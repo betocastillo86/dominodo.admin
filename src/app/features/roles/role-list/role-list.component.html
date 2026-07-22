@@ -1,0 +1,34 @@
+<app-page-header title="Roles" pretitle="Administración" />
+
+<div class="page-body">
+  <div class="card">
+    <div class="card-header">
+      <div class="row g-2">
+        <div class="col-12 col-sm-6 col-lg-6">
+          <input
+            type="text"
+            class="form-control"
+            placeholder="Buscar por nombre…"
+            [formControl]="nameControl"
+          />
+        </div>
+        <div class="col-12 col-sm-4 col-lg-6">
+          <select class="form-select" [formControl]="scopeControl">
+            <option value="">Todos los scopes</option>
+            <option value="Platform">Plataforma</option>
+            <option value="Tenant">Tenant</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <app-data-table
+      [columns]="columns"
+      [rows]="roles()"
+      [paging]="paging()"
+      [loading]="loading()"
+      [error]="error()"
+      [rowKey]="rowKey"
+      (pageChange)="onPageChange($event)"
+    />
+  </div>
+</div>

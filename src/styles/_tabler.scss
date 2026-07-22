@@ -1,0 +1,10 @@
+// Tabler theme entry point.
+//
+// NOTE: Tabler v1 ships its SCSS using the legacy `@import` system internally
+// (see node_modules/@tabler/core/scss/tabler.scss). We therefore import it with
+// `@import` too — this lets the variable overrides in `_variables.scss` (imported
+// just before this file in `styles.scss`) take effect, which a `@use ... with`
+// against a package that internally uses `@import` cannot do.
+@import '@tabler/core/scss/tabler';
+
+// Panel-specific overrides go below (applied after Tabler's own rules).

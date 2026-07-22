@@ -1,0 +1,63 @@
+@if (loading()) {
+  <app-spinner />
+} @else if (error()) {
+  <div class="alert alert-danger m-3" role="alert">{{ error() }}</div>
+} @else {
+  <div class="table-responsive">
+    <table class="table card-table table-vcenter text-nowrap">
+      <thead>
+        <tr>
+          @for (col of columns(); track col.header) {
+            <th [class]="col.class ?? ''">{{ col.header }}</th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of rows(); track rowKey()(row)) {
+          <tr>
+            @for (col of columns(); track col.header) {
+              <td [class]="col.class ?? ''">
+                @if (col.badgeClass?.(row); as badge) {
+                  <span [class]="badge">{{ col.value(row) }}</span>
+                } @else {
+                  {{ col.value(row) }}
+                }
+              </td>
+            }
+          </tr>
+        } @empty {
+          <tr>
+            <td [attr.colspan]="columns().length" class="text-center text-secondary py-4">
+              No hay registros para mostrar.
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  @if (paging(); as p) {
+    <div class="card-footer d-flex align-items-center">
+      <p class="m-0 text-secondary">
+        Página {{ p.page }} de {{ p.totalPages }} · {{ p.totalCount }} registros
+      </p>
+      <ul class="pagination m-0 ms-auto">
+        <li class="page-item" [class.disabled]="p.page <= 1">
+          <button type="button" class="page-link" (click)="goTo(p.page - 1)" [disabled]="p.page <= 1">
+            Anterior
+          </button>
+        </li>
+        <li class="page-item" [class.disabled]="p.page >= p.totalPages">
+          <button
+            type="button"
+            class="page-link"
+            (click)="goTo(p.page + 1)"
+            [disabled]="p.page >= p.totalPages"
+          >
+            Siguiente
+          </button>
+        </li>
+      </ul>
+    </div>
+  }
+}

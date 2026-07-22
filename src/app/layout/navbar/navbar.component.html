@@ -1,0 +1,28 @@
+<div class="container-xl">
+  <div class="navbar-nav flex-row order-md-last">
+    <div class="nav-item" ngbDropdown placement="bottom-end">
+      <a
+        class="nav-link d-flex lh-1 text-reset p-0"
+        role="button"
+        ngbDropdownToggle
+        id="user-menu"
+      >
+        <span class="avatar avatar-sm">
+          <tabler-icon name="user-circle"></tabler-icon>
+        </span>
+        <div class="d-none d-xl-block ps-2">
+          <div>{{ store.user()?.id ?? 'Administrador' }}</div>
+          <div class="mt-1 small text-secondary">
+            {{ (store.user()?.roles ?? []).join(', ') }}
+          </div>
+        </div>
+      </a>
+      <div ngbDropdownMenu class="dropdown-menu dropdown-menu-end" aria-labelledby="user-menu">
+        <button type="button" class="dropdown-item" (click)="logout()">
+          <tabler-icon name="logout" class="me-2"></tabler-icon>
+          Cerrar sesión
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

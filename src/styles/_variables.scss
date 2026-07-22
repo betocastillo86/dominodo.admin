@@ -1,0 +1,7 @@
+// Design tokens / palette overrides.
+// These are plain Sass variables consumed by Bootstrap/Tabler; they must be
+// declared BEFORE Tabler is imported (Tabler v1 uses `@import` internally and
+// its own values are `!default`, so ours win when defined first).
+
+// Brand palette — adjust here as the Dominodo identity evolves.
+$primary: #066fd1; // Tabler's default blue; placeholder brand color.

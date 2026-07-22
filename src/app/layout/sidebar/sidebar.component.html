@@ -1,0 +1,35 @@
+<div class="container-fluid">
+  <button
+    class="navbar-toggler"
+    type="button"
+    aria-label="Alternar navegación"
+    (click)="toggleMenu()"
+  >
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
+  <a routerLink="/" class="navbar-brand navbar-brand-autodark d-inline-flex align-items-center gap-2 text-reset text-decoration-none">
+    <tabler-icon name="shield-lock" class="text-primary"></tabler-icon>
+    <span>Dominodo</span>
+  </a>
+
+  <div class="collapse navbar-collapse" [class.show]="menuOpen()" id="sidebar-menu">
+    <ul class="navbar-nav pt-lg-3">
+      @for (item of navItems; track item.path) {
+        <li class="nav-item">
+          <a
+            class="nav-link"
+            [routerLink]="item.path"
+            routerLinkActive="active"
+            (click)="menuOpen.set(false)"
+          >
+            <span class="nav-link-icon d-md-none d-lg-inline-block">
+              <tabler-icon [name]="item.icon"></tabler-icon>
+            </span>
+            <span class="nav-link-title">{{ item.label }}</span>
+          </a>
+        </li>
+      }
+    </ul>
+  </div>
+</div>

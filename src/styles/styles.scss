@@ -1,0 +1,4 @@
+// Global styles entry point (registered in angular.json).
+// Order matters: variable overrides first, then the Tabler theme.
+@import 'variables';
+@import 'tabler';
