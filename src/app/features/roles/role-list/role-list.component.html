@@ -1,4 +1,6 @@
-<app-page-header title="Roles" pretitle="Administración" />
+<app-page-header title="Roles" pretitle="Administración">
+  <a routerLink="/roles/new" actions class="btn btn-primary">+ Nuevo rol</a>
+</app-page-header>
 
 <div class="page-body">
   <div class="card">
@@ -28,6 +30,7 @@
       [loading]="loading()"
       [error]="error()"
       [rowKey]="rowKey"
+      [actionLink]="editLink"
       (pageChange)="onPageChange($event)"
     />
   </div>

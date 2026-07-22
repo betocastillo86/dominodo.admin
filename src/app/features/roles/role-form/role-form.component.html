@@ -1,0 +1,122 @@
+<app-page-header
+  [title]="mode === 'edit' ? 'Editar rol' : 'Nuevo rol'"
+  pretitle="Administración"
+/>
+
+<div class="page-body">
+  <div class="container-xl">
+    <div class="card">
+      <div class="card-body">
+        @if (readOnly()) {
+          <div class="alert alert-info" role="alert">
+            <div class="d-flex">
+              <div>
+                <tabler-icon name="info-circle" class="alert-icon" />
+              </div>
+              <div>Este es un rol de sistema y no puede editarse.</div>
+            </div>
+          </div>
+        }
+
+        @if (loading()) {
+          <app-spinner />
+        } @else {
+          <form [formGroup]="form" (ngSubmit)="onSubmit()">
+            <div class="mb-3">
+              <label class="form-label required" for="role-name">Nombre</label>
+              <input
+                id="role-name"
+                type="text"
+                class="form-control"
+                formControlName="name"
+                [class.is-invalid]="form.controls.name.invalid && form.controls.name.touched"
+              />
+              @if (form.controls.name.invalid && form.controls.name.touched) {
+                <div class="invalid-feedback">
+                  @if (form.controls.name.errors?.['server']) {
+                    {{ form.controls.name.errors?.['server'] }}
+                  } @else if (form.controls.name.errors?.['required']) {
+                    El nombre es obligatorio.
+                  } @else if (form.controls.name.errors?.['maxlength']) {
+                    El nombre no puede superar los 100 caracteres.
+                  }
+                </div>
+              }
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label" for="role-description">Descripción</label>
+              <textarea
+                id="role-description"
+                class="form-control"
+                formControlName="description"
+                rows="2"
+              ></textarea>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label required" for="role-scope">Scope</label>
+              <select id="role-scope" class="form-select" formControlName="scope">
+                <option value="Platform">Plataforma</option>
+                <option value="Tenant">Tenant</option>
+              </select>
+              @if (mode === 'edit') {
+                <small class="form-hint">El scope no puede modificarse una vez creado el rol.</small>
+              }
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label required">Permisos</label>
+              @if (permissionsInvalid()) {
+                <div class="text-danger small mb-2">Selecciona al menos un permiso.</div>
+              }
+              @if (permissionGroups().length === 0) {
+                <div class="text-secondary">No hay permisos disponibles.</div>
+              }
+              @for (grp of permissionGroups(); track grp.group) {
+                <div class="mb-3">
+                  <div class="subheader mb-2">{{ grp.group }}</div>
+                  <div class="row g-2">
+                    @for (perm of grp.permissions; track perm.id) {
+                      <div class="col-12 col-md-6">
+                        <label class="form-check">
+                          <input
+                            type="checkbox"
+                            class="form-check-input"
+                            [checked]="isChecked(perm.id)"
+                            [disabled]="readOnly()"
+                            (change)="toggle(perm.id)"
+                          />
+                          <span class="form-check-label">
+                            <span class="fw-medium">{{ perm.code }}</span>
+                            <span class="d-block text-secondary">{{ perm.description }}</span>
+                          </span>
+                        </label>
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+
+            @if (error()) {
+              <div class="alert alert-danger" role="alert">{{ error() }}</div>
+            }
+
+            @if (!readOnly()) {
+              <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary" [disabled]="saving()">
+                  @if (saving()) {
+                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                  }
+                  Guardar
+                </button>
+                <a routerLink="/roles" class="btn btn-link">Cancelar</a>
+              </div>
+            }
+          </form>
+        }
+      </div>
+    </div>
+  </div>
+</div>

@@ -10,6 +10,9 @@
           @for (col of columns(); track col.header) {
             <th [class]="col.class ?? ''">{{ col.header }}</th>
           }
+          @if (actionLink()) {
+            <th class="w-1"></th>
+          }
         </tr>
       </thead>
       <tbody>
@@ -24,10 +27,17 @@
                 }
               </td>
             }
+            @if (actionLink(); as link) {
+              <td class="text-end">
+                <a [routerLink]="link(row)" class="btn btn-icon btn-sm">
+                  <tabler-icon [name]="actionIcon()" />
+                </a>
+              </td>
+            }
           </tr>
         } @empty {
           <tr>
-            <td [attr.colspan]="columns().length" class="text-center text-secondary py-4">
+            <td [attr.colspan]="columns().length + (actionLink() ? 1 : 0)" class="text-center text-secondary py-4">
               No hay registros para mostrar.
             </td>
           </tr>

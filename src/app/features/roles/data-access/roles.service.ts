@@ -1,9 +1,10 @@
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
+import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { PagedResult } from '../../../core/models/paged-result';
 import { ProblemDetails } from '../../../core/http/problem-details';
-import { RoleDto, RoleScope } from './role.models';
+import { CreateRoleRequest, RoleDetailDto, RoleDto, RoleScope, UpdateRoleRequest } from './role.models';
 
 /** Data-access for the Roles feature. Exposes state as signals. */
 @Injectable({ providedIn: 'root' })
@@ -41,6 +42,18 @@ export class RolesService {
         this._loading.set(false);
       },
     });
+  }
+
+  getById(id: number): Observable<RoleDetailDto> {
+    return this.http.get<RoleDetailDto>(`${this.base}/${id}`);
+  }
+
+  create(body: CreateRoleRequest): Observable<void> {
+    return this.http.post<void>(this.base, body);
+  }
+
+  update(id: number, body: UpdateRoleRequest): Observable<void> {
+    return this.http.put<void>(`${this.base}/${id}`, body);
   }
 
   private toError(error: unknown): string {

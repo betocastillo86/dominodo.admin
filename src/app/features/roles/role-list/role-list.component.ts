@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
 import { PageHeaderComponent } from '../../../shared/ui/page-header/page-header.component';
@@ -11,7 +12,7 @@ import { RoleDto, RoleScope } from '../data-access/role.models';
 @Component({
   selector: 'app-role-list',
   standalone: true,
-  imports: [PageHeaderComponent, DataTableComponent, ReactiveFormsModule],
+  imports: [PageHeaderComponent, DataTableComponent, ReactiveFormsModule, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './role-list.component.html',
 })
@@ -46,6 +47,8 @@ export class RoleListComponent {
   ];
 
   readonly rowKey = (role: RoleDto): number => role.id;
+
+  readonly editLink = (role: RoleDto): unknown[] => ['/roles', role.id, 'edit'];
 
   constructor() {
     this.nameControl.valueChanges.pipe(
