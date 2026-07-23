@@ -29,7 +29,11 @@
             }
             @if (actionLink(); as link) {
               <td class="text-end">
-                <a [routerLink]="link(row)" class="btn btn-icon btn-sm">
+                <a
+                  [routerLink]="link(row)"
+                  [queryParams]="actionQueryParams()?.(row) ?? null"
+                  class="btn btn-icon btn-sm"
+                >
                   <tabler-icon [name]="actionIcon()" />
                 </a>
               </td>

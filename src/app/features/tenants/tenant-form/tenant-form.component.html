@@ -205,3 +205,53 @@
     </div>
   </div>
 </div>
+
+@if (mode === 'edit' && tenantSlug()) {
+  <div class="page-body pt-0">
+    <div class="container-xl">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Apartamentos</h3>
+          <div class="card-options">
+            <a
+              [routerLink]="['/apartments', 'new']"
+              [queryParams]="{ tenant: tenantSlug(), tenantId }"
+              class="btn btn-sm btn-primary"
+            >+ Nuevo apartamento</a>
+          </div>
+        </div>
+        <div class="card-body border-bottom py-3">
+          <div class="row g-2">
+            <div class="col-12 col-sm-6">
+              <input
+                type="text"
+                class="form-control"
+                placeholder="Buscar por torre…"
+                [formControl]="towerSearch"
+              />
+            </div>
+            <div class="col-12 col-sm-6">
+              <input
+                type="text"
+                class="form-control"
+                placeholder="Buscar por apartamento…"
+                [formControl]="numberSearch"
+              />
+            </div>
+          </div>
+        </div>
+        <app-data-table
+          [columns]="apartmentColumns"
+          [rows]="filteredApartments()"
+          [paging]="apartmentsPaging()"
+          [loading]="loadingApartments()"
+          [error]="apartmentsError()"
+          [rowKey]="apartmentRowKey"
+          [actionLink]="apartmentEditLink"
+          [actionQueryParams]="apartmentQueryParams"
+          (pageChange)="loadApartmentsPage($event)"
+        />
+      </div>
+    </div>
+  </div>
+}

@@ -39,6 +39,8 @@ export class DataTableComponent<T> {
   readonly actionLink = input<((row: T) => string | unknown[]) | null>(null);
   /** Icon name for the action column link. */
   readonly actionIcon = input<string>('edit');
+  /** Optional query params merged into each row's action link. */
+  readonly actionQueryParams = input<((row: T) => Record<string, string>) | null>(null);
 
   readonly pageChange = output<number>();
 

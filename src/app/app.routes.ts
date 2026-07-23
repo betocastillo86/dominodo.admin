@@ -22,6 +22,11 @@ export const routes: Routes = [
           import('./features/tenants/tenants.routes').then((m) => m.tenantsRoutes),
       },
       {
+        path: 'apartments',
+        loadChildren: () =>
+          import('./features/apartments/apartments.routes').then((m) => m.apartmentsRoutes),
+      },
+      {
         path: 'users',
         loadChildren: () => import('./features/users/users.routes').then((m) => m.usersRoutes),
       },
