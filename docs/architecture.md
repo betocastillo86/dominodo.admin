@@ -13,9 +13,10 @@
 `dominodo.admin` is the global administration interface. Its user is the **SuperAdmin** (a `Platform`-scoped
 role), who manages resources that do not depend on a specific tenant.
 
-Current modules: **Authentication** (login by phone + password, restricted to SuperAdmin) and **Roles**
-(list, create, edit). Future modules (permissions, tenants, users, memberships, notifications, settings)
-follow the same conventions described here.
+Current modules: **Authentication** (login by phone + password, restricted to SuperAdmin), **Roles**
+(list, create, edit), **Users** (list with filters, create, edit), **Tenants** (list, create, edit
+of the conjuntos), and **System Settings** (list, create, edit of global configuration rows). Future
+modules (permissions, memberships, notifications) follow the same conventions described here.
 
 ---
 
@@ -43,9 +44,6 @@ follow the same conventions described here.
 - **Auth:** `POST /auth/login` (`{phone,password}` → tokens), `/auth/refresh`, `/auth/logout`. The JWT is
   tenant-agnostic and carries **no** permissions; the SuperAdmin is identified by a `role` claim that
   includes **`SuperAdmin`**. Fine-grained permissions are enforced **server-side** (a `403` surfaces as `ProblemDetails`).
-- **Roles:** standard CRUD (`GET /roles`, `GET /roles/{id}`, `POST /roles`, `PUT /roles/{id}`) plus
-  `GET /permissions` for the catalog. DTOs are typed exactly as the API returns them — see
-  `features/roles/data-access/` for the current shapes and the Swagger for the authoritative contract.
 
 > Two contract rules worth knowing up front: a role's `scope` is set on create and **immutable** on edit,
 > and **system roles** (`isSystem`) are treated as read-only in the panel.
@@ -67,8 +65,11 @@ src/app/
 ├── layout/      # panel chrome: shell (sidebar + navbar + outlet)
 ├── shared/ui/   # reusable presentational pieces (data-table, page-header, spinner)
 └── features/    # lazy domains, each with data-access/ + components
-    ├── auth/       # blank layout → login
-    └── roles/      # list + form (create/edit share one component)
+    ├── auth/             # blank layout → login
+    ├── roles/            # list + form (create/edit share one component)
+    ├── users/            # list + form (create/edit share one component)
+    ├── tenants/          # list + form (create/edit share one component)
+    └── system-settings/  # list + form (create/edit share one component)
 ```
 
 - **`core/`**: single instances and cross-cutting concerns; no business UI.
@@ -103,6 +104,11 @@ refresh-and-retry on 401 and maps `ProblemDetails` to user-facing messages. Guar
   → edit). It respects the contract rules: `scope` disabled on edit, and the whole form read-only for
   system roles. On success it notifies and navigates back to the list; on error it maps `ProblemDetails`
   (field errors → controls, 409 → name, else a global message).
+
+**Tenants** follow the same shape. Two notes worth flagging: `slug` and `type` are set on create and
+**immutable on edit** (disabled with a hint, like Roles' `scope`), and the list's `name`/`status`
+filters are **wired ahead of API support** — the UI and query params are in place, but `GET /tenants`
+does not yet read them, so they no-op until the backend adds them.
 
 The `DataTable` is generic and presentational: columns are declared as data (value + optional badge/link
 functions), pagination is server-side via `PagedResult`, and it renders loading/error/empty states itself.

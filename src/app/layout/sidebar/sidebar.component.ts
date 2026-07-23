@@ -26,6 +26,7 @@ export class SidebarComponent {
 
   readonly navItems: readonly NavItem[] = [
     { label: 'Roles', path: '/roles', icon: 'shield-lock' },
+    { label: 'Conjuntos', path: '/tenants', icon: 'building-community' },
     { label: 'Usuarios', path: '/users', icon: 'user' },
     { label: 'Configuración', path: '/system-settings', icon: 'settings' },
   ];

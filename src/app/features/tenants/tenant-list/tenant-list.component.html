@@ -1,0 +1,38 @@
+<app-page-header title="Conjuntos" pretitle="Administración">
+  <a routerLink="/tenants/new" actions class="btn btn-primary">+ Nuevo conjunto</a>
+</app-page-header>
+
+<div class="page-body">
+  <div class="card">
+    <div class="card-header">
+      <div class="row g-2">
+        <div class="col-12 col-sm-6 col-lg-6">
+          <input
+            type="text"
+            class="form-control"
+            placeholder="Buscar por nombre…"
+            [formControl]="nameControl"
+          />
+        </div>
+        <div class="col-12 col-sm-4 col-lg-6">
+          <select class="form-select" [formControl]="statusControl">
+            <option value="">Todos los estados</option>
+            <option value="Onboarding">Onboarding</option>
+            <option value="Active">Activo</option>
+            <option value="Suspended">Suspendido</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <app-data-table
+      [columns]="columns"
+      [rows]="tenants()"
+      [paging]="paging()"
+      [loading]="loading()"
+      [error]="error()"
+      [rowKey]="rowKey"
+      [actionLink]="editLink"
+      (pageChange)="onPageChange($event)"
+    />
+  </div>
+</div>

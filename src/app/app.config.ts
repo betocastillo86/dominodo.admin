@@ -3,6 +3,7 @@ import { provideRouter } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideTablerIcons } from 'angular-tabler-icons';
 import {
+  IconBuildingCommunity,
   IconEdit,
   IconInfoCircle,
   IconLogout,
@@ -23,6 +24,6 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes),
     provideHttpClient(withInterceptors([authInterceptor, errorInterceptor])),
     // Icons used across the app are registered here; add more as features need them.
-    provideTablerIcons({ IconShieldLock, IconUserCircle, IconLogout, IconMenu2, IconEdit, IconInfoCircle, IconSettings, IconUser }),
+    provideTablerIcons({ IconShieldLock, IconUserCircle, IconLogout, IconMenu2, IconEdit, IconInfoCircle, IconSettings, IconUser, IconBuildingCommunity }),
   ],
 };

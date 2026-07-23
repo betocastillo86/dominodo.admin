@@ -1,0 +1,207 @@
+<app-page-header
+  [title]="mode === 'edit' ? 'Editar conjunto' : 'Nuevo conjunto'"
+  pretitle="Administración"
+/>
+
+<div class="page-body">
+  <div class="container-xl">
+    <div class="card">
+      <div class="card-body">
+        @if (loading()) {
+          <app-spinner />
+        } @else {
+          <form [formGroup]="form" (ngSubmit)="onSubmit()">
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label required" for="tenant-slug">Slug</label>
+                <input
+                  id="tenant-slug"
+                  type="text"
+                  class="form-control"
+                  formControlName="slug"
+                  [class.is-invalid]="form.controls.slug.invalid && form.controls.slug.touched"
+                />
+                @if (mode === 'edit') {
+                  <small class="form-hint">El slug no puede modificarse una vez creado el conjunto.</small>
+                }
+                @if (form.controls.slug.invalid && form.controls.slug.touched) {
+                  <div class="invalid-feedback">
+                    @if (form.controls.slug.errors?.['server']) {
+                      {{ form.controls.slug.errors?.['server'] }}
+                    } @else if (form.controls.slug.errors?.['required']) {
+                      El slug es obligatorio.
+                    } @else if (form.controls.slug.errors?.['pattern']) {
+                      Solo minúsculas, números y guiones (p. ej. mi-conjunto).
+                    } @else if (form.controls.slug.errors?.['maxlength']) {
+                      El slug no puede superar los 100 caracteres.
+                    }
+                  </div>
+                }
+              </div>
+
+              <div class="col-md-6 mb-3">
+                <label class="form-label required" for="tenant-type">Tipo</label>
+                <select id="tenant-type" class="form-select" formControlName="type">
+                  <option value="Conjunto">Conjunto</option>
+                  <option value="Edificio">Edificio</option>
+                  <option value="Mixto">Mixto</option>
+                </select>
+                @if (mode === 'edit') {
+                  <small class="form-hint">El tipo no puede modificarse una vez creado el conjunto.</small>
+                }
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label required" for="tenant-name">Nombre</label>
+              <input
+                id="tenant-name"
+                type="text"
+                class="form-control"
+                formControlName="name"
+                [class.is-invalid]="form.controls.name.invalid && form.controls.name.touched"
+              />
+              @if (form.controls.name.invalid && form.controls.name.touched) {
+                <div class="invalid-feedback">
+                  @if (form.controls.name.errors?.['server']) {
+                    {{ form.controls.name.errors?.['server'] }}
+                  } @else if (form.controls.name.errors?.['required']) {
+                    El nombre es obligatorio.
+                  } @else if (form.controls.name.errors?.['maxlength']) {
+                    El nombre no puede superar los 200 caracteres.
+                  }
+                </div>
+              }
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label" for="tenant-legalId">Identificación legal</label>
+              <input
+                id="tenant-legalId"
+                type="text"
+                class="form-control"
+                formControlName="legalId"
+                [class.is-invalid]="form.controls.legalId.invalid && form.controls.legalId.touched"
+              />
+              @if (form.controls.legalId.invalid && form.controls.legalId.touched) {
+                <div class="invalid-feedback">
+                  @if (form.controls.legalId.errors?.['server']) {
+                    {{ form.controls.legalId.errors?.['server'] }}
+                  } @else if (form.controls.legalId.errors?.['maxlength']) {
+                    La identificación legal no puede superar los 50 caracteres.
+                  }
+                </div>
+              }
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label required" for="tenant-address">Dirección</label>
+              <input
+                id="tenant-address"
+                type="text"
+                class="form-control"
+                formControlName="address"
+                [class.is-invalid]="form.controls.address.invalid && form.controls.address.touched"
+              />
+              @if (form.controls.address.invalid && form.controls.address.touched) {
+                <div class="invalid-feedback">
+                  @if (form.controls.address.errors?.['server']) {
+                    {{ form.controls.address.errors?.['server'] }}
+                  } @else if (form.controls.address.errors?.['required']) {
+                    La dirección es obligatoria.
+                  } @else if (form.controls.address.errors?.['maxlength']) {
+                    La dirección no puede superar los 200 caracteres.
+                  }
+                </div>
+              }
+            </div>
+
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label required" for="tenant-city">Ciudad</label>
+                <input
+                  id="tenant-city"
+                  type="text"
+                  class="form-control"
+                  formControlName="city"
+                  [class.is-invalid]="form.controls.city.invalid && form.controls.city.touched"
+                />
+                @if (form.controls.city.invalid && form.controls.city.touched) {
+                  <div class="invalid-feedback">
+                    @if (form.controls.city.errors?.['server']) {
+                      {{ form.controls.city.errors?.['server'] }}
+                    } @else if (form.controls.city.errors?.['required']) {
+                      La ciudad es obligatoria.
+                    } @else if (form.controls.city.errors?.['maxlength']) {
+                      La ciudad no puede superar los 100 caracteres.
+                    }
+                  </div>
+                }
+              </div>
+
+              <div class="col-md-6 mb-3">
+                <label class="form-label required" for="tenant-country">País</label>
+                <input
+                  id="tenant-country"
+                  type="text"
+                  class="form-control"
+                  formControlName="country"
+                  [class.is-invalid]="form.controls.country.invalid && form.controls.country.touched"
+                />
+                @if (form.controls.country.invalid && form.controls.country.touched) {
+                  <div class="invalid-feedback">
+                    @if (form.controls.country.errors?.['server']) {
+                      {{ form.controls.country.errors?.['server'] }}
+                    } @else if (form.controls.country.errors?.['required']) {
+                      El país es obligatorio.
+                    } @else if (form.controls.country.errors?.['maxlength']) {
+                      El país no puede superar los 100 caracteres.
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+
+            @if (mode === 'create') {
+              <div class="mb-3">
+                <label class="form-label" for="tenant-branding">Branding</label>
+                <textarea
+                  id="tenant-branding"
+                  class="form-control"
+                  formControlName="branding"
+                  rows="2"
+                ></textarea>
+                <small class="form-hint">JSON de personalización visual (opcional).</small>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label" for="tenant-settings">Configuración</label>
+                <textarea
+                  id="tenant-settings"
+                  class="form-control"
+                  formControlName="settings"
+                  rows="2"
+                ></textarea>
+                <small class="form-hint">JSON de configuración inicial (opcional).</small>
+              </div>
+            }
+
+            @if (error()) {
+              <div class="alert alert-danger" role="alert">{{ error() }}</div>
+            }
+
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn btn-primary" [disabled]="saving()">
+                @if (saving()) {
+                  <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                }
+                Guardar
+              </button>
+              <a routerLink="/tenants" class="btn btn-link">Cancelar</a>
+            </div>
+          </form>
+        }
+      </div>
+    </div>
+  </div>
+</div>
