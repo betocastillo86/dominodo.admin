@@ -26,6 +26,8 @@ export class SidebarComponent {
 
   readonly navItems: readonly NavItem[] = [
     { label: 'Roles', path: '/roles', icon: 'shield-lock' },
+    { label: 'Usuarios', path: '/users', icon: 'user' },
+    { label: 'Configuración', path: '/system-settings', icon: 'settings' },
   ];
 
   toggleMenu(): void {

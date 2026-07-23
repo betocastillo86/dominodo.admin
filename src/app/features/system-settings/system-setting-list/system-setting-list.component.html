@@ -1,0 +1,30 @@
+<app-page-header title="Configuraciones del sistema" pretitle="Administración">
+  <a routerLink="/system-settings/new" actions class="btn btn-primary">+ Nueva configuración</a>
+</app-page-header>
+
+<div class="page-body">
+  <div class="card">
+    <div class="card-header">
+      <div class="row g-2">
+        <div class="col-12 col-sm-6 col-lg-8">
+          <input
+            type="text"
+            class="form-control"
+            placeholder="Buscar por key…"
+            [formControl]="keyControl"
+          />
+        </div>
+      </div>
+    </div>
+    <app-data-table
+      [columns]="columns"
+      [rows]="settings()"
+      [paging]="paging()"
+      [loading]="loading()"
+      [error]="error()"
+      [rowKey]="rowKey"
+      [actionLink]="editLink"
+      (pageChange)="onPageChange($event)"
+    />
+  </div>
+</div>

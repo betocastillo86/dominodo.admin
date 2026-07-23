@@ -1,0 +1,168 @@
+<app-page-header
+  [title]="mode === 'edit' ? 'Editar usuario' : 'Nuevo usuario'"
+  pretitle="Administración"
+/>
+
+<div class="page-body">
+  <div class="container-xl">
+    <div class="card">
+      <div class="card-body">
+        @if (loading()) {
+          <app-spinner />
+        } @else {
+          <form [formGroup]="form" (ngSubmit)="onSubmit()">
+
+            @if (mode === 'create') {
+              <div class="mb-3">
+                <label class="form-label required" for="user-phone">Teléfono</label>
+                <input
+                  id="user-phone"
+                  type="tel"
+                  class="form-control"
+                  placeholder="+573001234567"
+                  formControlName="phone"
+                  [class.is-invalid]="form.controls.phone.invalid && form.controls.phone.touched"
+                />
+                <small class="form-hint">Formato E.164, ej. +573001234567.</small>
+                @if (form.controls.phone.invalid && form.controls.phone.touched) {
+                  <div class="invalid-feedback">
+                    @if (form.controls.phone.errors?.['server']) {
+                      {{ form.controls.phone.errors?.['server'] }}
+                    } @else if (form.controls.phone.errors?.['required']) {
+                      El teléfono es obligatorio.
+                    } @else if (form.controls.phone.errors?.['pattern']) {
+                      Formato inválido. Usá E.164, ej. +573001234567.
+                    }
+                  </div>
+                }
+              </div>
+            } @else {
+              <div class="mb-3">
+                <label class="form-label" for="user-phone">Teléfono</label>
+                <input
+                  id="user-phone"
+                  type="tel"
+                  class="form-control"
+                  formControlName="phone"
+                />
+                <small class="form-hint">El teléfono no puede modificarse.</small>
+              </div>
+            }
+
+            <div class="row g-3 mb-3">
+              <div class="col-12 col-md-6">
+                <label class="form-label required" for="user-first-name">Nombre</label>
+                <input
+                  id="user-first-name"
+                  type="text"
+                  class="form-control"
+                  formControlName="firstName"
+                  [class.is-invalid]="form.controls.firstName.invalid && form.controls.firstName.touched"
+                />
+                @if (form.controls.firstName.invalid && form.controls.firstName.touched) {
+                  <div class="invalid-feedback">
+                    @if (form.controls.firstName.errors?.['server']) {
+                      {{ form.controls.firstName.errors?.['server'] }}
+                    } @else if (form.controls.firstName.errors?.['required']) {
+                      El nombre es obligatorio.
+                    } @else if (form.controls.firstName.errors?.['maxlength']) {
+                      El nombre no puede superar los 100 caracteres.
+                    }
+                  </div>
+                }
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label required" for="user-last-name">Apellido</label>
+                <input
+                  id="user-last-name"
+                  type="text"
+                  class="form-control"
+                  formControlName="lastName"
+                  [class.is-invalid]="form.controls.lastName.invalid && form.controls.lastName.touched"
+                />
+                @if (form.controls.lastName.invalid && form.controls.lastName.touched) {
+                  <div class="invalid-feedback">
+                    @if (form.controls.lastName.errors?.['server']) {
+                      {{ form.controls.lastName.errors?.['server'] }}
+                    } @else if (form.controls.lastName.errors?.['required']) {
+                      El apellido es obligatorio.
+                    } @else if (form.controls.lastName.errors?.['maxlength']) {
+                      El apellido no puede superar los 100 caracteres.
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label" for="user-email">Email</label>
+              <input
+                id="user-email"
+                type="email"
+                class="form-control"
+                formControlName="email"
+                [class.is-invalid]="form.controls.email.invalid && form.controls.email.touched"
+              />
+              @if (mode === 'edit') {
+                <small class="form-hint">
+                  <tabler-icon name="info-circle" />
+                  El email no puede modificarse desde el panel.
+                </small>
+              }
+              @if (form.controls.email.invalid && form.controls.email.touched) {
+                <div class="invalid-feedback">
+                  @if (form.controls.email.errors?.['server']) {
+                    {{ form.controls.email.errors?.['server'] }}
+                  } @else if (form.controls.email.errors?.['email']) {
+                    Ingresá un email válido.
+                  }
+                </div>
+              }
+            </div>
+
+            @if (mode === 'create') {
+              <div class="mb-3">
+                <label class="form-label required" for="user-password">Contraseña</label>
+                <input
+                  id="user-password"
+                  type="password"
+                  class="form-control"
+                  formControlName="password"
+                  [class.is-invalid]="form.controls.password.invalid && form.controls.password.touched"
+                />
+                <small class="form-hint">Mínimo 8 caracteres, con mayúscula, minúscula y número.</small>
+                @if (form.controls.password.invalid && form.controls.password.touched) {
+                  <div class="invalid-feedback">
+                    @if (form.controls.password.errors?.['required']) {
+                      La contraseña es obligatoria.
+                    } @else if (form.controls.password.errors?.['minlength']) {
+                      La contraseña debe tener al menos 8 caracteres.
+                    } @else if (form.controls.password.errors?.['maxlength']) {
+                      La contraseña no puede superar los 128 caracteres.
+                    } @else if (form.controls.password.errors?.['pattern']) {
+                      Debe contener al menos una mayúscula, una minúscula y un número.
+                    }
+                  </div>
+                }
+              </div>
+            }
+
+            @if (error()) {
+              <div class="alert alert-danger" role="alert">{{ error() }}</div>
+            }
+
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn btn-primary" [disabled]="saving()">
+                @if (saving()) {
+                  <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                }
+                Guardar
+              </button>
+              <a routerLink="/users" class="btn btn-link">Cancelar</a>
+            </div>
+          </form>
+        }
+      </div>
+    </div>
+  </div>
+</div>

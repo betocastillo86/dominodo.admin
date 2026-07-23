@@ -16,6 +16,17 @@ export const routes: Routes = [
         path: 'roles',
         loadChildren: () => import('./features/roles/roles.routes').then((m) => m.rolesRoutes),
       },
+      {
+        path: 'users',
+        loadChildren: () => import('./features/users/users.routes').then((m) => m.usersRoutes),
+      },
+      {
+        path: 'system-settings',
+        loadChildren: () =>
+          import('./features/system-settings/system-settings.routes').then(
+            (m) => m.systemSettingsRoutes,
+          ),
+      },
       { path: '', pathMatch: 'full', redirectTo: 'roles' },
     ],
   },

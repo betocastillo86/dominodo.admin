@@ -1,0 +1,46 @@
+<app-page-header title="Usuarios" pretitle="Administración">
+  <a routerLink="/users/new" actions class="btn btn-primary">+ Nuevo usuario</a>
+</app-page-header>
+
+<div class="page-body">
+  <div class="card">
+    <div class="card-header">
+      <div class="row g-2">
+        <div class="col-12 col-sm-4">
+          <input
+            type="text"
+            class="form-control"
+            placeholder="Buscar por nombre…"
+            [formControl]="nameControl"
+          />
+        </div>
+        <div class="col-12 col-sm-4">
+          <select class="form-select" [formControl]="statusControl">
+            <option value="">Todos los estados</option>
+            <option value="PendingVerification">Pendiente</option>
+            <option value="Active">Activo</option>
+            <option value="Disabled">Deshabilitado</option>
+          </select>
+        </div>
+        <div class="col-12 col-sm-4">
+          <input
+            type="text"
+            class="form-control"
+            placeholder="Tenant ID…"
+            [formControl]="tenantControl"
+          />
+        </div>
+      </div>
+    </div>
+    <app-data-table
+      [columns]="columns"
+      [rows]="users()"
+      [paging]="paging()"
+      [loading]="loading()"
+      [error]="error()"
+      [rowKey]="rowKey"
+      [actionLink]="editLink"
+      (pageChange)="onPageChange($event)"
+    />
+  </div>
+</div>
