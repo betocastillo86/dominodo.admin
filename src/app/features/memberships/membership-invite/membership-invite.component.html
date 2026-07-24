@@ -1,0 +1,182 @@
+<app-page-header title="Invitar miembro" pretitle="Membresías" />
+
+<div class="page-body">
+  <div class="container-xl">
+    <div class="card">
+      <div class="card-body">
+        @if (loadingRoles()) {
+          <app-spinner />
+        } @else {
+          <form [formGroup]="form" (ngSubmit)="onSubmit()">
+
+            <!-- Teléfono -->
+            <div class="mb-3">
+              <label class="form-label required" for="invite-phone">Teléfono</label>
+              <input
+                id="invite-phone"
+                type="tel"
+                class="form-control"
+                formControlName="phone"
+                placeholder="+57 300 123 4567"
+                [class.is-invalid]="form.controls.phone.invalid && form.controls.phone.touched"
+              />
+              @if (form.controls.phone.invalid && form.controls.phone.touched) {
+                <div class="invalid-feedback">
+                  @if (form.controls.phone.errors?.['server']) {
+                    {{ form.controls.phone.errors?.['server'] }}
+                  } @else if (form.controls.phone.errors?.['required']) {
+                    El teléfono es obligatorio.
+                  } @else if (form.controls.phone.errors?.['maxlength']) {
+                    El teléfono no puede superar los 30 caracteres.
+                  }
+                </div>
+              }
+              <small class="form-hint">
+                Si el número está registrado, el usuario recibirá una membresía activa. Si no, recibirá una invitación por correo.
+              </small>
+            </div>
+
+            <!-- Correo electrónico (opcional) -->
+            <div class="mb-3">
+              <label class="form-label" for="invite-email">Correo electrónico</label>
+              <input
+                id="invite-email"
+                type="email"
+                class="form-control"
+                formControlName="email"
+                placeholder="usuario@ejemplo.com"
+              />
+              <small class="form-hint">Opcional. Se usa para enviar la invitación si el usuario aún no está registrado.</small>
+            </div>
+
+            <!-- Rol -->
+            <div class="mb-3">
+              <label class="form-label required" for="invite-role">Rol</label>
+              <select
+                id="invite-role"
+                class="form-select"
+                formControlName="roleId"
+                [class.is-invalid]="form.controls.roleId.invalid && form.controls.roleId.touched"
+              >
+                <option value="">Selecciona un rol…</option>
+                @for (role of roles(); track role.id) {
+                  <option [value]="role.id">{{ role.name }}</option>
+                }
+              </select>
+              @if (form.controls.roleId.invalid && form.controls.roleId.touched) {
+                <div class="invalid-feedback">El rol es obligatorio.</div>
+              }
+            </div>
+
+            <!-- Sección apartamento (toggle) -->
+            <div class="mb-3">
+              <label class="form-check">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  [checked]="showApartment()"
+                  (change)="toggleApartment()"
+                />
+                <span class="form-check-label">Asignar a un apartamento</span>
+              </label>
+              <small class="form-hint">
+                Opcional. Vincula esta invitación a un apartamento específico del conjunto.
+              </small>
+            </div>
+
+            @if (showApartment()) {
+              <div class="card card-sm bg-blue-lt mb-3">
+                <div class="card-body">
+
+                  <!-- Apartamento -->
+                  <div class="mb-3">
+                    <label class="form-label required" for="invite-apartment">Apartamento</label>
+                    @if (loadingApartments()) {
+                      <div class="text-secondary small">Cargando apartamentos…</div>
+                    } @else if (apartments().length === 0) {
+                      <div class="alert alert-warning mb-0">
+                        No hay apartamentos registrados en este conjunto.
+                      </div>
+                    } @else {
+                      <select
+                        id="invite-apartment"
+                        class="form-select"
+                        formControlName="apartmentId"
+                        [class.is-invalid]="hasApartmentErrors()"
+                      >
+                        <option value="">Selecciona un apartamento…</option>
+                        @for (apt of apartments(); track apt.id) {
+                          <option [value]="apt.id">
+                            @if (apt.tower) {
+                              {{ apt.tower }} –
+                            }
+                            {{ apt.number }} ({{ apartmentTypeLabel(apt.type) }})
+                          </option>
+                        }
+                      </select>
+                      @if (hasApartmentErrors()) {
+                        <div class="invalid-feedback d-block">El apartamento es obligatorio.</div>
+                      }
+                    }
+                  </div>
+
+                  <!-- Tipo de relación -->
+                  <div class="mb-3">
+                    <label class="form-label required">Relación con el apartamento</label>
+                    <div class="row g-2">
+                      @for (option of relationTypeOptions; track option.value) {
+                        <div class="col-auto">
+                          <label class="form-check">
+                            <input
+                              class="form-check-input"
+                              type="radio"
+                              formControlName="relationType"
+                              [value]="option.value"
+                            />
+                            <span class="form-check-label">{{ option.label }}</span>
+                          </label>
+                        </div>
+                      }
+                    </div>
+                    @if (hasRelationErrors()) {
+                      <div class="text-danger small mt-1">El tipo de relación es obligatorio.</div>
+                    }
+                  </div>
+
+                  <!-- Reside aquí -->
+                  <div class="mb-0">
+                    <label class="form-check">
+                      <input
+                        class="form-check-input"
+                        type="checkbox"
+                        formControlName="livesHere"
+                      />
+                      <span class="form-check-label">Reside físicamente en el apartamento</span>
+                    </label>
+                  </div>
+
+                </div>
+              </div>
+            }
+
+            @if (error()) {
+              <div class="alert alert-danger" role="alert">{{ error() }}</div>
+            }
+
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn btn-primary" [disabled]="saving()">
+                @if (saving()) {
+                  <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                }
+                Enviar invitación
+              </button>
+              <a [routerLink]="backLink" [queryParams]="backQueryParams" class="btn btn-link">
+                Cancelar
+              </a>
+            </div>
+          </form>
+        }
+      </div>
+    </div>
+  </div>
+</div>

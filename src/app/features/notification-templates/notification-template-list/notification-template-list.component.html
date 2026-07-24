@@ -1,0 +1,43 @@
+<app-page-header title="Plantillas" pretitle="Notificaciones" />
+
+<div class="page-body">
+  <div class="card">
+    <div class="card-header">
+      <div class="row g-2 w-100">
+        <div class="col-12 col-sm-6 col-lg-6">
+          <input
+            type="text"
+            class="form-control"
+            placeholder="Buscar por nombre…"
+            [formControl]="searchControl"
+          />
+        </div>
+        <div class="col-12 col-sm-3 col-lg-3">
+          <select class="form-select" [formControl]="typeControl">
+            <option value="">Todos los tipos</option>
+            @for (type of types; track type) {
+              <option [value]="type">{{ typeLabels[type] }}</option>
+            }
+          </select>
+        </div>
+        <div class="col-12 col-sm-3 col-lg-3">
+          <select class="form-select" [formControl]="activeControl">
+            <option value="">Todos los estados</option>
+            <option value="true">Activas</option>
+            <option value="false">Inactivas</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <app-data-table
+      [columns]="columns"
+      [rows]="templates()"
+      [paging]="paging()"
+      [loading]="loading()"
+      [error]="error()"
+      [rowKey]="rowKey"
+      [actionLink]="editLink"
+      (pageChange)="onPageChange($event)"
+    />
+  </div>
+</div>

@@ -37,6 +37,25 @@ export const routes: Routes = [
             (m) => m.systemSettingsRoutes,
           ),
       },
+      {
+        path: 'notification-templates',
+        loadChildren: () =>
+          import('./features/notification-templates/notification-templates.routes').then(
+            (m) => m.notificationTemplatesRoutes,
+          ),
+      },
+      {
+        path: 'notification-messages',
+        loadChildren: () =>
+          import('./features/notification-messages/notification-messages.routes').then(
+            (m) => m.notificationMessagesRoutes,
+          ),
+      },
+      {
+        path: 'memberships',
+        loadChildren: () =>
+          import('./features/memberships/memberships.routes').then((m) => m.membershipsRoutes),
+      },
       { path: '', pathMatch: 'full', redirectTo: 'roles' },
     ],
   },

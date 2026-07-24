@@ -15,20 +15,55 @@
 
   <div class="collapse navbar-collapse" [class.show]="menuOpen()" id="sidebar-menu">
     <ul class="navbar-nav pt-lg-3">
-      @for (item of navItems; track item.path) {
-        <li class="nav-item">
-          <a
-            class="nav-link"
-            [routerLink]="item.path"
-            routerLinkActive="active"
-            (click)="menuOpen.set(false)"
-          >
-            <span class="nav-link-icon d-md-none d-lg-inline-block">
-              <tabler-icon [name]="item.icon"></tabler-icon>
-            </span>
-            <span class="nav-link-title">{{ item.label }}</span>
-          </a>
-        </li>
+      @for (item of navItems; track item.label) {
+        @if (item.children) {
+          <li class="nav-item">
+            <button
+              type="button"
+              class="nav-link w-100 border-0 bg-transparent text-start"
+              [attr.aria-expanded]="isGroupOpen(item.label)"
+              (click)="toggleGroup(item.label)"
+            >
+              <span class="nav-link-icon d-md-none d-lg-inline-block">
+                <tabler-icon [name]="item.icon"></tabler-icon>
+              </span>
+              <span class="nav-link-title">{{ item.label }}</span>
+              <span class="nav-link-toggle ms-auto">
+                <tabler-icon name="chevron-right"></tabler-icon>
+              </span>
+            </button>
+            @if (isGroupOpen(item.label)) {
+              <ul class="navbar-nav ps-3">
+                @for (child of item.children; track child.path) {
+                  <li class="nav-item">
+                    <a
+                      class="nav-link"
+                      [routerLink]="child.path"
+                      routerLinkActive="active"
+                      (click)="menuOpen.set(false)"
+                    >
+                      <span class="nav-link-title">{{ child.label }}</span>
+                    </a>
+                  </li>
+                }
+              </ul>
+            }
+          </li>
+        } @else {
+          <li class="nav-item">
+            <a
+              class="nav-link"
+              [routerLink]="item.path"
+              routerLinkActive="active"
+              (click)="menuOpen.set(false)"
+            >
+              <span class="nav-link-icon d-md-none d-lg-inline-block">
+                <tabler-icon [name]="item.icon"></tabler-icon>
+              </span>
+              <span class="nav-link-title">{{ item.label }}</span>
+            </a>
+          </li>
+        }
       }
     </ul>
   </div>

@@ -14,9 +14,12 @@
 role), who manages resources that do not depend on a specific tenant.
 
 Current modules: **Authentication** (login by phone + password, restricted to SuperAdmin), **Roles**
-(list, create, edit), **Users** (list with filters, create, edit), **Tenants** (list, create, edit
-of the conjuntos), and **System Settings** (list, create, edit of global configuration rows). Future
-modules (permissions, memberships, notifications) follow the same conventions described here.
+(list, create, edit), **Users** (list with filters, create, edit), **Tenants** (list, create, edit of
+the conjuntos), **System Settings** (list, create, edit of global configuration rows),
+**Memberships** (list of tenant members, invite with optional apartment assignment, and a
+filterable invitations view), and
+**Notification Templates / Messages** (template editing, sent-message read-only views). Future
+modules follow the same conventions described here.
 
 ---
 
@@ -39,8 +42,9 @@ modules (permissions, memberships, notifications) follow the same conventions de
 - **Base URL:** `http://localhost:5083/api/v1/` (configurable via `environment`). **Swagger:** `/swagger/index.html`.
 - **Paged responses:** `PagedResult<T> = { items, page, pageSize, totalCount, totalPages }`.
 - **Errors:** RFC 9457 `ProblemDetails` → `{ type, title, status, detail, errors?: [{ property, message }] }`.
-- **Multi-tenancy:** the endpoints this panel uses (`auth`, `roles`, `permissions`, `tenants`) are
-  **cross-tenant** and do **not** send the `X-Tenant` header.
+- **Multi-tenancy:** most endpoints this panel uses (`auth`, `roles`, `permissions`, `tenants`) are
+  **cross-tenant** and do **not** send the `X-Tenant` header. Tenant-scoped endpoints (`apartments`,
+  `memberships`) require the `X-Tenant: <slug>` header and receive the slug via a `?tenant=` query param.
 - **Auth:** `POST /auth/login` (`{phone,password}` → tokens), `/auth/refresh`, `/auth/logout`. The JWT is
   tenant-agnostic and carries **no** permissions; the SuperAdmin is identified by a `role` claim that
   includes **`SuperAdmin`**. Fine-grained permissions are enforced **server-side** (a `403` surfaces as `ProblemDetails`).
@@ -67,9 +71,12 @@ src/app/
 └── features/    # lazy domains, each with data-access/ + components
     ├── auth/             # blank layout → login
     ├── roles/            # list + form (create/edit share one component)
-    ├── users/            # list + form (create/edit share one component)
-    ├── tenants/          # list + form (create/edit share one component)
-    └── system-settings/  # list + form (create/edit share one component)
+    ├── users/                  # list + form (create/edit share one component)
+    ├── tenants/                # list + form (create/edit share one component)
+    ├── system-settings/        # list + form (create/edit share one component)
+    ├── notification-templates/ # list + edit-only form (no create/delete)
+    ├── notification-messages/  # read-only lists of sent messages (email/push/in-app)
+    └── memberships/            # tenant-scoped: member list, invitations list + invite form
 ```
 
 - **`core/`**: single instances and cross-cutting concerns; no business UI.
@@ -109,6 +116,23 @@ refresh-and-retry on 401 and maps `ProblemDetails` to user-facing messages. Guar
 **immutable on edit** (disabled with a hint, like Roles' `scope`), and the list's `name`/`status`
 filters are **wired ahead of API support** — the UI and query params are in place, but `GET /tenants`
 does not yet read them, so they no-op until the backend adds them.
+
+**Notification Templates** is a variation worth noting: the API exposes **only list + edit** (`GET`/`PUT
+/notification-templates`), so there is **no create and no delete** — the form is edit-only and the list has
+no "+ Nuevo" action. Templates are seeded by the backend; their `type` is **immutable** (shown disabled),
+and `localization` is read-only but part of the `PUT` body, so its loaded value is re-sent unchanged. The
+form has **conditional per-channel sections** (Email / In-App / Push) revealed by their enable toggles, and
+the email body is edited with a **WYSIWYG editor** (`ngx-quill`, configured via `provideQuillConfig` in
+`app.config.ts`; the Quill theme CSS is registered in `angular.json`). This module also introduced
+**grouped sidebar navigation**: a "Notificaciones" parent (collapsible via a signal, no Bootstrap JS) with a
+"Plantillas" child.
+
+**Notification Messages** are the **materialized** (already-sent) notifications, exposed as three
+**read-only** paged lists — Email (`GET /messages/email`), Push (`GET /messages/push`), and In-App
+(`GET /notifications`). Each is a plain `DataTable` list with its own signal-based service (no forms, no row
+actions, since the API has no per-message detail/edit). Email and Push accept a `status` filter
+(`AdminDeliveryStatus`: Pending/Sent/Failed); In-App has none. They hang off the same "Notificaciones"
+sidebar group as the templates, under the `notification-messages/{email|push|in-app}` routes.
 
 The `DataTable` is generic and presentational: columns are declared as data (value + optional badge/link
 functions), pagination is server-side via `PagedResult`, and it renders loading/error/empty states itself.

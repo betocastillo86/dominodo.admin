@@ -1,0 +1,99 @@
+<app-page-header title="Membresías" [pretitle]="tenantSlug || 'Conjunto'">
+  <a
+    [routerLink]="['/memberships', 'invite']"
+    [queryParams]="navQueryParams"
+    actions
+    class="btn btn-primary"
+  >
+    + Invitar miembro
+  </a>
+</app-page-header>
+
+<div class="page-body">
+  <div class="container-xl">
+    <div class="d-flex align-items-center mb-3">
+      <a [routerLink]="backLink" class="btn btn-ghost-secondary btn-sm">
+        ← Volver al conjunto
+      </a>
+    </div>
+
+    @if (!tenantSlug) {
+      <div class="alert alert-warning">
+        No se especificó un conjunto. Accede desde la página de edición del conjunto.
+      </div>
+    } @else {
+      <!-- Miembros actuales -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <h3 class="card-title">Miembros actuales</h3>
+        </div>
+        <app-data-table
+          [columns]="memberColumns"
+          [rows]="members()"
+          [paging]="paging()"
+          [loading]="loading()"
+          [error]="error()"
+          [rowKey]="memberRowKey"
+          (pageChange)="onMembersPageChange($event)"
+        />
+      </div>
+
+      <!-- Invitaciones -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Invitaciones</h3>
+        </div>
+        <div class="card-body border-bottom py-3">
+          <div class="row g-2">
+            <div class="col-12 col-md-4">
+              <input
+                type="text"
+                class="form-control"
+                placeholder="Buscar por correo o teléfono…"
+                [formControl]="searchControl"
+              />
+            </div>
+            <div class="col-6 col-md-2">
+              <select class="form-select" [formControl]="usedControl">
+                <option value="">Todos los estados</option>
+                <option value="false">Pendientes</option>
+                <option value="true">Aceptadas</option>
+              </select>
+            </div>
+            <div class="col-6 col-md-2">
+              <select class="form-select" [formControl]="registeredControl">
+                <option value="">Registro: todos</option>
+                <option value="true">Registrados</option>
+                <option value="false">No registrados</option>
+              </select>
+            </div>
+            <div class="col-6 col-md-2">
+              <select class="form-select" [formControl]="expiredControl">
+                <option value="">Vigencia: todas</option>
+                <option value="false">Vigentes</option>
+                <option value="true">Expiradas</option>
+              </select>
+            </div>
+            <div class="col-6 col-md-2">
+              <select class="form-select" [formControl]="roleControl">
+                <option value="">Todos los roles</option>
+                @for (role of roles(); track role.id) {
+                  <option [value]="role.id">{{ role.name }}</option>
+                }
+              </select>
+            </div>
+          </div>
+        </div>
+        <app-data-table
+          [columns]="invitationColumns"
+          [rows]="invitations()"
+          [paging]="invitationsPaging()"
+          [loading]="invitationsLoading()"
+          [error]="invitationsError()"
+          [rowKey]="invitationRowKey"
+          (pageChange)="onInvitationsPageChange($event)"
+        />
+      </div>
+    }
+  </div>
+</div>

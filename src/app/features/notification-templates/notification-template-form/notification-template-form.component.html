@@ -1,0 +1,177 @@
+<app-page-header title="Editar plantilla" pretitle="Notificaciones" />
+
+<div class="page-body">
+  <div class="container-xl">
+    <div class="card">
+      <div class="card-body">
+        @if (loadingDetail()) {
+          <app-spinner />
+        } @else {
+          <form [formGroup]="form" (ngSubmit)="onSubmit()">
+            <div class="row g-3">
+              <div class="col-12 col-md-6">
+                <label class="form-label" for="tpl-type">Tipo</label>
+                <select id="tpl-type" class="form-select" formControlName="type">
+                  <option value="">—</option>
+                  @for (type of types; track type) {
+                    <option [value]="type">{{ typeLabels[type] }}</option>
+                  }
+                </select>
+                <small class="form-hint">El tipo identifica la plantilla y no puede modificarse.</small>
+              </div>
+
+              <div class="col-12 col-md-6">
+                <label class="form-label" for="tpl-localization">Idioma</label>
+                <input
+                  id="tpl-localization"
+                  type="text"
+                  class="form-control"
+                  formControlName="localization"
+                  placeholder="—"
+                />
+                <small class="form-hint">El idioma se define al crear la plantilla.</small>
+              </div>
+            </div>
+
+            <div class="mb-3 mt-3">
+              <label class="form-label required" for="tpl-name">Nombre</label>
+              <input
+                id="tpl-name"
+                type="text"
+                class="form-control"
+                formControlName="name"
+                [class.is-invalid]="form.controls.name.invalid && form.controls.name.touched"
+              />
+              @if (form.controls.name.invalid && form.controls.name.touched) {
+                <div class="invalid-feedback">
+                  @if (form.controls.name.errors?.['server']) {
+                    {{ form.controls.name.errors?.['server'] }}
+                  } @else if (form.controls.name.errors?.['required']) {
+                    El nombre es obligatorio.
+                  } @else if (form.controls.name.errors?.['maxlength']) {
+                    El nombre no puede superar los 200 caracteres.
+                  }
+                </div>
+              }
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label" for="tpl-description">Descripción</label>
+              <textarea
+                id="tpl-description"
+                class="form-control"
+                formControlName="description"
+                rows="2"
+              ></textarea>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" formControlName="isActive" />
+                <span class="form-check-label">Plantilla activa</span>
+              </label>
+            </div>
+
+            <hr />
+
+            <!-- Email channel -->
+            <div class="mb-3">
+              <label class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" formControlName="emailEnabled" />
+                <span class="form-check-label d-inline-flex align-items-center gap-1">
+                  <tabler-icon name="mail" />
+                  Correo electrónico
+                </span>
+              </label>
+            </div>
+            @if (form.controls.emailEnabled.value) {
+              <div class="card card-sm mb-3">
+                <div class="card-body">
+                  <div class="mb-3">
+                    <label class="form-label" for="tpl-email-subject">Asunto</label>
+                    <input
+                      id="tpl-email-subject"
+                      type="text"
+                      class="form-control"
+                      formControlName="emailSubject"
+                    />
+                  </div>
+                  <div>
+                    <label class="form-label">Cuerpo (HTML)</label>
+                    <quill-editor
+                      formControlName="emailBodyHtml"
+                      [styles]="{ minHeight: '200px' }"
+                      class="d-block"
+                    />
+                  </div>
+                </div>
+              </div>
+            }
+
+            <!-- In-App channel -->
+            <div class="mb-3">
+              <label class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" formControlName="inAppEnabled" />
+                <span class="form-check-label d-inline-flex align-items-center gap-1">
+                  <tabler-icon name="apps" />
+                  Notificación en la app
+                </span>
+              </label>
+            </div>
+            @if (form.controls.inAppEnabled.value) {
+              <div class="card card-sm mb-3">
+                <div class="card-body">
+                  <label class="form-label" for="tpl-inapp-text">Texto</label>
+                  <textarea
+                    id="tpl-inapp-text"
+                    class="form-control"
+                    formControlName="inAppText"
+                    rows="3"
+                  ></textarea>
+                </div>
+              </div>
+            }
+
+            <!-- Push channel -->
+            <div class="mb-3">
+              <label class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" formControlName="pushEnabled" />
+                <span class="form-check-label d-inline-flex align-items-center gap-1">
+                  <tabler-icon name="device-mobile" />
+                  Notificación push
+                </span>
+              </label>
+            </div>
+            @if (form.controls.pushEnabled.value) {
+              <div class="card card-sm mb-3">
+                <div class="card-body">
+                  <label class="form-label" for="tpl-push-text">Texto</label>
+                  <textarea
+                    id="tpl-push-text"
+                    class="form-control"
+                    formControlName="pushText"
+                    rows="3"
+                  ></textarea>
+                </div>
+              </div>
+            }
+
+            @if (error()) {
+              <div class="alert alert-danger" role="alert">{{ error() }}</div>
+            }
+
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn btn-primary" [disabled]="saving()">
+                @if (saving()) {
+                  <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                }
+                Guardar
+              </button>
+              <a routerLink="/notification-templates" class="btn btn-link">Cancelar</a>
+            </div>
+          </form>
+        }
+      </div>
+    </div>
+  </div>
+</div>

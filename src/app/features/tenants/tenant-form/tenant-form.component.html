@@ -209,6 +209,35 @@
 @if (mode === 'edit' && tenantSlug()) {
   <div class="page-body pt-0">
     <div class="container-xl">
+      <div class="card mb-3">
+        <div class="card-header">
+          <h3 class="card-title">Membresías</h3>
+          <div class="card-options">
+            <a
+              [routerLink]="['/memberships', 'invite']"
+              [queryParams]="{ tenant: tenantSlug(), tenantId }"
+              class="btn btn-sm btn-primary me-2"
+            >+ Invitar miembro</a>
+            <a
+              [routerLink]="['/memberships']"
+              [queryParams]="{ tenant: tenantSlug(), tenantId }"
+              class="btn btn-sm btn-ghost-secondary"
+            >Ver miembros e invitaciones</a>
+          </div>
+        </div>
+        <div class="card-body">
+          <p class="text-secondary mb-0">
+            Gestiona los miembros e invitaciones del conjunto desde la sección de membresías.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
+@if (mode === 'edit' && tenantSlug()) {
+  <div class="page-body pt-0">
+    <div class="container-xl">
       <div class="card">
         <div class="card-header">
           <h3 class="card-title">Apartamentos</h3>

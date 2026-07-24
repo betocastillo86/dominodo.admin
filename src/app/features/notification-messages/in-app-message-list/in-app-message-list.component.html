@@ -1,0 +1,15 @@
+<app-page-header title="En la app" pretitle="Notificaciones" />
+
+<div class="page-body">
+  <div class="card">
+    <app-data-table
+      [columns]="columns"
+      [rows]="messages()"
+      [paging]="paging()"
+      [loading]="loading()"
+      [error]="error()"
+      [rowKey]="rowKey"
+      (pageChange)="onPageChange($event)"
+    />
+  </div>
+</div>
