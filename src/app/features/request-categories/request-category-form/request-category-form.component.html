@@ -1,0 +1,111 @@
+<app-page-header
+  [title]="mode === 'edit' ? 'Editar categoría' : 'Nueva categoría'"
+  pretitle="Solicitudes"
+/>
+
+<div class="page-body">
+  <div class="container-xl">
+    <div class="card">
+      <div class="card-body">
+        @if (loadingDetail()) {
+          <app-spinner />
+        } @else {
+          <form [formGroup]="form" (ngSubmit)="onSubmit()">
+            <div class="mb-3">
+              <label class="form-label required" for="cat-code">Código</label>
+              <input
+                id="cat-code"
+                type="text"
+                class="form-control"
+                formControlName="code"
+                [class.is-invalid]="form.controls.code.invalid && form.controls.code.touched"
+              />
+              @if (mode === 'edit') {
+                <small class="form-hint">El código no puede modificarse una vez creada la categoría.</small>
+              }
+              @if (form.controls.code.invalid && form.controls.code.touched) {
+                <div class="invalid-feedback">
+                  @if (form.controls.code.errors?.['server']) {
+                    {{ form.controls.code.errors?.['server'] }}
+                  } @else if (form.controls.code.errors?.['required']) {
+                    El código es obligatorio.
+                  } @else if (form.controls.code.errors?.['maxlength']) {
+                    El código no puede superar los 50 caracteres.
+                  }
+                </div>
+              }
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label required" for="cat-name">Nombre</label>
+              <input
+                id="cat-name"
+                type="text"
+                class="form-control"
+                formControlName="name"
+                [class.is-invalid]="form.controls.name.invalid && form.controls.name.touched"
+              />
+              @if (form.controls.name.invalid && form.controls.name.touched) {
+                <div class="invalid-feedback">
+                  @if (form.controls.name.errors?.['server']) {
+                    {{ form.controls.name.errors?.['server'] }}
+                  } @else if (form.controls.name.errors?.['required']) {
+                    El nombre es obligatorio.
+                  } @else if (form.controls.name.errors?.['maxlength']) {
+                    El nombre no puede superar los 100 caracteres.
+                  }
+                </div>
+              }
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label" for="cat-description">Descripción</label>
+              <textarea
+                id="cat-description"
+                class="form-control"
+                formControlName="description"
+                rows="2"
+                [class.is-invalid]="
+                  form.controls.description.invalid && form.controls.description.touched
+                "
+              ></textarea>
+              @if (form.controls.description.invalid && form.controls.description.touched) {
+                <div class="invalid-feedback">
+                  @if (form.controls.description.errors?.['maxlength']) {
+                    La descripción no puede superar los 255 caracteres.
+                  }
+                </div>
+              }
+            </div>
+
+            <div class="mb-3">
+              <label class="form-check form-switch">
+                <input
+                  type="checkbox"
+                  class="form-check-input"
+                  formControlName="isActive"
+                  id="cat-isActive"
+                />
+                <span class="form-check-label" for="cat-isActive">Activo</span>
+              </label>
+            </div>
+
+            @if (error()) {
+              <div class="alert alert-danger" role="alert">{{ error() }}</div>
+            }
+
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn btn-primary" [disabled]="saving()">
+                @if (saving()) {
+                  <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                }
+                Guardar
+              </button>
+              <a routerLink="/request-categories" class="btn btn-link">Cancelar</a>
+            </div>
+          </form>
+        }
+      </div>
+    </div>
+  </div>
+</div>

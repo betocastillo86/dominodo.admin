@@ -56,6 +56,18 @@ export const routes: Routes = [
         loadChildren: () =>
           import('./features/memberships/memberships.routes').then((m) => m.membershipsRoutes),
       },
+      {
+        path: 'requests',
+        loadChildren: () =>
+          import('./features/requests/requests.routes').then((m) => m.requestsRoutes),
+      },
+      {
+        path: 'request-categories',
+        loadChildren: () =>
+          import('./features/request-categories/request-categories.routes').then(
+            (m) => m.requestCategoriesRoutes,
+          ),
+      },
       { path: '', pathMatch: 'full', redirectTo: 'roles' },
     ],
   },

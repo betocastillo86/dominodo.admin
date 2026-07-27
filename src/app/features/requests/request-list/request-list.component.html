@@ -1,0 +1,78 @@
+<app-page-header title="Solicitudes" pretitle="Administración" />
+
+<div class="page-body">
+  <div class="card">
+    <div class="card-header">
+      <div class="row g-2">
+        <div class="col-12 col-sm-6 col-lg-4">
+          <input
+            type="text"
+            class="form-control"
+            placeholder="Buscar…"
+            [formControl]="searchControl"
+          />
+        </div>
+        <div class="col-12 col-sm-6 col-lg-4">
+          <select class="form-select" [formControl]="tenantControl">
+            <option value="">Todos los conjuntos</option>
+            @for (t of tenants(); track t.id) {
+              <option [value]="t.id">{{ t.name }}</option>
+            }
+          </select>
+        </div>
+        <div class="col-12 col-sm-4 col-lg-4">
+          <select class="form-select" [formControl]="statusControl">
+            <option value="">Todos los estados</option>
+            @for (opt of statusOptions; track opt.value) {
+              <option [value]="opt.value">{{ opt.label }}</option>
+            }
+          </select>
+        </div>
+        <div class="col-12 col-sm-4 col-lg-4">
+          <select class="form-select" [formControl]="typeControl">
+            <option value="">Todos los tipos</option>
+            @for (opt of typeOptions; track opt.value) {
+              <option [value]="opt.value">{{ opt.label }}</option>
+            }
+          </select>
+        </div>
+        <div class="col-12 col-sm-4 col-lg-4">
+          <select class="form-select" [formControl]="priorityControl">
+            <option value="">Todas las prioridades</option>
+            @for (opt of priorityOptions; track opt.value) {
+              <option [value]="opt.value">{{ opt.label }}</option>
+            }
+          </select>
+        </div>
+        <div class="col-12 col-sm-4 col-lg-4">
+          <select class="form-select" [formControl]="visibilityControl">
+            <option value="">Toda visibilidad</option>
+            <option value="Public">Pública</option>
+            <option value="Private">Privada</option>
+          </select>
+        </div>
+        <div class="col-12 col-sm-4 col-lg-4">
+          <select class="form-select" [formControl]="categoryControl">
+            <option value="">
+              {{ tenantControl.value ? 'Todas las categorías' : 'Selecciona un conjunto…' }}
+            </option>
+            @for (cat of categories(); track cat.id) {
+              <option [value]="cat.id">{{ cat.name }}</option>
+            }
+          </select>
+        </div>
+      </div>
+    </div>
+    <app-data-table
+      [columns]="columns()"
+      [rows]="requests()"
+      [paging]="paging()"
+      [loading]="loading()"
+      [error]="error()"
+      [rowKey]="rowKey"
+      [actionLink]="editLink"
+      [actionQueryParams]="editQueryParams"
+      (pageChange)="onPageChange($event)"
+    />
+  </div>
+</div>

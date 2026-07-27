@@ -4,6 +4,9 @@ export type ResidentRelationType = 'Owner' | 'Renter';
 export interface MembershipDto {
   userId: string;
   tenantId: string;
+  userName: string;
+  phone: string;
+  email: string | null;
   roleId: number;
   roleName: string;
   status: string;

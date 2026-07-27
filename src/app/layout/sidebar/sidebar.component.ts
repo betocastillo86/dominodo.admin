@@ -31,12 +31,20 @@ export class SidebarComponent {
   /** Mobile collapse state (avoids depending on Bootstrap's JS). */
   readonly menuOpen = signal(false);
   /** Labels of expanded nav groups (avoids depending on Bootstrap's JS). */
-  private readonly openGroups = signal<Set<string>>(new Set(['Notificaciones']));
+  private readonly openGroups = signal<Set<string>>(new Set(['Notificaciones', 'Solicitudes']));
 
   readonly navItems: readonly NavItem[] = [
     { label: 'Roles', path: '/roles', icon: 'shield-lock' },
     { label: 'Conjuntos', path: '/tenants', icon: 'building-community' },
     { label: 'Usuarios', path: '/users', icon: 'user' },
+    {
+      label: 'Solicitudes',
+      icon: 'list-details',
+      children: [
+        { label: 'Lista', path: '/requests' },
+        { label: 'Categorías', path: '/request-categories' },
+      ],
+    },
     { label: 'Configuración', path: '/system-settings', icon: 'settings' },
     {
       label: 'Notificaciones',

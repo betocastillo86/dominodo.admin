@@ -1,0 +1,358 @@
+<app-page-header [title]="pageTitle()" pretitle="Solicitudes">
+  <a routerLink="/requests" actions class="btn btn-secondary">Volver al listado</a>
+</app-page-header>
+
+<div class="page-body">
+  <div class="container-xl">
+
+    @if (loadError()) {
+      <div class="alert alert-danger" role="alert">{{ loadError() }}</div>
+    } @else if (loadingInit()) {
+      <app-spinner />
+    } @else if (detail(); as d) {
+
+      <!-- Edit fields -->
+      <div class="card mb-3">
+        <div class="card-header">
+          <h3 class="card-title">Datos de la solicitud</h3>
+          <div class="card-options text-secondary small">
+            Conjunto: <strong>{{ tenantName() ?? d.tenantId }}</strong>
+            &nbsp;·&nbsp; Código: <strong>{{ d.code }}</strong>
+          </div>
+        </div>
+        <div class="card-body">
+          <form [formGroup]="editForm" (ngSubmit)="onSubmitEdit()">
+            <div class="row g-3">
+              <div class="col-12 col-md-6">
+                <label class="form-label required" for="req-type">Tipo</label>
+                <select id="req-type" class="form-select" formControlName="type">
+                  @for (opt of typeOptions; track opt.value) {
+                    <option [value]="opt.value">{{ opt.label }}</option>
+                  }
+                </select>
+              </div>
+
+              <div class="col-12 col-md-6">
+                <label class="form-label required" for="req-priority">Prioridad</label>
+                <select id="req-priority" class="form-select" formControlName="priority">
+                  @for (opt of priorityOptions; track opt.value) {
+                    <option [value]="opt.value">{{ opt.label }}</option>
+                  }
+                </select>
+              </div>
+
+              <div class="col-12">
+                <label class="form-label required" for="req-title">Título</label>
+                <input
+                  id="req-title"
+                  type="text"
+                  class="form-control"
+                  formControlName="title"
+                  [class.is-invalid]="editForm.controls.title.invalid && editForm.controls.title.touched"
+                />
+                @if (editForm.controls.title.invalid && editForm.controls.title.touched) {
+                  <div class="invalid-feedback">
+                    @if (editForm.controls.title.errors?.['required']) {
+                      El título es obligatorio.
+                    } @else if (editForm.controls.title.errors?.['maxlength']) {
+                      El título no puede superar los 200 caracteres.
+                    }
+                  </div>
+                }
+              </div>
+
+              <div class="col-12">
+                <label class="form-label required" for="req-description">Descripción</label>
+                <textarea
+                  id="req-description"
+                  class="form-control"
+                  formControlName="description"
+                  rows="4"
+                  [class.is-invalid]="editForm.controls.description.invalid && editForm.controls.description.touched"
+                ></textarea>
+                @if (editForm.controls.description.invalid && editForm.controls.description.touched) {
+                  <div class="invalid-feedback">La descripción es obligatoria.</div>
+                }
+              </div>
+
+              <div class="col-12 col-md-6">
+                <label class="form-label required" for="req-category">Categoría</label>
+                <select
+                  id="req-category"
+                  class="form-select"
+                  formControlName="categoryId"
+                  [class.is-invalid]="editForm.controls.categoryId.invalid && editForm.controls.categoryId.touched"
+                >
+                  <option value="" disabled>Selecciona una categoría…</option>
+                  @for (cat of categories(); track cat.id) {
+                    <option [value]="cat.id">{{ cat.name }}</option>
+                  }
+                </select>
+                @if (editForm.controls.categoryId.invalid && editForm.controls.categoryId.touched) {
+                  <div class="invalid-feedback">La categoría es obligatoria.</div>
+                }
+              </div>
+
+              <div class="col-12 col-md-6">
+                <label class="form-label" for="req-location">Ubicación</label>
+                <input
+                  id="req-location"
+                  type="text"
+                  class="form-control"
+                  formControlName="location"
+                />
+              </div>
+
+              <div class="col-12 col-md-6">
+                <label class="form-label required" for="req-visibility">Visibilidad</label>
+                <select id="req-visibility" class="form-select" formControlName="visibility">
+                  @for (opt of visibilityOptions; track opt.value) {
+                    <option [value]="opt.value">{{ opt.label }}</option>
+                  }
+                </select>
+              </div>
+
+              <div class="col-12">
+                <label class="form-label" for="req-metadata">Metadata (JSON)</label>
+                <textarea
+                  id="req-metadata"
+                  class="form-control"
+                  formControlName="metadata"
+                  rows="2"
+                ></textarea>
+              </div>
+            </div>
+
+            @if (editError()) {
+              <div class="alert alert-danger mt-3" role="alert">{{ editError() }}</div>
+            }
+
+            <div class="mt-3 d-flex gap-2">
+              <button type="submit" class="btn btn-primary" [disabled]="savingEdit()">
+                @if (savingEdit()) {
+                  <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                }
+                Guardar cambios
+              </button>
+              <a routerLink="/requests" class="btn btn-link">Cancelar</a>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Status & Participant — two columns -->
+      <div class="row g-3 mb-3">
+
+        <!-- Change status -->
+        <div class="col-12 col-md-6">
+          <div class="card h-100">
+            <div class="card-header">
+              <h3 class="card-title">Cambiar estado</h3>
+              <div class="card-options">
+                <span [class]="statusBadge(d.status)">{{ statusLabel(d.status) }}</span>
+              </div>
+            </div>
+            <div class="card-body">
+              <form [formGroup]="statusForm" (ngSubmit)="onSubmitStatus()">
+                <div class="mb-3">
+                  <label class="form-label required" for="req-status">Nuevo estado</label>
+                  <select id="req-status" class="form-select" formControlName="status">
+                    @for (opt of statusOptions; track opt.value) {
+                      <option [value]="opt.value">{{ opt.label }}</option>
+                    }
+                  </select>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label" for="req-status-note">Nota (opcional)</label>
+                  <textarea
+                    id="req-status-note"
+                    class="form-control"
+                    formControlName="note"
+                    rows="2"
+                  ></textarea>
+                </div>
+                @if (statusError()) {
+                  <div class="alert alert-danger" role="alert">{{ statusError() }}</div>
+                }
+                <button type="submit" class="btn btn-warning" [disabled]="savingStatus()">
+                  @if (savingStatus()) {
+                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                  }
+                  Cambiar estado
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <!-- Add participant -->
+        <div class="col-12 col-md-6">
+          <div class="card h-100">
+            <div class="card-header">
+              <h3 class="card-title">Agregar participante</h3>
+            </div>
+            <div class="card-body">
+              <form (ngSubmit)="onSubmitParticipant()">
+                <div class="mb-3">
+                  <label class="form-label required" for="req-user-search">Buscar usuario</label>
+                  <input
+                    id="req-user-search"
+                    type="text"
+                    class="form-control"
+                    autocomplete="off"
+                    placeholder="Nombre, teléfono o correo…"
+                    [formControl]="participantSearch"
+                    [ngbTypeahead]="searchUsers"
+                    [resultFormatter]="userFormatter"
+                    [inputFormatter]="userFormatter"
+                    [editable]="false"
+                    (selectItem)="onSelectUser($event)"
+                    (input)="onSearchInput()"
+                    [class.is-invalid]="participantSubmitted() && !selectedUser()"
+                  >
+                  <small class="form-hint">Se buscan usuarios con membresía en este conjunto.</small>
+                  @if (participantSubmitted() && !selectedUser()) {
+                    <div class="text-danger small mt-1">Selecciona un usuario de la lista.</div>
+                  }
+                </div>
+
+                @if (selectedUser(); as u) {
+                  <div class="mb-3 d-flex align-items-center gap-2 p-2 border rounded bg-secondary-lt">
+                    <div class="flex-fill">
+                      <div class="fw-medium">{{ u.userName }}</div>
+                      <div class="text-secondary small">
+                        {{ u.phone }}{{ u.email ? ' · ' + u.email : '' }} · {{ u.roleName }}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      class="btn btn-icon btn-sm"
+                      aria-label="Quitar selección"
+                      (click)="clearSelectedUser()"
+                    >
+                      <tabler-icon name="x" />
+                    </button>
+                  </div>
+                }
+
+                @if (participantError()) {
+                  <div class="alert alert-danger" role="alert">{{ participantError() }}</div>
+                }
+                <button
+                  type="submit"
+                  class="btn btn-primary"
+                  [disabled]="savingParticipant() || !selectedUser()"
+                >
+                  @if (savingParticipant()) {
+                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                  }
+                  <tabler-icon name="user-plus" class="me-1" />
+                  Agregar
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Participants list -->
+      @if (d.participants.length > 0) {
+        <div class="card mb-3">
+          <div class="card-header">
+            <h3 class="card-title">Participantes ({{ d.participants.length }})</h3>
+          </div>
+          <div class="table-responsive">
+            <table class="table card-table table-vcenter">
+              <thead>
+                <tr>
+                  <th>Usuario ID</th>
+                  <th>Tipo</th>
+                  <th>Fuente</th>
+                  <th>Desde</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (p of d.participants; track trackParticipant($index, p)) {
+                  <tr>
+                    <td class="text-secondary font-monospace small">{{ p.userId }}</td>
+                    <td><span class="badge bg-blue-lt">{{ p.participantType }}</span></td>
+                    <td class="text-secondary">{{ p.source }}</td>
+                    <td class="text-secondary">{{ p.joinedAtUtc | date:'short' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      }
+
+      <!-- Status history -->
+      @if (d.statusHistory.length > 0) {
+        <div class="card mb-3">
+          <div class="card-header">
+            <h3 class="card-title">Historial de estado</h3>
+          </div>
+          <div class="table-responsive">
+            <table class="table card-table table-vcenter">
+              <thead>
+                <tr>
+                  <th>De</th>
+                  <th>A</th>
+                  <th>Por</th>
+                  <th>Fecha</th>
+                  <th>Nota</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (h of d.statusHistory; track trackHistoryEntry($index, h)) {
+                  <tr>
+                    <td>
+                      @if (h.fromStatus) {
+                        <span [class]="statusBadge(h.fromStatus)">{{ statusLabel(h.fromStatus) }}</span>
+                      } @else {
+                        <span class="text-secondary">—</span>
+                      }
+                    </td>
+                    <td><span [class]="statusBadge(h.toStatus)">{{ statusLabel(h.toStatus) }}</span></td>
+                    <td class="text-secondary font-monospace small">{{ h.changedByUserId.slice(0, 8) }}…</td>
+                    <td class="text-secondary">{{ h.changedAtUtc | date:'short' }}</td>
+                    <td class="text-secondary">{{ h.note ?? '—' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      }
+
+      <!-- Updates / timeline -->
+      @if (d.updates.length > 0) {
+        <div class="card mb-3">
+          <div class="card-header">
+            <h3 class="card-title">Actualizaciones</h3>
+          </div>
+          <div class="card-body p-0">
+            <ul class="list-group list-group-flush">
+              @for (u of d.updates; track trackUpdate($index, u)) {
+                <li class="list-group-item">
+                  <div class="d-flex align-items-center mb-1">
+                    <span class="badge bg-secondary-lt me-2">{{ u.type }}</span>
+                    @if (u.isInternal) {
+                      <span class="badge bg-yellow-lt me-2">Interno</span>
+                    }
+                    <small class="text-secondary ms-auto">{{ u.createdAtUtc | date:'short' }}</small>
+                  </div>
+                  @if (u.body) {
+                    <p class="mb-0">{{ u.body }}</p>
+                  }
+                  <small class="text-secondary font-monospace">{{ u.authorUserId.slice(0, 8) }}…</small>
+                </li>
+              }
+            </ul>
+          </div>
+        </div>
+      }
+
+    }
+  </div>
+</div>

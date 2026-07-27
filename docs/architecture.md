@@ -16,9 +16,10 @@ role), who manages resources that do not depend on a specific tenant.
 Current modules: **Authentication** (login by phone + password, restricted to SuperAdmin), **Roles**
 (list, create, edit), **Users** (list with filters, create, edit), **Tenants** (list, create, edit of
 the conjuntos), **System Settings** (list, create, edit of global configuration rows),
-**Memberships** (list of tenant members, invite with optional apartment assignment, and a
-filterable invitations view), and
-**Notification Templates / Messages** (template editing, sent-message read-only views). Future
+**Memberships** (a single page showing current members plus a filterable invitations section, and
+an invite form with optional apartment assignment), and
+**Notification Templates / Messages** (template editing, sent-message read-only views),
+and **Request Categories** (cross-tenant catalog of PQRS categories, list + create + edit). Future
 modules follow the same conventions described here.
 
 ---
@@ -76,7 +77,9 @@ src/app/
     ├── system-settings/        # list + form (create/edit share one component)
     ├── notification-templates/ # list + edit-only form (no create/delete)
     ├── notification-messages/  # read-only lists of sent messages (email/push/in-app)
-    └── memberships/            # tenant-scoped: member list, invitations list + invite form
+    ├── memberships/            # tenant-scoped: members + invitations on one page, + invite form
+    ├── requests/               # cross-tenant PQRS list + detail/edit page (edit, status, participant)
+    └── request-categories/     # cross-tenant catalog: list, create, edit of PQRS categories
 ```
 
 - **`core/`**: single instances and cross-cutting concerns; no business UI.
@@ -126,6 +129,29 @@ the email body is edited with a **WYSIWYG editor** (`ngx-quill`, configured via 
 `app.config.ts`; the Quill theme CSS is registered in `angular.json`). This module also introduced
 **grouped sidebar navigation**: a "Notificaciones" parent (collapsible via a signal, no Bootstrap JS) with a
 "Plantillas" child.
+
+**Request Categories** is a cross-tenant catalog (`GET/POST/PUT /request-categories`, no `X-Tenant`
+header) that lives under the "Solicitudes" sidebar group alongside the requests list. It follows the
+standard list + form pattern: `code` is set on create and **immutable on edit** (disabled with a
+hint), `isActive` is a boolean toggle, and the list accepts `name`, `code`, and `isActive` filters.
+
+**Requests** is the PQRS management module. It lists cross-tenant requests from `GET /requests`
+(filtered by tenant, status, type, priority, visibility, category, or free-text search) and provides
+a detail/edit page at `/requests/:id/edit?tenantId=<uuid>`. A request's **category is a `categoryId`**
+referencing the tenant-scoped `request-categories` catalog (`GET /request-categories`, `X-Tenant`),
+so the edit form renders it as a required `<select>` populated from that tenant's categories. In the
+list, the category filter is **dependent on the tenant filter** — it stays disabled until a tenant is
+picked, then loads that tenant's categories; the `categoryId` query param is **wired ahead of API
+support** (like the tenants list filters) and no-ops until `GET /requests` reads it. The detail page bundles three write
+operations in one view: edit request fields (`PUT /requests/{id}`), change lifecycle status with
+an optional note (`PUT /requests/{id}/status`), and add a participant
+(`POST /requests/{id}/participants`). The participant picker is an **ng-bootstrap `NgbTypeahead`**
+autocomplete that searches the tenant's memberships server-side (`GET /memberships?search=`,
+debounced, `X-Tenant`-scoped) and submits the chosen membership's `userId` — no raw UUID entry.
+Searching memberships (rather than users) guarantees the target already belongs to the tenant.
+Because write endpoints require the `X-Tenant` header (a slug), the detail component resolves the
+slug from the `tenantId` query param by calling `TenantsService.getById()` before loading the
+request detail.
 
 **Notification Messages** are the **materialized** (already-sent) notifications, exposed as three
 **read-only** paged lists — Email (`GET /messages/email`), Push (`GET /messages/push`), and In-App

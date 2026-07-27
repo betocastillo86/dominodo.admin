@@ -1,0 +1,37 @@
+<app-page-header title="Categorías" pretitle="Solicitudes">
+  <a routerLink="/request-categories/new" actions class="btn btn-primary">+ Nueva categoría</a>
+</app-page-header>
+
+<div class="page-body">
+  <div class="card">
+    <div class="card-header">
+      <div class="row g-2">
+        <div class="col-12 col-sm-6">
+          <input
+            type="text"
+            class="form-control"
+            placeholder="Buscar por nombre…"
+            [formControl]="nameControl"
+          />
+        </div>
+        <div class="col-12 col-sm-6">
+          <select class="form-select" [formControl]="isActiveControl">
+            <option value="">Todos los estados</option>
+            <option value="true">Activo</option>
+            <option value="false">Inactivo</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <app-data-table
+      [columns]="columns"
+      [rows]="categories()"
+      [paging]="paging()"
+      [loading]="loading()"
+      [error]="error()"
+      [rowKey]="rowKey"
+      [actionLink]="editLink"
+      (pageChange)="onPageChange($event)"
+    />
+  </div>
+</div>

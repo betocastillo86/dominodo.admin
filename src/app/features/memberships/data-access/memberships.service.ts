@@ -98,6 +98,23 @@ export class MembershipsService {
       });
   }
 
+  /**
+   * Free-text search of memberships scoped to a tenant, for autocomplete/typeahead.
+   * Returns just the items (no signal side-effects) so callers can pipe it per keystroke.
+   */
+  search(tenantSlug: string, search: string, take = 10): Observable<MembershipDto[]> {
+    const params = new HttpParams()
+      .set('page', 1)
+      .set('pageSize', take)
+      .set('search', search);
+    return this.http
+      .get<PagedResult<MembershipDto>>(this.base, {
+        params,
+        headers: { 'X-Tenant': tenantSlug },
+      })
+      .pipe(map((r) => r.items));
+  }
+
   invite(body: InviteMemberRequest, tenantSlug: string): Observable<void> {
     return this.http.post<void>(`${this.base}/invite`, body, {
       headers: { 'X-Tenant': tenantSlug },
