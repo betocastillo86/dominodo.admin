@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { distinctUntilChanged } from 'rxjs';
+import { debounceTime, distinctUntilChanged } from 'rxjs';
 import { PageHeaderComponent } from '../../../shared/ui/page-header/page-header.component';
 import { DataTableComponent, TableColumn } from '../../../shared/ui/data-table/data-table.component';
 import { PushMessagesService } from '../data-access/push-messages.service';
@@ -35,7 +35,11 @@ export class PushMessageListComponent {
 
   private readonly pageSize = 20;
 
+  readonly searchControl = new FormControl('', { nonNullable: true });
+  readonly recipientUserIdControl = new FormControl('', { nonNullable: true });
   readonly statusControl = new FormControl<AdminDeliveryStatus | ''>('', { nonNullable: true });
+  readonly fromControl = new FormControl('', { nonNullable: true });
+  readonly toControl = new FormControl('', { nonNullable: true });
 
   readonly columns: readonly TableColumn<AdminPushMessageDto>[] = [
     { header: 'Título', value: (m) => m.title },
@@ -52,12 +56,29 @@ export class PushMessageListComponent {
     },
     { header: 'Intentos', value: (m) => m.attempts, class: 'text-end' },
     { header: 'Enviado', value: (m) => this.formatDate(m.sentAtUtc), class: 'text-secondary' },
+    { header: 'Creado', value: (m) => this.formatDate(m.createdAtUtc), class: 'text-secondary' },
   ];
 
   readonly rowKey = (message: AdminPushMessageDto): string => message.id;
 
   constructor() {
+    this.searchControl.valueChanges
+      .pipe(debounceTime(300), distinctUntilChanged(), takeUntilDestroyed())
+      .subscribe(() => this.reload(1));
+
+    this.recipientUserIdControl.valueChanges
+      .pipe(debounceTime(300), distinctUntilChanged(), takeUntilDestroyed())
+      .subscribe(() => this.reload(1));
+
     this.statusControl.valueChanges
+      .pipe(distinctUntilChanged(), takeUntilDestroyed())
+      .subscribe(() => this.reload(1));
+
+    this.fromControl.valueChanges
+      .pipe(distinctUntilChanged(), takeUntilDestroyed())
+      .subscribe(() => this.reload(1));
+
+    this.toControl.valueChanges
       .pipe(distinctUntilChanged(), takeUntilDestroyed())
       .subscribe(() => this.reload(1));
 
@@ -69,8 +90,13 @@ export class PushMessageListComponent {
   }
 
   private reload(page: number): void {
-    const status = this.statusControl.value || undefined;
-    this.pushService.list(page, this.pageSize, status);
+    this.pushService.list(page, this.pageSize, {
+      status: this.statusControl.value || undefined,
+      search: this.searchControl.value.trim() || undefined,
+      recipientUserId: this.recipientUserIdControl.value.trim() || undefined,
+      from: this.fromControl.value || undefined,
+      to: this.toControl.value || undefined,
+    });
   }
 
   private formatDate(iso?: string | null): string {

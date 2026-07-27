@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { distinctUntilChanged } from 'rxjs';
+import { debounceTime, distinctUntilChanged } from 'rxjs';
 import { PageHeaderComponent } from '../../../shared/ui/page-header/page-header.component';
 import { DataTableComponent, TableColumn } from '../../../shared/ui/data-table/data-table.component';
 import { EmailMessagesService } from '../data-access/email-messages.service';
@@ -34,7 +34,11 @@ export class EmailMessageListComponent {
 
   private readonly pageSize = 20;
 
+  readonly searchControl = new FormControl('', { nonNullable: true });
+  readonly recipientControl = new FormControl('', { nonNullable: true });
   readonly statusControl = new FormControl<AdminDeliveryStatus | ''>('', { nonNullable: true });
+  readonly fromControl = new FormControl('', { nonNullable: true });
+  readonly toControl = new FormControl('', { nonNullable: true });
 
   readonly columns: readonly TableColumn<AdminEmailMessageDto>[] = [
     { header: 'Destinatario', value: (m) => (m.toName ? `${m.toName} <${m.to}>` : m.to) },
@@ -47,12 +51,29 @@ export class EmailMessageListComponent {
     { header: 'Intentos', value: (m) => m.attempts, class: 'text-end' },
     { header: 'Programado', value: (m) => this.formatDate(m.scheduledAtUtc), class: 'text-secondary' },
     { header: 'Enviado', value: (m) => this.formatDate(m.sentAtUtc), class: 'text-secondary' },
+    { header: 'Creado', value: (m) => this.formatDate(m.createdAtUtc), class: 'text-secondary' },
   ];
 
   readonly rowKey = (message: AdminEmailMessageDto): string => message.id;
 
   constructor() {
+    this.searchControl.valueChanges
+      .pipe(debounceTime(300), distinctUntilChanged(), takeUntilDestroyed())
+      .subscribe(() => this.reload(1));
+
+    this.recipientControl.valueChanges
+      .pipe(debounceTime(300), distinctUntilChanged(), takeUntilDestroyed())
+      .subscribe(() => this.reload(1));
+
     this.statusControl.valueChanges
+      .pipe(distinctUntilChanged(), takeUntilDestroyed())
+      .subscribe(() => this.reload(1));
+
+    this.fromControl.valueChanges
+      .pipe(distinctUntilChanged(), takeUntilDestroyed())
+      .subscribe(() => this.reload(1));
+
+    this.toControl.valueChanges
       .pipe(distinctUntilChanged(), takeUntilDestroyed())
       .subscribe(() => this.reload(1));
 
@@ -64,8 +85,13 @@ export class EmailMessageListComponent {
   }
 
   private reload(page: number): void {
-    const status = this.statusControl.value || undefined;
-    this.emailService.list(page, this.pageSize, status);
+    this.emailService.list(page, this.pageSize, {
+      status: this.statusControl.value || undefined,
+      search: this.searchControl.value.trim() || undefined,
+      recipient: this.recipientControl.value.trim() || undefined,
+      from: this.fromControl.value || undefined,
+      to: this.toControl.value || undefined,
+    });
   }
 
   private formatDate(iso?: string | null): string {

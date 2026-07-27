@@ -50,7 +50,6 @@ export class NotificationTemplateListComponent {
       value: (t) => (t.isActive ? 'Activa' : 'Inactiva'),
       badgeClass: (t) => (t.isActive ? 'badge bg-green-lt' : 'badge bg-secondary-lt'),
     },
-    { header: 'Descripción', value: (t) => t.description ?? '—' },
   ];
 
   readonly rowKey = (template: AdminNotificationTemplateDto): string => template.id;

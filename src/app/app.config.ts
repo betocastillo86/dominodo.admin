@@ -19,6 +19,7 @@ import {
   IconUser,
   IconUserCircle,
   IconUserPlus,
+  IconVariable,
   IconX,
 } from 'angular-tabler-icons/icons';
 import { provideQuillConfig } from 'ngx-quill';
@@ -50,6 +51,7 @@ export const appConfig: ApplicationConfig = {
       IconApps,
       IconUserPlus,
       IconListDetails,
+      IconVariable,
       IconX,
     }),
     // WYSIWYG editor (notification-templates email body). Toolbar kept intentionally small.

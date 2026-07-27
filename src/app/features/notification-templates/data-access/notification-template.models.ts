@@ -6,12 +6,25 @@ export type AdminNotificationType =
   | 'RequestClosed'
   | 'DeliveryReceived'
   | 'VisitRegistered'
-  | 'Announcement';
+  | 'Announcement'
+  | 'UserInvited'
+  | 'MembershipInvited';
+
+/**
+ * A placeholder available to a template's channel content, as returned by
+ * `GET /notification-templates/{id}` (camelCase, do not rename). Informative
+ * only — used to help authors build the template text; not editable.
+ */
+export interface AdminNotificationParameterDto {
+  key: string;
+  description: string;
+  required: boolean;
+}
 
 /**
  * Notification template as returned by `GET /notification-templates` and
  * `GET /notification-templates/{id}` (camelCase, do not rename). List and
- * detail share the same shape.
+ * detail share the same shape, except `parameters` is only populated on detail.
  */
 export interface AdminNotificationTemplateDto {
   id: string; // uuid
@@ -28,6 +41,7 @@ export interface AdminNotificationTemplateDto {
   pushText?: string | null;
   isActive: boolean;
   localization?: string | null;
+  parameters?: AdminNotificationParameterDto[]; // detail only; informative
 }
 
 /** Spanish labels for each notification type, for use in lists and the form. */
@@ -39,6 +53,8 @@ export const NOTIFICATION_TYPE_LABELS: Record<AdminNotificationType, string> = {
   DeliveryReceived: 'Entrega recibida',
   VisitRegistered: 'Visita registrada',
   Announcement: 'Anuncio',
+  UserInvited: 'Usuario invitado',
+  MembershipInvited: 'Membresía invitada',
 };
 
 /** Ordered list of notification types, for populating selects. */
@@ -50,6 +66,8 @@ export const NOTIFICATION_TYPES: readonly AdminNotificationType[] = [
   'DeliveryReceived',
   'VisitRegistered',
   'Announcement',
+  'UserInvited',
+  'MembershipInvited',
 ];
 
 /**

@@ -3,7 +3,7 @@ import { inject, Injectable, signal } from '@angular/core';
 import { environment } from '../../../../environments/environment';
 import { PagedResult } from '../../../core/models/paged-result';
 import { ProblemDetails } from '../../../core/http/problem-details';
-import { AdminDeliveryStatus, AdminEmailMessageDto } from './notification-message.models';
+import { AdminEmailMessageDto, EmailMessageFilters } from './notification-message.models';
 
 /** Data-access for materialized email messages. Exposes list state as signals. */
 @Injectable({ providedIn: 'root' })
@@ -22,12 +22,16 @@ export class EmailMessagesService {
   readonly error = this._error.asReadonly();
 
   /** Fetch a page of email messages and push the result into the state signals. */
-  list(page: number, pageSize: number, status?: AdminDeliveryStatus): void {
+  list(page: number, pageSize: number, filters: EmailMessageFilters = {}): void {
     this._loading.set(true);
     this._error.set(null);
 
     let params = new HttpParams().set('page', page).set('pageSize', pageSize);
-    if (status) params = params.set('status', status);
+    if (filters.status) params = params.set('status', filters.status);
+    if (filters.search) params = params.set('search', filters.search);
+    if (filters.recipient) params = params.set('recipient', filters.recipient);
+    if (filters.from) params = params.set('from', filters.from);
+    if (filters.to) params = params.set('to', filters.to);
 
     this.http.get<PagedResult<AdminEmailMessageDto>>(this.base, { params }).subscribe({
       next: (result) => {

@@ -11,6 +11,7 @@ import { NotificationService } from '../../../core/notifications/notification.se
 import { ProblemDetails } from '../../../core/http/problem-details';
 import { NotificationTemplatesService } from '../data-access/notification-templates.service';
 import {
+  AdminNotificationParameterDto,
   AdminNotificationType,
   NOTIFICATION_TYPE_LABELS,
   NOTIFICATION_TYPES,
@@ -66,6 +67,8 @@ export class NotificationTemplateFormComponent implements OnInit {
 
   readonly typeLabels = NOTIFICATION_TYPE_LABELS;
   readonly types = NOTIFICATION_TYPES;
+  /** Placeholders available for this template's channel content. Informative only. */
+  readonly parameters = signal<AdminNotificationParameterDto[]>([]);
   readonly loadingDetail = signal(false);
   readonly saving = signal(false);
   readonly error = signal<string | null>(null);
@@ -118,6 +121,7 @@ export class NotificationTemplateFormComponent implements OnInit {
       .subscribe({
         next: (template) => {
           this.loadedLocalization = template.localization ?? null;
+          this.parameters.set(template.parameters ?? []);
           this.form.patchValue({
             name: template.name,
             description: template.description ?? '',

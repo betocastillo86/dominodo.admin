@@ -3,13 +3,13 @@ import { inject, Injectable, signal } from '@angular/core';
 import { environment } from '../../../../environments/environment';
 import { PagedResult } from '../../../core/models/paged-result';
 import { ProblemDetails } from '../../../core/http/problem-details';
-import { AdminInAppMessageDto } from './notification-message.models';
+import { AdminInAppMessageDto, InAppMessageFilters } from './notification-message.models';
 
 /** Data-access for materialized in-app notifications. Exposes list state as signals. */
 @Injectable({ providedIn: 'root' })
 export class InAppMessagesService {
   private readonly http = inject(HttpClient);
-  private readonly base = `${environment.apiBaseUrl}/notifications`;
+  private readonly base = `${environment.apiBaseUrl}/messages/inapp`;
 
   private readonly _messages = signal<AdminInAppMessageDto[]>([]);
   private readonly _paging = signal<PagedResult<AdminInAppMessageDto> | null>(null);
@@ -22,11 +22,15 @@ export class InAppMessagesService {
   readonly error = this._error.asReadonly();
 
   /** Fetch a page of in-app notifications and push the result into the state signals. */
-  list(page: number, pageSize: number): void {
+  list(page: number, pageSize: number, filters: InAppMessageFilters = {}): void {
     this._loading.set(true);
     this._error.set(null);
 
-    const params = new HttpParams().set('page', page).set('pageSize', pageSize);
+    let params = new HttpParams().set('page', page).set('pageSize', pageSize);
+    if (filters.search) params = params.set('search', filters.search);
+    if (filters.recipientUserId) params = params.set('recipientUserId', filters.recipientUserId);
+    if (filters.from) params = params.set('from', filters.from);
+    if (filters.to) params = params.set('to', filters.to);
 
     this.http.get<PagedResult<AdminInAppMessageDto>>(this.base, { params }).subscribe({
       next: (result) => {

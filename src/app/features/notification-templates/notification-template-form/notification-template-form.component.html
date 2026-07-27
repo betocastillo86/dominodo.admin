@@ -72,6 +72,48 @@
               </label>
             </div>
 
+            @if (parameters().length) {
+              <div class="card card-sm mb-3">
+                <div class="card-status-start bg-blue"></div>
+                <div class="card-body">
+                  <h3 class="card-title d-flex align-items-center gap-2">
+                    <tabler-icon name="variable" />
+                    Parámetros disponibles
+                  </h3>
+                  <p class="text-secondary">
+                    Usa estas variables en el contenido de los canales, con el formato
+                    <code>{{ '{{' }}clave{{ '}}' }}</code>. Este listado es informativo.
+                  </p>
+                  <div class="table-responsive">
+                    <table class="table table-sm table-vcenter card-table">
+                      <thead>
+                        <tr>
+                          <th>Clave</th>
+                          <th>Descripción</th>
+                          <th class="text-center">Obligatorio</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (param of parameters(); track param.key) {
+                          <tr>
+                            <td><code>{{ '{{' }}{{ param.key }}{{ '}}' }}</code></td>
+                            <td>{{ param.description }}</td>
+                            <td class="text-center">
+                              @if (param.required) {
+                                <span class="badge bg-blue-lt">Sí</span>
+                              } @else {
+                                <span class="text-secondary">—</span>
+                              }
+                            </td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            }
+
             <hr />
 
             <!-- Email channel -->

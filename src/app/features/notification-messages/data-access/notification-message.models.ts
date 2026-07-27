@@ -17,6 +17,7 @@ export interface AdminEmailMessageDto {
   attempts: number;
   scheduledAtUtc?: string | null; // date-time
   sentAtUtc?: string | null; // date-time
+  createdAtUtc: string; // date-time
 }
 
 /** Materialized push message as returned by `GET /messages/push`. */
@@ -32,9 +33,10 @@ export interface AdminPushMessageDto {
   attempts: number;
   dedupHash: string;
   sentAtUtc?: string | null; // date-time
+  createdAtUtc: string; // date-time
 }
 
-/** Materialized in-app notification as returned by `GET /notifications`. */
+/** Materialized in-app notification as returned by `GET /messages/inapp`. */
 export interface AdminInAppMessageDto {
   id: string; // uuid
   tenantId: string; // uuid
@@ -47,6 +49,35 @@ export interface AdminInAppMessageDto {
   readAtUtc?: string | null; // date-time
   triggeredByUserId?: string | null; // uuid
   createdAtUtc: string; // date-time
+}
+
+/**
+ * Query filters for `GET /messages/email`. All optional; omit to skip the filter.
+ * `from`/`to` are date strings (`YYYY-MM-DD`) matched against the scheduled/sent date.
+ */
+export interface EmailMessageFilters {
+  status?: AdminDeliveryStatus;
+  search?: string;
+  recipient?: string;
+  from?: string;
+  to?: string;
+}
+
+/** Query filters for `GET /messages/push`. All optional; omit to skip the filter. */
+export interface PushMessageFilters {
+  status?: AdminDeliveryStatus;
+  search?: string;
+  recipientUserId?: string;
+  from?: string;
+  to?: string;
+}
+
+/** Query filters for `GET /messages/inapp`. All optional; omit to skip the filter. */
+export interface InAppMessageFilters {
+  search?: string;
+  recipientUserId?: string;
+  from?: string;
+  to?: string;
 }
 
 /** Ordered list of delivery statuses, for populating selects. */
