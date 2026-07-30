@@ -1,9 +1,13 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { AbstractControl, FormControl, ReactiveFormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
 import { PageHeaderComponent } from '../../../shared/ui/page-header/page-header.component';
 import { DataTableComponent, TableColumn } from '../../../shared/ui/data-table/data-table.component';
+import {
+  MultiSelectComponent,
+  MultiSelectOption,
+} from '../../../shared/ui/multi-select/multi-select.component';
 import { RequestsService, RequestFilters } from '../data-access/requests.service';
 import {
   REQUEST_PRIORITY_LABELS,
@@ -21,7 +25,7 @@ import { TenantDto } from '../../tenants/data-access/tenant.models';
 @Component({
   selector: 'app-request-list',
   standalone: true,
-  imports: [PageHeaderComponent, DataTableComponent, ReactiveFormsModule],
+  imports: [PageHeaderComponent, DataTableComponent, MultiSelectComponent, ReactiveFormsModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './request-list.component.html',
 })
@@ -36,13 +40,13 @@ export class RequestListComponent {
   private readonly pageSize = 20;
 
   readonly searchControl = new FormControl('', { nonNullable: true });
-  readonly statusControl = new FormControl<RequestStatus | ''>('', { nonNullable: true });
+  readonly statusControl = new FormControl<RequestStatus[]>([], { nonNullable: true });
   readonly typeControl = new FormControl<RequestType | ''>('', { nonNullable: true });
   readonly priorityControl = new FormControl<RequestPriority | ''>('', { nonNullable: true });
   readonly visibilityControl = new FormControl<RequestVisibility | ''>('', { nonNullable: true });
   readonly tenantControl = new FormControl<string>('', { nonNullable: true });
   /** Disabled until a tenant is selected — categories are tenant-scoped. */
-  readonly categoryControl = new FormControl<string>({ value: '', disabled: true }, { nonNullable: true });
+  readonly categoryControl = new FormControl<string[]>({ value: [], disabled: true }, { nonNullable: true });
 
   readonly tenants = signal<TenantDto[]>([]);
   /** Categories of the currently selected tenant; empty when no tenant is chosen. */
@@ -55,7 +59,7 @@ export class RequestListComponent {
     return m;
   });
 
-  readonly statusOptions: { value: RequestStatus; label: string }[] = [
+  readonly statusOptions: MultiSelectOption[] = [
     { value: 'New', label: 'Nuevo' },
     { value: 'InReview', label: 'En revisión' },
     { value: 'InProgress', label: 'En progreso' },
@@ -65,6 +69,11 @@ export class RequestListComponent {
     { value: 'Cancelled', label: 'Cancelado' },
     { value: 'Reopened', label: 'Reabierto' },
   ];
+
+  /** Category options for the multi-select, derived from the selected tenant's catalog. */
+  readonly categoryOptions = computed<MultiSelectOption[]>(() =>
+    this.categories().map((c) => ({ value: c.id, label: c.name })),
+  );
 
   readonly typeOptions: { value: RequestType; label: string }[] = [
     { value: 'Peticion', label: 'Petición' },
@@ -103,6 +112,7 @@ export class RequestListComponent {
       value: (r) => REQUEST_PRIORITY_LABELS[r.priority as RequestPriority] ?? r.priority,
       badgeClass: (r) => this.priorityBadge(r.priority),
     },
+    { header: 'Registro', value: (r) => this.formatDate(r.createdAtUtc), class: 'text-secondary text-nowrap' },
   ]);
 
   readonly rowKey = (r: RequestDto): string => r.id;
@@ -121,13 +131,14 @@ export class RequestListComponent {
       .pipe(debounceTime(300), distinctUntilChanged(), takeUntilDestroyed())
       .subscribe(() => this.reload(1));
 
-    [
+    const filterControls: AbstractControl[] = [
       this.statusControl,
       this.typeControl,
       this.priorityControl,
       this.visibilityControl,
       this.categoryControl,
-    ].forEach((ctrl) => {
+    ];
+    filterControls.forEach((ctrl) => {
       ctrl.valueChanges
         .pipe(distinctUntilChanged(), takeUntilDestroyed())
         .subscribe(() => this.reload(1));
@@ -146,7 +157,7 @@ export class RequestListComponent {
   }
 
   private onTenantChange(tenantId: string): void {
-    this.categoryControl.setValue('', { emitEvent: false });
+    this.categoryControl.setValue([], { emitEvent: false });
     this.categories.set([]);
 
     const slug = this.tenants().find((t) => t.id === tenantId)?.slug;
@@ -193,15 +204,23 @@ export class RequestListComponent {
     return map[priority] ?? 'badge';
   }
 
+  private formatDate(iso?: string | null): string {
+    if (!iso) return '—';
+    const date = new Date(iso);
+    return isNaN(date.getTime()) ? iso : date.toLocaleString('es');
+  }
+
   private reload(page: number): void {
+    const statuses = this.statusControl.value;
+    const categoryIds = this.categoryControl.value;
     const filters: RequestFilters = {
       search: this.searchControl.value || undefined,
-      status: (this.statusControl.value as RequestStatus) || undefined,
+      statuses: statuses.length ? statuses : undefined,
       type: (this.typeControl.value as RequestType) || undefined,
       priority: (this.priorityControl.value as RequestPriority) || undefined,
       visibility: (this.visibilityControl.value as RequestVisibility) || undefined,
       tenantId: this.tenantControl.value || undefined,
-      categoryId: this.categoryControl.value || undefined,
+      categoryIds: categoryIds.length ? categoryIds : undefined,
     };
     this.requestsService.list(page, this.pageSize, filters);
   }

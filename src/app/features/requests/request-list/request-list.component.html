@@ -21,12 +21,11 @@
           </select>
         </div>
         <div class="col-12 col-sm-4 col-lg-4">
-          <select class="form-select" [formControl]="statusControl">
-            <option value="">Todos los estados</option>
-            @for (opt of statusOptions; track opt.value) {
-              <option [value]="opt.value">{{ opt.label }}</option>
-            }
-          </select>
+          <app-multi-select
+            [formControl]="statusControl"
+            [options]="statusOptions"
+            placeholder="Todos los estados"
+          />
         </div>
         <div class="col-12 col-sm-4 col-lg-4">
           <select class="form-select" [formControl]="typeControl">
@@ -52,14 +51,12 @@
           </select>
         </div>
         <div class="col-12 col-sm-4 col-lg-4">
-          <select class="form-select" [formControl]="categoryControl">
-            <option value="">
-              {{ tenantControl.value ? 'Todas las categorías' : 'Selecciona un conjunto…' }}
-            </option>
-            @for (cat of categories(); track cat.id) {
-              <option [value]="cat.id">{{ cat.name }}</option>
-            }
-          </select>
+          <app-multi-select
+            [formControl]="categoryControl"
+            [options]="categoryOptions()"
+            [placeholder]="tenantControl.value ? 'Todas las categorías' : 'Selecciona un conjunto…'"
+            emptyText="Este conjunto no tiene categorías"
+          />
         </div>
       </div>
     </div>

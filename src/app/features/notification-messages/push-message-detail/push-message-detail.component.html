@@ -1,0 +1,86 @@
+<app-page-header title="Detalle de la notificación push" pretitle="Notificaciones">
+  <a routerLink="/notification-messages/push" actions class="btn btn-secondary">Volver al listado</a>
+</app-page-header>
+
+<div class="page-body">
+  <div class="container-xl">
+    @if (message(); as m) {
+      <div class="card mb-3">
+        <div class="card-header">
+          <h3 class="card-title">{{ m.title }}</h3>
+          <div class="card-actions">
+            <span [class]="statusBadge(m)">{{ statusLabel(m) }}</span>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="datagrid">
+            <div class="datagrid-item">
+              <div class="datagrid-title">Título</div>
+              <div class="datagrid-content">{{ m.title }}</div>
+            </div>
+            <div class="datagrid-item">
+              <div class="datagrid-title">Mensaje</div>
+              <div class="datagrid-content">{{ m.body }}</div>
+            </div>
+            <div class="datagrid-item">
+              <div class="datagrid-title">URL destino</div>
+              <div class="datagrid-content">
+                @if (m.targetUrl) {
+                  <a [href]="m.targetUrl" target="_blank" rel="noopener">{{ m.targetUrl }}</a>
+                } @else {
+                  —
+                }
+              </div>
+            </div>
+            <div class="datagrid-item">
+              <div class="datagrid-title">Plataforma</div>
+              <div class="datagrid-content"><span [class]="platformBadge(m)">{{ m.platform }}</span></div>
+            </div>
+            <div class="datagrid-item">
+              <div class="datagrid-title">Estado</div>
+              <div class="datagrid-content"><span [class]="statusBadge(m)">{{ statusLabel(m) }}</span></div>
+            </div>
+            <div class="datagrid-item">
+              <div class="datagrid-title">Intentos</div>
+              <div class="datagrid-content">{{ m.attempts }}</div>
+            </div>
+            <div class="datagrid-item">
+              <div class="datagrid-title">Enviado</div>
+              <div class="datagrid-content">{{ formatDate(m.sentAtUtc) }}</div>
+            </div>
+            <div class="datagrid-item">
+              <div class="datagrid-title">Creado</div>
+              <div class="datagrid-content">{{ formatDate(m.createdAtUtc) }}</div>
+            </div>
+            <div class="datagrid-item">
+              <div class="datagrid-title">ID</div>
+              <div class="datagrid-content"><span class="text-secondary font-monospace">{{ m.id }}</span></div>
+            </div>
+            <div class="datagrid-item">
+              <div class="datagrid-title">Usuario destinatario</div>
+              <div class="datagrid-content"><span class="text-secondary font-monospace">{{ m.recipientUserId }}</span></div>
+            </div>
+            <div class="datagrid-item">
+              <div class="datagrid-title">Conjunto (tenant)</div>
+              <div class="datagrid-content"><span class="text-secondary font-monospace">{{ m.tenantId }}</span></div>
+            </div>
+            <div class="datagrid-item">
+              <div class="datagrid-title">Hash de deduplicación</div>
+              <div class="datagrid-content"><span class="text-secondary font-monospace">{{ m.dedupHash }}</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    } @else {
+      <div class="empty">
+        <p class="empty-title">Notificación no disponible</p>
+        <p class="empty-subtitle text-secondary">
+          No se encontró la notificación en la lista cargada. Vuelve al listado y ábrela desde ahí.
+        </p>
+        <div class="empty-action">
+          <a routerLink="/notification-messages/push" class="btn btn-primary">Volver al listado</a>
+        </div>
+      </div>
+    }
+  </div>
+</div>

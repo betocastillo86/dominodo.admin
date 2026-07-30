@@ -161,6 +161,79 @@
               <a routerLink="/users" class="btn btn-link">Cancelar</a>
             </div>
           </form>
+
+          @if (mode === 'edit') {
+            <hr class="my-4" />
+
+            <div class="mb-2 d-flex align-items-center gap-2">
+              <h4 class="mb-0">Verificación de teléfono</h4>
+              @if (userStatus() === 'Active') {
+                <span class="badge bg-success-lt">Activo</span>
+              } @else if (userStatus() === 'PendingVerification') {
+                <span class="badge bg-warning-lt">Pendiente de verificación</span>
+              } @else if (userStatus() === 'Disabled') {
+                <span class="badge bg-danger-lt">Deshabilitado</span>
+              }
+            </div>
+            <p class="text-secondary small mb-3">
+              Enviá un código OTP al teléfono del usuario para verificar su cuenta y activarla.
+            </p>
+
+            @if (otpError()) {
+              <div class="alert alert-danger py-2" role="alert">{{ otpError() }}</div>
+            }
+
+            <div class="d-flex align-items-end gap-3 flex-wrap">
+              <div>
+                <button
+                  type="button"
+                  class="btn btn-secondary"
+                  (click)="requestOtp()"
+                  [disabled]="otpSending() || otpConfirming()"
+                >
+                  @if (otpSending()) {
+                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                  } @else {
+                    <tabler-icon name="device-mobile-message" class="me-1" />
+                  }
+                  {{ otpRequested() ? 'Reenviar OTP' : 'Solicitar OTP' }}
+                </button>
+              </div>
+
+              @if (otpRequested()) {
+                <div class="flex-grow-1" style="max-width: 200px;">
+                  <label class="form-label" for="otp-code">Código OTP</label>
+                  <input
+                    id="otp-code"
+                    type="text"
+                    class="form-control"
+                    placeholder="123456"
+                    [formControl]="otpCode"
+                    [class.is-invalid]="otpCode.invalid && otpCode.touched"
+                    autocomplete="one-time-code"
+                  />
+                  @if (otpCode.invalid && otpCode.touched) {
+                    <div class="invalid-feedback">Ingresá el código recibido.</div>
+                  }
+                </div>
+                <div>
+                  <button
+                    type="button"
+                    class="btn btn-primary"
+                    (click)="confirmOtp()"
+                    [disabled]="otpConfirming() || otpSending()"
+                  >
+                    @if (otpConfirming()) {
+                      <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                    } @else {
+                      <tabler-icon name="circle-check" class="me-1" />
+                    }
+                    Confirmar OTP
+                  </button>
+                </div>
+              }
+            </div>
+          }
         }
       </div>
     </div>

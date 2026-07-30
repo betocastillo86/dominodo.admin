@@ -13,6 +13,8 @@ export interface UserListItemDto {
   documentNumber?: string;
   phoneVerified: boolean;
   emailVerified: boolean;
+  createdAtUtc: string; // date-time
+  updatedAtUtc?: string | null; // date-time
 }
 
 /** User detail as returned by GET /users/{id}. */
@@ -40,4 +42,13 @@ export interface UpdateUserRequest {
   /** Send the original value — email is immutable in the admin panel UI. */
   email?: string | null;
   preferredLanguage: string;
+}
+
+export interface RequestVerificationRequest {
+  phone: string;
+}
+
+export interface ConfirmVerificationRequest {
+  phone: string;
+  code: string;
 }

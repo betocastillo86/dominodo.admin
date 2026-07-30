@@ -11,7 +11,13 @@ import { NotificationService } from '../../../core/notifications/notification.se
 import { ProblemDetails } from '../../../core/http/problem-details';
 import { PagedResult } from '../../../core/models/paged-result';
 import { TenantsService } from '../data-access/tenants.service';
-import { TenantType } from '../data-access/tenant.models';
+import {
+  TENANT_STATUS_BADGES,
+  TENANT_STATUS_LABELS,
+  TenantFeatureDto,
+  TenantStatus,
+  TenantType,
+} from '../data-access/tenant.models';
 import { ApartmentsService } from '../../apartments/data-access/apartments.service';
 import {
   APARTMENT_STATUS_BADGES,
@@ -71,6 +77,7 @@ export class TenantFormComponent implements OnInit {
       nonNullable: true,
       validators: [Validators.required, Validators.maxLength(100)],
     }),
+    confirmInvitationRequired: new FormControl(false, { nonNullable: true }),
     // Create-only fields (not part of the update contract; disabled on edit).
     branding: new FormControl('', { nonNullable: true }),
     settings: new FormControl('', { nonNullable: true }),
@@ -116,6 +123,24 @@ export class TenantFormComponent implements OnInit {
       badgeClass: (a) => APARTMENT_STATUS_BADGES[a.status] ?? 'badge',
     },
   ];
+
+  // Status section (edit mode only).
+  readonly currentStatus = signal<TenantStatus | null>(null);
+  readonly selectedStatus = signal<TenantStatus | null>(null);
+  readonly changingStatus = signal(false);
+  readonly confirmingStatus = signal(false);
+  readonly statusError = signal<string | null>(null);
+  readonly TENANT_STATUS_LABELS = TENANT_STATUS_LABELS;
+  readonly TENANT_STATUS_BADGES = TENANT_STATUS_BADGES;
+  readonly ALL_STATUSES: TenantStatus[] = ['Onboarding', 'Active', 'Suspended'];
+
+  // Features section (edit mode only).
+  readonly tenantFeatures = signal<TenantFeatureDto[]>([]);
+  readonly loadingFeatures = signal(false);
+  readonly featuresError = signal<string | null>(null);
+  readonly newFeatureKey = new FormControl('', { nonNullable: true });
+  readonly addingFeature = signal(false);
+  readonly togglingFeature = signal<string | null>(null);
 
   readonly apartmentRowKey = (apt: ApartmentDto): string => apt.id;
 
@@ -175,6 +200,7 @@ export class TenantFormComponent implements OnInit {
           city,
           country,
           legalId,
+          confirmInvitationRequired: raw.confirmInvitationRequired,
           branding: raw.branding.trim() || null,
           settings: raw.settings.trim() || null,
         })
@@ -185,7 +211,7 @@ export class TenantFormComponent implements OnInit {
         });
     } else {
       this.tenantsService
-        .update(this.id!, { name, legalId, address, city, country })
+        .update(this.id!, { name, legalId, address, city, country, confirmInvitationRequired: raw.confirmInvitationRequired })
         .pipe(finalize(() => this.saving.set(false)))
         .subscribe({
           next: () => this.onSuccess('Conjunto actualizado'),
@@ -209,13 +235,93 @@ export class TenantFormComponent implements OnInit {
             address: tenant.address,
             city: tenant.city,
             country: tenant.country,
+            confirmInvitationRequired: tenant.confirmInvitationRequired,
             branding: tenant.branding ?? '',
             settings: tenant.settings ?? '',
           });
           this.tenantSlug.set(tenant.slug);
+          this.currentStatus.set(tenant.status);
+          this.selectedStatus.set(tenant.status);
           this.loadApartmentsPage(1);
+          this.loadFeatures();
         },
         error: (err: unknown) => this.error.set(this.toMessage(err, 'No se pudo cargar el conjunto.')),
+      });
+  }
+
+  onStatusChange(value: string): void {
+    this.selectedStatus.set(value as TenantStatus);
+    this.confirmingStatus.set(false);
+  }
+
+  requestStatusChange(): void {
+    this.confirmingStatus.set(true);
+  }
+
+  cancelStatusChange(): void {
+    this.confirmingStatus.set(false);
+  }
+
+  submitStatusChange(): void {
+    const status = this.selectedStatus();
+    if (!status || !this.id || status === this.currentStatus()) return;
+    this.changingStatus.set(true);
+    this.confirmingStatus.set(false);
+    this.statusError.set(null);
+    this.tenantsService
+      .changeStatus(this.id, { status })
+      .pipe(finalize(() => this.changingStatus.set(false)))
+      .subscribe({
+        next: () => {
+          this.currentStatus.set(status);
+          this.notifications.success('Estado actualizado');
+        },
+        error: (err: unknown) =>
+          this.statusError.set(this.toMessage(err, 'No se pudo actualizar el estado.')),
+      });
+  }
+
+  loadFeatures(): void {
+    if (!this.id) return;
+    this.loadingFeatures.set(true);
+    this.featuresError.set(null);
+    this.tenantsService
+      .getFeatures(this.id)
+      .pipe(finalize(() => this.loadingFeatures.set(false)))
+      .subscribe({
+        next: (features) => this.tenantFeatures.set(features),
+        error: (err: unknown) =>
+          this.featuresError.set(this.toMessage(err, 'No se pudieron cargar las features.')),
+      });
+  }
+
+  addFeature(): void {
+    const key = this.newFeatureKey.value.trim();
+    if (!key || !this.id) return;
+    this.addingFeature.set(true);
+    this.tenantsService
+      .setFeature(this.id, key, { enabled: true })
+      .pipe(finalize(() => this.addingFeature.set(false)))
+      .subscribe({
+        next: () => {
+          this.newFeatureKey.reset();
+          this.loadFeatures();
+        },
+        error: (err: unknown) =>
+          this.featuresError.set(this.toMessage(err, 'No se pudo agregar la feature.')),
+      });
+  }
+
+  toggleFeature(feature: TenantFeatureDto): void {
+    if (!this.id) return;
+    this.togglingFeature.set(feature.featureKey);
+    this.tenantsService
+      .setFeature(this.id, feature.featureKey, { enabled: !feature.enabled })
+      .pipe(finalize(() => this.togglingFeature.set(null)))
+      .subscribe({
+        next: () => this.loadFeatures(),
+        error: (err: unknown) =>
+          this.featuresError.set(this.toMessage(err, 'No se pudo actualizar la feature.')),
       });
   }
 

@@ -5,7 +5,9 @@ import { environment } from '../../../../environments/environment';
 import { PagedResult } from '../../../core/models/paged-result';
 import { ProblemDetails } from '../../../core/http/problem-details';
 import {
+  ConfirmVerificationRequest,
   RegisterUserRequest,
+  RequestVerificationRequest,
   UpdateUserRequest,
   UserDetailDto,
   UserListItemDto,
@@ -17,6 +19,7 @@ import {
 export class UsersService {
   private readonly http = inject(HttpClient);
   private readonly base = `${environment.apiBaseUrl}/users`;
+  private readonly authBase = `${environment.apiBaseUrl}/auth`;
 
   private readonly _users = signal<UserListItemDto[]>([]);
   private readonly _paging = signal<PagedResult<UserListItemDto> | null>(null);
@@ -61,6 +64,14 @@ export class UsersService {
 
   update(id: string, body: UpdateUserRequest): Observable<void> {
     return this.http.put<void>(`${this.base}/${id}`, body);
+  }
+
+  requestVerification(body: RequestVerificationRequest): Observable<void> {
+    return this.http.post<void>(`${this.authBase}/verify/request`, body);
+  }
+
+  confirmVerification(body: ConfirmVerificationRequest): Observable<void> {
+    return this.http.post<void>(`${this.authBase}/verify/confirm`, body);
   }
 
   private toError(error: unknown): string {

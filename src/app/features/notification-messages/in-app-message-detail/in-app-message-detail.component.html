@@ -1,0 +1,88 @@
+<app-page-header title="Detalle de la notificación en la app" pretitle="Notificaciones">
+  <a routerLink="/notification-messages/in-app" actions class="btn btn-secondary">Volver al listado</a>
+</app-page-header>
+
+<div class="page-body">
+  <div class="container-xl">
+    @if (message(); as m) {
+      <div class="card mb-3">
+        <div class="card-header">
+          <h3 class="card-title">{{ m.title }}</h3>
+          <div class="card-actions">
+            @if (m.isRead) {
+              <span class="badge bg-green-lt">Leído</span>
+            } @else {
+              <span class="badge bg-secondary-lt">No leído</span>
+            }
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="datagrid">
+            <div class="datagrid-item">
+              <div class="datagrid-title">Tipo</div>
+              <div class="datagrid-content"><span class="badge bg-blue-lt">{{ m.type }}</span></div>
+            </div>
+            <div class="datagrid-item">
+              <div class="datagrid-title">Título</div>
+              <div class="datagrid-content">{{ m.title }}</div>
+            </div>
+            <div class="datagrid-item">
+              <div class="datagrid-title">Mensaje</div>
+              <div class="datagrid-content">{{ m.body }}</div>
+            </div>
+            <div class="datagrid-item">
+              <div class="datagrid-title">URL destino</div>
+              <div class="datagrid-content">
+                @if (m.targetUrl) {
+                  <a [href]="m.targetUrl" target="_blank" rel="noopener">{{ m.targetUrl }}</a>
+                } @else {
+                  —
+                }
+              </div>
+            </div>
+            <div class="datagrid-item">
+              <div class="datagrid-title">Leído</div>
+              <div class="datagrid-content">{{ m.isRead ? 'Sí' : 'No' }}</div>
+            </div>
+            <div class="datagrid-item">
+              <div class="datagrid-title">Leído el</div>
+              <div class="datagrid-content">{{ formatDate(m.readAtUtc) }}</div>
+            </div>
+            <div class="datagrid-item">
+              <div class="datagrid-title">Creado</div>
+              <div class="datagrid-content">{{ formatDate(m.createdAtUtc) }}</div>
+            </div>
+            <div class="datagrid-item">
+              <div class="datagrid-title">ID</div>
+              <div class="datagrid-content"><span class="text-secondary font-monospace">{{ m.id }}</span></div>
+            </div>
+            <div class="datagrid-item">
+              <div class="datagrid-title">Usuario destinatario</div>
+              <div class="datagrid-content"><span class="text-secondary font-monospace">{{ m.recipientUserId }}</span></div>
+            </div>
+            <div class="datagrid-item">
+              <div class="datagrid-title">Disparado por</div>
+              <div class="datagrid-content">
+                <span class="text-secondary font-monospace">{{ m.triggeredByUserId ?? '—' }}</span>
+              </div>
+            </div>
+            <div class="datagrid-item">
+              <div class="datagrid-title">Conjunto (tenant)</div>
+              <div class="datagrid-content"><span class="text-secondary font-monospace">{{ m.tenantId }}</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    } @else {
+      <div class="empty">
+        <p class="empty-title">Notificación no disponible</p>
+        <p class="empty-subtitle text-secondary">
+          No se encontró la notificación en la lista cargada. Vuelve al listado y ábrela desde ahí.
+        </p>
+        <div class="empty-action">
+          <a routerLink="/notification-messages/in-app" class="btn btn-primary">Volver al listado</a>
+        </div>
+      </div>
+    }
+  </div>
+</div>

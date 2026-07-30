@@ -86,3 +86,10 @@ export const INVITATION_STATUS_BADGES: Record<string, string> = {
   Expired: 'badge bg-secondary-lt',
   Revoked: 'badge bg-red-lt',
 };
+
+/** Query filters accepted by `GET /memberships`. */
+export interface MembershipFilters {
+  search?: string;
+  status?: string;
+  roleId?: number;
+}

@@ -9,6 +9,7 @@ import {
   IconChevronRight,
   IconDeviceMobile,
   IconEdit,
+  IconEye,
   IconInfoCircle,
   IconListDetails,
   IconLogout,
@@ -16,6 +17,7 @@ import {
   IconMenu2,
   IconSettings,
   IconShieldLock,
+  IconSpeakerphone,
   IconUser,
   IconUserCircle,
   IconUserPlus,
@@ -36,10 +38,12 @@ export const appConfig: ApplicationConfig = {
     // Icons used across the app are registered here; add more as features need them.
     provideTablerIcons({
       IconShieldLock,
+      IconSpeakerphone,
       IconUserCircle,
       IconLogout,
       IconMenu2,
       IconEdit,
+      IconEye,
       IconInfoCircle,
       IconSettings,
       IconUser,

@@ -20,12 +20,12 @@ import {
 
 export interface RequestFilters {
   search?: string;
-  status?: RequestStatus;
+  statuses?: RequestStatus[];
   type?: RequestType;
   priority?: RequestPriority;
   visibility?: RequestVisibility;
   tenantId?: string;
-  categoryId?: string;
+  categoryIds?: string[];
 }
 
 /** Data-access for the Requests feature. List state is exposed as signals; writes return Observables. */
@@ -50,14 +50,14 @@ export class RequestsService {
 
     let params = new HttpParams().set('page', page).set('pageSize', pageSize);
     if (filters.search) params = params.set('search', filters.search);
-    if (filters.status) params = params.set('status', filters.status);
+    // `statuses` and `categoryIds` are array params — repeated query keys
+    // (e.g. `statuses=New&statuses=InReview`), the ASP.NET default binding.
+    for (const status of filters.statuses ?? []) params = params.append('statuses', status);
+    for (const categoryId of filters.categoryIds ?? []) params = params.append('categoryIds', categoryId);
     if (filters.type) params = params.set('type', filters.type);
     if (filters.priority) params = params.set('priority', filters.priority);
     if (filters.visibility) params = params.set('visibility', filters.visibility);
     if (filters.tenantId) params = params.set('tenantId', filters.tenantId);
-    // NOTE: `categoryId` is wired ahead of API support — `GET /requests` does not
-    // yet read it, so the server ignores it until the backend adds the filter.
-    if (filters.categoryId) params = params.set('categoryId', filters.categoryId);
 
     this.http.get<PagedResult<RequestDto>>(this.base, { params }).subscribe({
       next: (result) => {

@@ -1,0 +1,153 @@
+<app-page-header
+  [title]="mode === 'edit' ? 'Editar anuncio' : 'Nuevo anuncio'"
+  pretitle="Administración"
+/>
+
+<div class="page-body">
+  <div class="container-xl">
+    <div class="card">
+      <div class="card-body">
+        @if (loading()) {
+          <app-spinner />
+        } @else {
+          <form [formGroup]="form" (ngSubmit)="onSubmit()">
+
+            <div class="mb-3">
+              <label class="form-label required" for="ann-title">Título</label>
+              <input
+                id="ann-title"
+                type="text"
+                class="form-control"
+                formControlName="title"
+                [class.is-invalid]="form.controls.title.invalid && form.controls.title.touched"
+              />
+              @if (form.controls.title.invalid && form.controls.title.touched) {
+                <div class="invalid-feedback">
+                  @if (form.controls.title.errors?.['server']) {
+                    {{ form.controls.title.errors?.['server'] }}
+                  } @else if (form.controls.title.errors?.['required']) {
+                    El título es obligatorio.
+                  } @else if (form.controls.title.errors?.['maxlength']) {
+                    El título no puede superar los 200 caracteres.
+                  }
+                </div>
+              }
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label required" for="ann-body">Cuerpo</label>
+              <textarea
+                id="ann-body"
+                class="form-control"
+                formControlName="body"
+                rows="6"
+                [class.is-invalid]="form.controls.body.invalid && form.controls.body.touched"
+              ></textarea>
+              @if (form.controls.body.invalid && form.controls.body.touched) {
+                <div class="invalid-feedback">
+                  @if (form.controls.body.errors?.['server']) {
+                    {{ form.controls.body.errors?.['server'] }}
+                  } @else {
+                    El cuerpo es obligatorio.
+                  }
+                </div>
+              }
+            </div>
+
+            <div class="row g-3 mb-3">
+              <div class="col-12 col-md-4">
+                <label class="form-label required" for="ann-priority">Prioridad</label>
+                <input
+                  id="ann-priority"
+                  type="number"
+                  class="form-control"
+                  formControlName="priority"
+                  min="0"
+                  [class.is-invalid]="form.controls.priority.invalid && form.controls.priority.touched"
+                />
+                @if (form.controls.priority.invalid && form.controls.priority.touched) {
+                  <div class="invalid-feedback">
+                    @if (form.controls.priority.errors?.['server']) {
+                      {{ form.controls.priority.errors?.['server'] }}
+                    } @else if (form.controls.priority.errors?.['required']) {
+                      La prioridad es obligatoria.
+                    } @else if (form.controls.priority.errors?.['min']) {
+                      La prioridad debe ser 0 o mayor.
+                    }
+                  </div>
+                }
+              </div>
+
+              <div class="col-12 col-md-4">
+                <label class="form-label required" for="ann-audience-type">Audiencia</label>
+                <select
+                  id="ann-audience-type"
+                  class="form-select"
+                  formControlName="audienceType"
+                  [class.is-invalid]="form.controls.audienceType.invalid && form.controls.audienceType.touched"
+                >
+                  <option value="AllTenant">Todos (conjunto completo)</option>
+                  <option value="ByTower">Por torre</option>
+                  <option value="ByApartments">Por apartamentos</option>
+                </select>
+                @if (form.controls.audienceType.invalid && form.controls.audienceType.touched) {
+                  <div class="invalid-feedback">La audiencia es obligatoria.</div>
+                }
+              </div>
+
+              <div class="col-12 col-md-4">
+                <label class="form-label" for="ann-category">Categoría</label>
+                <input
+                  id="ann-category"
+                  type="text"
+                  class="form-control"
+                  formControlName="category"
+                  placeholder="Ej. Mantenimiento, Seguridad…"
+                />
+              </div>
+            </div>
+
+            @if (showAudienceFilter()) {
+              <div class="mb-3">
+                <label class="form-label" for="ann-audience-filter">{{ audienceFilterLabel() }}</label>
+                <input
+                  id="ann-audience-filter"
+                  type="text"
+                  class="form-control"
+                  formControlName="audienceFilter"
+                  [placeholder]="audienceTypeValue() === 'ByTower' ? 'ID de la torre' : 'IDs de apartamentos separados por coma'"
+                />
+              </div>
+            }
+
+            <div class="mb-3">
+              <label class="form-label" for="ann-expires">Fecha de vencimiento (UTC)</label>
+              <input
+                id="ann-expires"
+                type="datetime-local"
+                class="form-control"
+                formControlName="expiresAtUtc"
+              />
+              <small class="form-hint">Opcional. El anuncio dejará de mostrarse luego de esta fecha.</small>
+            </div>
+
+            @if (error()) {
+              <div class="alert alert-danger" role="alert">{{ error() }}</div>
+            }
+
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn btn-primary" [disabled]="saving()">
+                @if (saving()) {
+                  <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                }
+                Guardar
+              </button>
+              <a routerLink="/announcements" class="btn btn-link">Cancelar</a>
+            </div>
+
+          </form>
+        }
+      </div>
+    </div>
+  </div>
+</div>

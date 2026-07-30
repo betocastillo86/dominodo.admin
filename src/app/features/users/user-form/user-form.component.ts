@@ -9,6 +9,7 @@ import { SpinnerComponent } from '../../../shared/ui/spinner/spinner.component';
 import { NotificationService } from '../../../core/notifications/notification.service';
 import { ProblemDetails } from '../../../core/http/problem-details';
 import { UsersService } from '../data-access/users.service';
+import { UserStatus } from '../data-access/user.models';
 
 /** Create or edit a user. Mode is resolved from the presence of `:id` in the route. */
 @Component({
@@ -62,6 +63,15 @@ export class UserFormComponent implements OnInit {
   readonly saving = signal(false);
   readonly error = signal<string | null>(null);
 
+  readonly userStatus = signal<UserStatus | null>(null);
+  readonly userPhone = signal<string>('');
+
+  readonly otpRequested = signal(false);
+  readonly otpSending = signal(false);
+  readonly otpConfirming = signal(false);
+  readonly otpError = signal<string | null>(null);
+  readonly otpCode = new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.minLength(4)] });
+
   ngOnInit(): void {
     if (this.mode === 'edit') {
       this.form.controls.phone.disable();
@@ -112,6 +122,43 @@ export class UserFormComponent implements OnInit {
     }
   }
 
+  requestOtp(): void {
+    this.otpError.set(null);
+    this.otpSending.set(true);
+    this.usersService
+      .requestVerification({ phone: this.userPhone() })
+      .pipe(finalize(() => this.otpSending.set(false)))
+      .subscribe({
+        next: () => {
+          this.otpRequested.set(true);
+          this.otpCode.reset('');
+          this.notifications.success('Código OTP enviado al teléfono del usuario.');
+        },
+        error: (err: unknown) => this.otpError.set(this.toMessage(err, 'No se pudo enviar el OTP.')),
+      });
+  }
+
+  confirmOtp(): void {
+    if (this.otpCode.invalid) {
+      this.otpCode.markAsTouched();
+      return;
+    }
+    this.otpError.set(null);
+    this.otpConfirming.set(true);
+    this.usersService
+      .confirmVerification({ phone: this.userPhone(), code: this.otpCode.value.trim() })
+      .pipe(finalize(() => this.otpConfirming.set(false)))
+      .subscribe({
+        next: () => {
+          this.otpRequested.set(false);
+          this.otpCode.reset('');
+          this.userStatus.set('Active');
+          this.notifications.success('Teléfono verificado. El usuario ahora está activo.');
+        },
+        error: (err: unknown) => this.otpError.set(this.toMessage(err, 'Código inválido o expirado.')),
+      });
+  }
+
   private loadUser(id: string): void {
     this.loading.set(true);
     this.usersService
@@ -125,6 +172,8 @@ export class UserFormComponent implements OnInit {
             lastName: user.lastName,
             email: user.email ?? '',
           });
+          this.userStatus.set(user.status);
+          this.userPhone.set(user.phone);
         },
         error: (err: unknown) =>
           this.error.set(this.toMessage(err, 'No se pudo cargar el usuario.')),

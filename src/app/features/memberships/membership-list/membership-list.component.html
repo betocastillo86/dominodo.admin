@@ -27,6 +27,34 @@
         <div class="card-header">
           <h3 class="card-title">Miembros actuales</h3>
         </div>
+        <div class="card-body border-bottom py-3">
+          <div class="row g-2">
+            <div class="col-12 col-md-4">
+              <input
+                type="text"
+                class="form-control"
+                placeholder="Buscar por nombre o teléfono…"
+                [formControl]="memberSearchControl"
+              />
+            </div>
+            <div class="col-6 col-md-3">
+              <select class="form-select" [formControl]="memberStatusControl">
+                <option value="">Todos los estados</option>
+                <option value="Active">Activos</option>
+                <option value="Invited">Invitados</option>
+                <option value="Suspended">Suspendidos</option>
+              </select>
+            </div>
+            <div class="col-6 col-md-3">
+              <select class="form-select" [formControl]="memberRoleControl">
+                <option value="">Todos los roles</option>
+                @for (role of roles(); track role.id) {
+                  <option [value]="role.id">{{ role.name }}</option>
+                }
+              </select>
+            </div>
+          </div>
+        </div>
         <app-data-table
           [columns]="memberColumns"
           [rows]="members()"

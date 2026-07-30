@@ -79,7 +79,8 @@ src/app/
     ├── notification-messages/  # read-only lists of sent messages (email/push/in-app)
     ├── memberships/            # tenant-scoped: members + invitations on one page, + invite form
     ├── requests/               # cross-tenant PQRS list + detail/edit page (edit, status, participant)
-    └── request-categories/     # cross-tenant catalog: list, create, edit of PQRS categories
+    ├── request-categories/     # cross-tenant catalog: list, create, edit of PQRS categories
+    └── announcements/          # cross-tenant list (status/category/tenant filters) + create/edit form
 ```
 
 - **`core/`**: single instances and cross-cutting concerns; no business UI.

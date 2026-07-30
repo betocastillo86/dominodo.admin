@@ -56,6 +56,7 @@ export class UserListComponent {
       value: (u) => (u.phoneVerified ? 'Sí' : 'No'),
       badgeClass: (u) => (u.phoneVerified ? 'badge bg-green-lt' : ''),
     },
+    { header: 'Registro', value: (u) => this.formatDate(u.createdAtUtc), class: 'text-secondary' },
   ];
 
   readonly rowKey = (user: UserListItemDto): string => user.id;
@@ -91,5 +92,11 @@ export class UserListComponent {
     const status = (this.statusControl.value as UserStatus) || undefined;
     const tenantId = this.tenantControl.value || undefined;
     this.usersService.list(page, this.pageSize, name, status, tenantId);
+  }
+
+  private formatDate(iso?: string | null): string {
+    if (!iso) return '—';
+    const date = new Date(iso);
+    return isNaN(date.getTime()) ? iso : date.toLocaleString('es');
   }
 }

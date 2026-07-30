@@ -5,9 +5,12 @@ import { environment } from '../../../../environments/environment';
 import { PagedResult } from '../../../core/models/paged-result';
 import { ProblemDetails } from '../../../core/http/problem-details';
 import {
+  ChangeTenantStatusRequest,
   CreateTenantRequest,
+  SetTenantFeatureRequest,
   TenantDetailDto,
   TenantDto,
+  TenantFeatureDto,
   TenantStatus,
   UpdateTenantRequest,
 } from './tenant.models';
@@ -67,6 +70,18 @@ export class TenantsService {
 
   update(id: string, body: UpdateTenantRequest): Observable<void> {
     return this.http.put<void>(`${this.base}/${id}`, body);
+  }
+
+  getFeatures(tenantId: string): Observable<TenantFeatureDto[]> {
+    return this.http.get<TenantFeatureDto[]>(`${this.base}/${tenantId}/features`);
+  }
+
+  setFeature(tenantId: string, featureKey: string, body: SetTenantFeatureRequest): Observable<void> {
+    return this.http.put<void>(`${this.base}/${tenantId}/features/${featureKey}`, body);
+  }
+
+  changeStatus(id: string, body: ChangeTenantStatusRequest): Observable<void> {
+    return this.http.put<void>(`${this.base}/${id}/status`, body);
   }
 
   private toError(error: unknown): string {

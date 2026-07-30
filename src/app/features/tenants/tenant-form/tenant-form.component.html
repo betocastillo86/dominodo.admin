@@ -162,6 +162,19 @@
               </div>
             </div>
 
+            <div class="mb-3">
+              <label class="form-check">
+                <input
+                  id="tenant-confirmInvitationRequired"
+                  type="checkbox"
+                  class="form-check-input"
+                  formControlName="confirmInvitationRequired"
+                />
+                <span class="form-check-label">Confirmación de invitación requerida</span>
+              </label>
+              <small class="form-hint">Si está activo, el usuario deberá confirmar la invitación antes de acceder al conjunto.</small>
+            </div>
+
             @if (mode === 'create') {
               <div class="mb-3">
                 <label class="form-label" for="tenant-branding">Branding</label>
@@ -206,6 +219,78 @@
   </div>
 </div>
 
+@if (mode === 'edit' && currentStatus()) {
+  <div class="page-body pt-0">
+    <div class="container-xl">
+      <div class="card mb-3">
+        <div class="card-header">
+          <h3 class="card-title">Estado del conjunto</h3>
+          <div class="card-options">
+            <span [class]="TENANT_STATUS_BADGES[currentStatus()!]">
+              {{ TENANT_STATUS_LABELS[currentStatus()!] }}
+            </span>
+          </div>
+        </div>
+        <div class="card-body">
+          <p class="text-secondary mb-3">
+            Cambia el estado del conjunto. Esta acción es independiente de los datos del formulario.
+          </p>
+          <div class="row g-2 align-items-end">
+            <div class="col-auto">
+              <label class="form-label" for="tenant-status">Nuevo estado</label>
+              <select
+                id="tenant-status"
+                class="form-select"
+                [value]="selectedStatus()"
+                [disabled]="confirmingStatus() || changingStatus()"
+                (change)="onStatusChange($any($event.target).value)"
+              >
+                @for (s of ALL_STATUSES; track s) {
+                  <option [value]="s">{{ TENANT_STATUS_LABELS[s] }}</option>
+                }
+              </select>
+            </div>
+            <div class="col-auto">
+              @if (!confirmingStatus()) {
+                <button
+                  type="button"
+                  class="btn btn-warning"
+                  [disabled]="changingStatus() || selectedStatus() === currentStatus()"
+                  (click)="requestStatusChange()"
+                >
+                  @if (changingStatus()) {
+                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                  }
+                  Cambiar estado
+                </button>
+              } @else {
+                <div class="d-flex align-items-center gap-2">
+                  <span class="text-warning fw-medium">
+                    ¿Cambiar a <strong>{{ TENANT_STATUS_LABELS[selectedStatus()!] }}</strong>?
+                  </span>
+                  <button
+                    type="button"
+                    class="btn btn-danger"
+                    (click)="submitStatusChange()"
+                  >Confirmar</button>
+                  <button
+                    type="button"
+                    class="btn btn-ghost-secondary"
+                    (click)="cancelStatusChange()"
+                  >Cancelar</button>
+                </div>
+              }
+            </div>
+          </div>
+          @if (statusError()) {
+            <div class="alert alert-danger mt-3 mb-0">{{ statusError() }}</div>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
 @if (mode === 'edit' && tenantSlug()) {
   <div class="page-body pt-0">
     <div class="container-xl">
@@ -230,6 +315,98 @@
             Gestiona los miembros e invitaciones del conjunto desde la sección de membresías.
           </p>
         </div>
+      </div>
+    </div>
+  </div>
+}
+
+@if (mode === 'edit') {
+  <div class="page-body pt-0">
+    <div class="container-xl">
+      <div class="card mb-3">
+        <div class="card-header">
+          <h3 class="card-title">Features</h3>
+        </div>
+        <div class="card-body border-bottom py-3">
+          <div class="row g-2 align-items-center">
+            <div class="col">
+              <input
+                type="text"
+                class="form-control"
+                placeholder="Clave de la feature (p. ej. reservas)"
+                [formControl]="newFeatureKey"
+                (keydown.enter)="addFeature()"
+              />
+            </div>
+            <div class="col-auto">
+              <button
+                type="button"
+                class="btn btn-primary"
+                [disabled]="addingFeature() || !newFeatureKey.value.trim()"
+                (click)="addFeature()"
+              >
+                @if (addingFeature()) {
+                  <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                }
+                Agregar
+              </button>
+            </div>
+          </div>
+        </div>
+
+        @if (featuresError()) {
+          <div class="card-body py-2">
+            <div class="alert alert-danger mb-0">{{ featuresError() }}</div>
+          </div>
+        }
+
+        @if (loadingFeatures()) {
+          <div class="card-body">
+            <app-spinner />
+          </div>
+        } @else if (tenantFeatures().length === 0) {
+          <div class="card-body text-secondary">Este conjunto no tiene features configuradas.</div>
+        } @else {
+          <div class="table-responsive">
+            <table class="table table-vcenter card-table">
+              <thead>
+                <tr>
+                  <th>Clave</th>
+                  <th>Estado</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (feature of tenantFeatures(); track feature.featureKey) {
+                  <tr>
+                    <td><code>{{ feature.featureKey }}</code></td>
+                    <td>
+                      @if (feature.enabled) {
+                        <span class="badge bg-success-lt">Habilitada</span>
+                      } @else {
+                        <span class="badge bg-secondary-lt">Deshabilitada</span>
+                      }
+                    </td>
+                    <td class="text-end">
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-ghost-secondary me-1"
+                        [disabled]="togglingFeature() === feature.featureKey"
+                        (click)="toggleFeature(feature)"
+                      >
+                        @if (togglingFeature() === feature.featureKey) {
+                          <span class="spinner-border spinner-border-sm" role="status"></span>
+                        } @else {
+                          {{ feature.enabled ? 'Deshabilitar' : 'Habilitar' }}
+                        }
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
       </div>
     </div>
   </div>

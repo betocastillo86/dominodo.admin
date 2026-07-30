@@ -64,6 +64,10 @@ export interface RequestDto {
   createdByUserId: string;
   apartmentId: string | null;
   assignedToUserId: string | null;
+  createdAtUtc: string; // date-time
+  updatedAtUtc?: string | null; // date-time
+  createdBy?: string | null;
+  updatedBy?: string | null;
 }
 
 /** Request detail as returned by `GET /requests/{id}`. */

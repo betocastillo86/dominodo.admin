@@ -1,0 +1,81 @@
+<app-page-header title="Detalle del correo" pretitle="Notificaciones">
+  <a routerLink="/notification-messages/email" actions class="btn btn-secondary">Volver al listado</a>
+</app-page-header>
+
+<div class="page-body">
+  <div class="container-xl">
+    @if (message(); as m) {
+      <div class="card mb-3">
+        <div class="card-header">
+          <h3 class="card-title">{{ m.subject }}</h3>
+          <div class="card-actions">
+            <span [class]="statusBadge(m)">{{ statusLabel(m) }}</span>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="datagrid">
+            <div class="datagrid-item">
+              <div class="datagrid-title">Destinatario</div>
+              <div class="datagrid-content">{{ m.toName ? m.toName + ' <' + m.to + '>' : m.to }}</div>
+            </div>
+            <div class="datagrid-item">
+              <div class="datagrid-title">Asunto</div>
+              <div class="datagrid-content">{{ m.subject }}</div>
+            </div>
+            <div class="datagrid-item">
+              <div class="datagrid-title">Estado</div>
+              <div class="datagrid-content"><span [class]="statusBadge(m)">{{ statusLabel(m) }}</span></div>
+            </div>
+            <div class="datagrid-item">
+              <div class="datagrid-title">Prioridad</div>
+              <div class="datagrid-content">{{ m.priority }}</div>
+            </div>
+            <div class="datagrid-item">
+              <div class="datagrid-title">Intentos</div>
+              <div class="datagrid-content">{{ m.attempts }}</div>
+            </div>
+            <div class="datagrid-item">
+              <div class="datagrid-title">Programado</div>
+              <div class="datagrid-content">{{ formatDate(m.scheduledAtUtc) }}</div>
+            </div>
+            <div class="datagrid-item">
+              <div class="datagrid-title">Enviado</div>
+              <div class="datagrid-content">{{ formatDate(m.sentAtUtc) }}</div>
+            </div>
+            <div class="datagrid-item">
+              <div class="datagrid-title">Creado</div>
+              <div class="datagrid-content">{{ formatDate(m.createdAtUtc) }}</div>
+            </div>
+            <div class="datagrid-item">
+              <div class="datagrid-title">ID</div>
+              <div class="datagrid-content"><span class="text-secondary font-monospace">{{ m.id }}</span></div>
+            </div>
+            <div class="datagrid-item">
+              <div class="datagrid-title">Conjunto (tenant)</div>
+              <div class="datagrid-content"><span class="text-secondary font-monospace">{{ m.tenantId }}</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Cuerpo HTML</h3>
+        </div>
+        <div class="card-body">
+          <div class="border rounded p-3" [innerHTML]="m.bodyHtml"></div>
+        </div>
+      </div>
+    } @else {
+      <div class="empty">
+        <p class="empty-title">Correo no disponible</p>
+        <p class="empty-subtitle text-secondary">
+          No se encontró el correo en la lista cargada. Vuelve al listado y ábrelo desde ahí.
+        </p>
+        <div class="empty-action">
+          <a routerLink="/notification-messages/email" class="btn btn-primary">Volver al listado</a>
+        </div>
+      </div>
+    }
+  </div>
+</div>

@@ -37,6 +37,7 @@ export class SidebarComponent {
     { label: 'Roles', path: '/roles', icon: 'shield-lock' },
     { label: 'Conjuntos', path: '/tenants', icon: 'building-community' },
     { label: 'Usuarios', path: '/users', icon: 'user' },
+    { label: 'Anuncios', path: '/announcements', icon: 'speakerphone' },
     {
       label: 'Solicitudes',
       icon: 'list-details',

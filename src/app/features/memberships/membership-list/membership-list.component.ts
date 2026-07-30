@@ -12,6 +12,7 @@ import {
   INVITATION_STATUS_BADGES,
   INVITATION_STATUS_LABELS,
   MembershipDto,
+  MembershipFilters,
   MEMBERSHIP_STATUS_BADGES,
   MEMBERSHIP_STATUS_LABELS,
   RoleSummaryDto,
@@ -52,6 +53,11 @@ export class MembershipListComponent {
 
   readonly roles = signal<RoleSummaryDto[]>([]);
 
+  // Member filters.
+  readonly memberSearchControl = new FormControl('', { nonNullable: true });
+  readonly memberStatusControl = new FormControl('', { nonNullable: true });
+  readonly memberRoleControl = new FormControl('', { nonNullable: true });
+
   // Invitation filters.
   readonly searchControl = new FormControl('', { nonNullable: true });
   /** '' = todas, 'false' = pendientes, 'true' = aceptadas. */
@@ -61,11 +67,8 @@ export class MembershipListComponent {
   readonly roleControl = new FormControl('', { nonNullable: true });
 
   readonly memberColumns: readonly TableColumn<MembershipDto>[] = [
-    {
-      header: 'Usuario',
-      value: (m) => m.userId.slice(0, 8) + '…',
-      class: 'text-secondary font-monospace',
-    },
+    { header: 'Nombre', value: (m) => m.userName },
+    { header: 'Teléfono', value: (m) => m.phone, class: 'text-secondary font-monospace' },
     { header: 'Rol', value: (m) => m.roleName, badgeClass: () => 'badge bg-blue-lt' },
     {
       header: 'Estado',
@@ -117,6 +120,16 @@ export class MembershipListComponent {
   readonly invitationRowKey = (i: InvitationDto): string => i.id;
 
   constructor() {
+    this.memberSearchControl.valueChanges
+      .pipe(debounceTime(300), distinctUntilChanged(), takeUntilDestroyed())
+      .subscribe(() => this.reloadMembers(1));
+
+    for (const control of [this.memberStatusControl, this.memberRoleControl]) {
+      control.valueChanges
+        .pipe(distinctUntilChanged(), takeUntilDestroyed())
+        .subscribe(() => this.reloadMembers(1));
+    }
+
     this.searchControl.valueChanges
       .pipe(debounceTime(300), distinctUntilChanged(), takeUntilDestroyed())
       .subscribe(() => this.reloadInvitations(1));
@@ -134,13 +147,27 @@ export class MembershipListComponent {
 
     if (this.tenantSlug) {
       this.loadRoles();
-      this.membershipsService.list(this.tenantSlug, 1, this.pageSize);
+      this.reloadMembers(1);
       this.reloadInvitations(1);
     }
   }
 
   onMembersPageChange(page: number): void {
-    this.membershipsService.list(this.tenantSlug, page, this.pageSize);
+    this.reloadMembers(page);
+  }
+
+  private reloadMembers(page: number): void {
+    if (!this.tenantSlug) return;
+    this.membershipsService.list(this.tenantSlug, page, this.pageSize, this.buildMemberFilters());
+  }
+
+  private buildMemberFilters(): MembershipFilters {
+    const filters: MembershipFilters = {};
+    const search = this.memberSearchControl.value.trim();
+    if (search) filters.search = search;
+    if (this.memberStatusControl.value) filters.status = this.memberStatusControl.value;
+    if (this.memberRoleControl.value) filters.roleId = Number(this.memberRoleControl.value);
+    return filters;
   }
 
   onInvitationsPageChange(page: number): void {

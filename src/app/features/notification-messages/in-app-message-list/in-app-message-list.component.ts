@@ -44,6 +44,8 @@ export class InAppMessageListComponent {
 
   readonly rowKey = (message: AdminInAppMessageDto): string => message.id;
 
+  readonly actionLink = (message: AdminInAppMessageDto): string[] => [message.id];
+
   constructor() {
     this.searchControl.valueChanges
       .pipe(debounceTime(300), distinctUntilChanged(), takeUntilDestroyed())

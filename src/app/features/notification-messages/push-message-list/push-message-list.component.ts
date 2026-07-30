@@ -61,6 +61,8 @@ export class PushMessageListComponent {
 
   readonly rowKey = (message: AdminPushMessageDto): string => message.id;
 
+  readonly actionLink = (message: AdminPushMessageDto): string[] => [message.id];
+
   constructor() {
     this.searchControl.valueChanges
       .pipe(debounceTime(300), distinctUntilChanged(), takeUntilDestroyed())

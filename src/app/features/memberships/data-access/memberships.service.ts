@@ -9,6 +9,7 @@ import {
   InvitationFilters,
   InviteMemberRequest,
   MembershipDto,
+  MembershipFilters,
   RoleSummaryDto,
 } from './membership.models';
 
@@ -39,11 +40,15 @@ export class MembershipsService {
   readonly invitationsLoading = this._invitationsLoading.asReadonly();
   readonly invitationsError = this._invitationsError.asReadonly();
 
-  list(tenantSlug: string, page: number, pageSize: number): void {
+  list(tenantSlug: string, page: number, pageSize: number, filters: MembershipFilters = {}): void {
     this._loading.set(true);
     this._error.set(null);
 
-    const params = new HttpParams().set('page', page).set('pageSize', pageSize);
+    let params = new HttpParams().set('page', page).set('pageSize', pageSize);
+    if (filters.search) params = params.set('search', filters.search);
+    if (filters.status) params = params.set('status', filters.status);
+    if (filters.roleId !== undefined) params = params.set('roleId', filters.roleId);
+
     this.http
       .get<PagedResult<MembershipDto>>(this.base, {
         params,

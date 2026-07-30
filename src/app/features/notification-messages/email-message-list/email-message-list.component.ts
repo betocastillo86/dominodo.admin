@@ -41,7 +41,7 @@ export class EmailMessageListComponent {
   readonly toControl = new FormControl('', { nonNullable: true });
 
   readonly columns: readonly TableColumn<AdminEmailMessageDto>[] = [
-    { header: 'Destinatario', value: (m) => (m.toName ? `${m.toName} <${m.to}>` : m.to) },
+    { header: 'Destinatario', value: (m) => m.to },
     { header: 'Asunto', value: (m) => m.subject },
     {
       header: 'Estado',
@@ -55,6 +55,8 @@ export class EmailMessageListComponent {
   ];
 
   readonly rowKey = (message: AdminEmailMessageDto): string => message.id;
+
+  readonly actionLink = (message: AdminEmailMessageDto): string[] => [message.id];
 
   constructor() {
     this.searchControl.valueChanges

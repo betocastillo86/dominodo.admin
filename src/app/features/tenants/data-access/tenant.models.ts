@@ -27,6 +27,7 @@ export interface TenantDetailDto {
   country: string;
   branding?: string | null;
   settings?: string | null;
+  confirmInvitationRequired: boolean;
 }
 
 export interface CreateTenantRequest {
@@ -39,6 +40,7 @@ export interface CreateTenantRequest {
   legalId?: string | null;
   branding?: string | null;
   settings?: string | null;
+  confirmInvitationRequired: boolean;
 }
 
 /** `PUT /tenants/{id}` — note it excludes the immutable `slug`/`type` and the create-only `branding`/`settings`. */
@@ -48,4 +50,35 @@ export interface UpdateTenantRequest {
   address: string;
   city: string;
   country: string;
+  confirmInvitationRequired: boolean;
 }
+
+/** Feature flag record for a tenant, returned by `GET /tenants/{tenantId}/features`. */
+export interface TenantFeatureDto {
+  id: string;
+  tenantId: string;
+  featureKey: string;
+  enabled: boolean;
+}
+
+/** `PUT /tenants/{tenantId}/features/{featureKey}` */
+export interface SetTenantFeatureRequest {
+  enabled: boolean;
+}
+
+/** `PUT /tenants/{id}/status` */
+export interface ChangeTenantStatusRequest {
+  status: TenantStatus;
+}
+
+export const TENANT_STATUS_LABELS: Record<TenantStatus, string> = {
+  Onboarding: 'Onboarding',
+  Active: 'Activo',
+  Suspended: 'Suspendido',
+};
+
+export const TENANT_STATUS_BADGES: Record<TenantStatus, string> = {
+  Onboarding: 'badge bg-warning-lt',
+  Active: 'badge bg-success-lt',
+  Suspended: 'badge bg-danger-lt',
+};
