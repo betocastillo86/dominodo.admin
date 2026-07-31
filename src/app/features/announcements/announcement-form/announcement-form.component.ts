@@ -17,6 +17,7 @@ import { NotificationService } from '../../../core/notifications/notification.se
 import { ProblemDetails } from '../../../core/http/problem-details';
 import { AnnouncementsService } from '../data-access/announcements.service';
 import { AudienceType } from '../data-access/announcement.models';
+import { RequestCategoriesService } from '../../request-categories/data-access/request-categories.service';
 
 /** Create or edit an announcement. Mode is resolved from the presence of `:id` in the route. */
 @Component({
@@ -30,10 +31,13 @@ export class AnnouncementFormComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly announcementsService = inject(AnnouncementsService);
+  private readonly requestCategoriesService = inject(RequestCategoriesService);
   private readonly notifications = inject(NotificationService);
 
   private readonly id = this.route.snapshot.paramMap.get('id');
   readonly mode: 'create' | 'edit' = this.id ? 'edit' : 'create';
+
+  readonly categories = this.requestCategoriesService.categories;
 
   readonly form = new FormGroup({
     title: new FormControl('', {
@@ -53,7 +57,7 @@ export class AnnouncementFormComponent implements OnInit {
       validators: [Validators.required],
     }),
     audienceFilter: new FormControl('', { nonNullable: true }),
-    category: new FormControl('', { nonNullable: true }),
+    categoryId: new FormControl('', { nonNullable: true }),
     expiresAtUtc: new FormControl('', { nonNullable: true }),
   });
 
@@ -77,6 +81,8 @@ export class AnnouncementFormComponent implements OnInit {
   readonly loading = computed(() => this.loadingDetail());
 
   ngOnInit(): void {
+    this.requestCategoriesService.list(1, 200);
+
     if (this.mode === 'edit') {
       this.loadDetail(this.id!);
     }
@@ -98,8 +104,7 @@ export class AnnouncementFormComponent implements OnInit {
       priority: raw.priority,
       audienceType: raw.audienceType,
       audienceFilter: raw.audienceFilter.trim() || null,
-      category: raw.category.trim() || null,
-      // datetime-local gives "YYYY-MM-DDTHH:MM"; append seconds + UTC suffix for ISO 8601
+      categoryId: raw.categoryId || null,
       expiresAtUtc: raw.expiresAtUtc ? raw.expiresAtUtc + ':00.000Z' : null,
     };
 
@@ -135,8 +140,7 @@ export class AnnouncementFormComponent implements OnInit {
             priority: detail.priority,
             audienceType: detail.audienceType,
             audienceFilter: detail.audienceFilter ?? '',
-            category: detail.category ?? '',
-            // API returns full ISO timestamp; trim to "YYYY-MM-DDTHH:MM" for datetime-local
+            categoryId: detail.categoryId ?? '',
             expiresAtUtc: detail.expiresAtUtc ? detail.expiresAtUtc.slice(0, 16) : '',
           });
         },

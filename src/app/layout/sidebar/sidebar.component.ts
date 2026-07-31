@@ -38,6 +38,7 @@ export class SidebarComponent {
     { label: 'Conjuntos', path: '/tenants', icon: 'building-community' },
     { label: 'Usuarios', path: '/users', icon: 'user' },
     { label: 'Anuncios', path: '/announcements', icon: 'speakerphone' },
+    { label: 'Base de conocimiento', path: '/knowledge-resources', icon: 'book' },
     {
       label: 'Solicitudes',
       icon: 'list-details',

@@ -61,6 +61,8 @@ export class ApartmentFormComponent implements OnInit {
   readonly residentsError = signal<string | null>(null);
 
   readonly residentColumns: readonly TableColumn<ResidentDto>[] = [
+    { header: 'Nombre', value: (r) => r.user?.fullName ?? '—' },
+    { header: 'Teléfono', value: (r) => r.user?.phone ?? '—' },
     {
       header: 'Relación',
       value: (r) => RESIDENT_RELATION_LABELS[r.relationType] ?? r.relationType,

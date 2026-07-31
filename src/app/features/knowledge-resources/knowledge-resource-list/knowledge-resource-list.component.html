@@ -1,5 +1,5 @@
-<app-page-header title="Anuncios" pretitle="Administración">
-  <a routerLink="/announcements/new" actions class="btn btn-primary">+ Nuevo anuncio</a>
+<app-page-header title="Base de conocimiento" pretitle="Administración">
+  <a routerLink="/knowledge-resources/new" actions class="btn btn-primary">+ Nuevo recurso</a>
 </app-page-header>
 
 <div class="page-body">
@@ -15,11 +15,11 @@
           </select>
         </div>
         <div class="col-12 col-sm-4 col-lg-4">
-          <app-multi-select
-            [formControl]="categoryControl"
-            [options]="categoryOptions()"
-            placeholder="Todas las categorías"
-            emptyText="No hay categorías disponibles"
+          <input
+            type="text"
+            class="form-control"
+            placeholder="Buscar…"
+            [formControl]="searchControl"
           />
         </div>
         <div class="col-12 col-sm-4 col-lg-4">
@@ -34,12 +34,13 @@
     </div>
     <app-data-table
       [columns]="columns()"
-      [rows]="announcements()"
+      [rows]="resources()"
       [paging]="paging()"
       [loading]="loading()"
       [error]="error()"
       [rowKey]="rowKey"
       [actionLink]="editLink"
+      [actionQueryParams]="editQueryParams"
       (pageChange)="onPageChange($event)"
     />
   </div>

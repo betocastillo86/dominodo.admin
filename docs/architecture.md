@@ -80,7 +80,8 @@ src/app/
     ├── memberships/            # tenant-scoped: members + invitations on one page, + invite form
     ├── requests/               # cross-tenant PQRS list + detail/edit page (edit, status, participant)
     ├── request-categories/     # cross-tenant catalog: list, create, edit of PQRS categories
-    └── announcements/          # cross-tenant list (status/category/tenant filters) + create/edit form
+    ├── announcements/          # cross-tenant list (status/category/tenant filters) + create/edit form
+    └── knowledge-resources/    # cross-tenant list (status/category/tenant filters) + create/edit form
 ```
 
 - **`core/`**: single instances and cross-cutting concerns; no business UI.
@@ -160,6 +161,16 @@ request detail.
 actions, since the API has no per-message detail/edit). Email and Push accept a `status` filter
 (`AdminDeliveryStatus`: Pending/Sent/Failed); In-App has none. They hang off the same "Notificaciones"
 sidebar group as the templates, under the `notification-messages/{email|push|in-app}` routes.
+
+**Knowledge Resources** is the cross-tenant knowledge base. Its list mirrors Announcements — a cross-tenant
+`GET /knowledge-resources` (no `X-Tenant` header, filtered by `status`, free-text `category`, and `tenantId`
+query params) rendered in a `DataTable` with a per-row edit link that carries the resource's `tenantId` as a
+query param. Its create/edit follow the **Requests** write pattern instead: the create/update bodies carry no
+`tenantId`, so the operations are tenant-scoped via the `X-Tenant` slug header. On **create** the user picks a
+conjunto and its slug is resolved from the loaded catalog; on **edit** the `tenantId` query param is resolved
+to a slug via `TenantsService.getById` (the conjunto is then immutable). A resource is always created as a
+**Draft** (the create body has no `status`); its lifecycle (`Draft`/`Published`/`Archived`) is driven by the
+`status` field, which is therefore only shown in edit mode.
 
 The `DataTable` is generic and presentational: columns are declared as data (value + optional badge/link
 functions), pagination is server-side via `PagedResult`, and it renders loading/error/empty states itself.

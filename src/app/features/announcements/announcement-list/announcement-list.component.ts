@@ -1,24 +1,30 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { debounceTime, distinctUntilChanged } from 'rxjs';
+import { distinctUntilChanged } from 'rxjs';
 import { PageHeaderComponent } from '../../../shared/ui/page-header/page-header.component';
 import { DataTableComponent, TableColumn } from '../../../shared/ui/data-table/data-table.component';
+import {
+  MultiSelectComponent,
+  MultiSelectOption,
+} from '../../../shared/ui/multi-select/multi-select.component';
 import { AnnouncementsService } from '../data-access/announcements.service';
 import { AnnouncementDto, AnnouncementStatus } from '../data-access/announcement.models';
 import { TenantDto } from '../../tenants/data-access/tenant.models';
+import { RequestCategoriesService } from '../../request-categories/data-access/request-categories.service';
 
 /** Server-paginated listing of announcements with status, category and tenant filters. */
 @Component({
   selector: 'app-announcement-list',
   standalone: true,
-  imports: [PageHeaderComponent, DataTableComponent, ReactiveFormsModule, RouterLink],
+  imports: [PageHeaderComponent, DataTableComponent, MultiSelectComponent, ReactiveFormsModule, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './announcement-list.component.html',
 })
 export class AnnouncementListComponent {
   private readonly announcementsService = inject(AnnouncementsService);
+  private readonly requestCategoriesService = inject(RequestCategoriesService);
 
   readonly announcements = this.announcementsService.announcements;
   readonly paging = this.announcementsService.paging;
@@ -28,9 +34,21 @@ export class AnnouncementListComponent {
   readonly tenants = signal<TenantDto[]>([]);
   private readonly tenantsMap = signal<Map<string, string>>(new Map());
 
+  readonly categories = this.requestCategoriesService.categories;
+
+  private readonly categoriesMap = computed(() => {
+    const m = new Map<string, string>();
+    for (const c of this.categories()) m.set(c.id, c.name);
+    return m;
+  });
+
+  readonly categoryOptions = computed<MultiSelectOption[]>(() =>
+    this.categories().map((c) => ({ value: c.id, label: c.name })),
+  );
+
   private readonly pageSize = 20;
 
-  readonly categoryControl = new FormControl('', { nonNullable: true });
+  readonly categoryControl = new FormControl<string[]>([], { nonNullable: true });
   readonly statusControl = new FormControl<AnnouncementStatus | ''>('', { nonNullable: true });
   readonly tenantControl = new FormControl('', { nonNullable: true });
 
@@ -52,7 +70,7 @@ export class AnnouncementListComponent {
     Archived: 'badge bg-red-lt',
   };
 
-  readonly columns: readonly TableColumn<AnnouncementDto>[] = [
+  readonly columns = computed((): readonly TableColumn<AnnouncementDto>[] => [
     { header: 'Título', value: (r) => r.title },
     {
       header: 'Conjunto',
@@ -63,11 +81,17 @@ export class AnnouncementListComponent {
       value: (r) => this.statusLabels[r.status] ?? r.status,
       badgeClass: (r) => this.statusBadges[r.status] ?? 'badge',
     },
-    { header: 'Categoría', value: (r) => r.category ?? '—' },
+    {
+      header: 'Categoría',
+      value: (r) =>
+        r.categoryId
+          ? (this.categoriesMap().get(r.categoryId) ?? r.categoryId.slice(0, 8) + '…')
+          : '—',
+    },
     { header: 'Audiencia', value: (r) => this.audienceLabels[r.audienceType] ?? r.audienceType },
     { header: 'Prioridad', value: (r) => r.priority, class: 'text-end w-1' },
     { header: 'Vence', value: (r) => (r.expiresAtUtc ? r.expiresAtUtc.slice(0, 10) : '—') },
-  ];
+  ]);
 
   readonly rowKey = (a: AnnouncementDto): string => a.id;
   readonly editLink = (a: AnnouncementDto): unknown[] => ['/announcements', a.id, 'edit'];
@@ -80,8 +104,10 @@ export class AnnouncementListComponent {
       },
     });
 
+    this.requestCategoriesService.list(1, 200);
+
     this.categoryControl.valueChanges
-      .pipe(debounceTime(300), distinctUntilChanged(), takeUntilDestroyed())
+      .pipe(distinctUntilChanged(), takeUntilDestroyed())
       .subscribe(() => this.reload(1));
 
     this.statusControl.valueChanges
@@ -100,9 +126,15 @@ export class AnnouncementListComponent {
   }
 
   private reload(page: number): void {
-    const category = this.categoryControl.value || undefined;
+    const categoryIds = this.categoryControl.value;
     const status = (this.statusControl.value as AnnouncementStatus) || undefined;
     const tenantId = this.tenantControl.value || undefined;
-    this.announcementsService.list(page, this.pageSize, status, category, tenantId);
+    this.announcementsService.list(
+      page,
+      this.pageSize,
+      status,
+      categoryIds.length ? categoryIds : undefined,
+      tenantId,
+    );
   }
 }

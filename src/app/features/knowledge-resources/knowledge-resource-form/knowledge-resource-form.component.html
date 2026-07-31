@@ -1,0 +1,136 @@
+<app-page-header
+  [title]="mode === 'edit' ? 'Editar recurso' : 'Nuevo recurso'"
+  pretitle="Administración"
+/>
+
+<div class="page-body">
+  <div class="container-xl">
+    <div class="card">
+      <div class="card-body">
+        @if (loading()) {
+          <app-spinner />
+        } @else {
+          <form [formGroup]="form" (ngSubmit)="onSubmit()">
+
+            <div class="mb-3">
+              <label class="form-label required" for="kr-tenant">Conjunto</label>
+              @if (mode === 'create') {
+                <select
+                  id="kr-tenant"
+                  class="form-select"
+                  formControlName="tenantId"
+                  [class.is-invalid]="form.controls.tenantId.invalid && form.controls.tenantId.touched"
+                >
+                  <option value="">Selecciona un conjunto…</option>
+                  @for (tenant of tenants(); track tenant.id) {
+                    <option [value]="tenant.id">{{ tenant.name }}</option>
+                  }
+                </select>
+                @if (form.controls.tenantId.invalid && form.controls.tenantId.touched) {
+                  <div class="invalid-feedback">Selecciona un conjunto.</div>
+                }
+              } @else {
+                <input
+                  id="kr-tenant"
+                  type="text"
+                  class="form-control"
+                  [value]="tenantName() ?? ''"
+                  disabled
+                />
+                <small class="form-hint">El conjunto no puede modificarse una vez creado el recurso.</small>
+              }
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label required" for="kr-title">Título</label>
+              <input
+                id="kr-title"
+                type="text"
+                class="form-control"
+                formControlName="title"
+                [class.is-invalid]="form.controls.title.invalid && form.controls.title.touched"
+              />
+              @if (form.controls.title.invalid && form.controls.title.touched) {
+                <div class="invalid-feedback">
+                  @if (form.controls.title.errors?.['server']) {
+                    {{ form.controls.title.errors?.['server'] }}
+                  } @else if (form.controls.title.errors?.['required']) {
+                    El título es obligatorio.
+                  } @else if (form.controls.title.errors?.['maxlength']) {
+                    El título no puede superar los 200 caracteres.
+                  }
+                </div>
+              }
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label required" for="kr-body">Contenido</label>
+              <textarea
+                id="kr-body"
+                class="form-control"
+                formControlName="body"
+                rows="8"
+                [class.is-invalid]="form.controls.body.invalid && form.controls.body.touched"
+              ></textarea>
+              @if (form.controls.body.invalid && form.controls.body.touched) {
+                <div class="invalid-feedback">
+                  @if (form.controls.body.errors?.['server']) {
+                    {{ form.controls.body.errors?.['server'] }}
+                  } @else {
+                    El contenido es obligatorio.
+                  }
+                </div>
+              }
+            </div>
+
+            <div class="row g-3 mb-3">
+              <div class="col-12" [class.col-md-6]="mode === 'edit'">
+                <label class="form-label" for="kr-category">Categoría</label>
+                <input
+                  id="kr-category"
+                  type="text"
+                  class="form-control"
+                  formControlName="category"
+                  placeholder="Opcional"
+                />
+              </div>
+
+              @if (mode === 'edit') {
+                <div class="col-12 col-md-6">
+                  <label class="form-label required" for="kr-status">Estado</label>
+                  <select id="kr-status" class="form-select" formControlName="status">
+                    <option value="Draft">Borrador</option>
+                    <option value="Published">Publicado</option>
+                    <option value="Archived">Archivado</option>
+                  </select>
+                  <small class="form-hint">Cambiar el estado publica o archiva el recurso.</small>
+                </div>
+              }
+            </div>
+
+            @if (mode === 'create') {
+              <div class="alert alert-info" role="alert">
+                El recurso se crea como <strong>borrador</strong>. Podrás publicarlo desde la edición.
+              </div>
+            }
+
+            @if (error()) {
+              <div class="alert alert-danger" role="alert">{{ error() }}</div>
+            }
+
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn btn-primary" [disabled]="saving()">
+                @if (saving()) {
+                  <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                }
+                Guardar
+              </button>
+              <a routerLink="/knowledge-resources" class="btn btn-link">Cancelar</a>
+            </div>
+
+          </form>
+        }
+      </div>
+    </div>
+  </div>
+</div>

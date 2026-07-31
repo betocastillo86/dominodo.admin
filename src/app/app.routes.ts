@@ -64,6 +64,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'knowledge-resources',
+        loadChildren: () =>
+          import('./features/knowledge-resources/knowledge-resources.routes').then(
+            (m) => m.knowledgeResourcesRoutes,
+          ),
+      },
+      {
         path: 'requests',
         loadChildren: () =>
           import('./features/requests/requests.routes').then((m) => m.requestsRoutes),

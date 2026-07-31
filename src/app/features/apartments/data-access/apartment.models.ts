@@ -56,11 +56,17 @@ export const APARTMENT_STATUS_BADGES: Record<ApartmentStatus, string> = {
 
 export type ResidentRelationType = 'Owner' | 'Renter';
 
+export interface ResidentUserDto {
+  fullName: string;
+  phone: string;
+}
+
 /** Resident as returned by `GET /apartments/{apartmentId}/residents` (camelCase, do not rename). */
 export interface ResidentDto {
   id: string;
   apartmentId: string;
   userId: string;
+  user?: ResidentUserDto | null;
   relationType: string;
   livesHere: boolean;
   startDate?: string | null;

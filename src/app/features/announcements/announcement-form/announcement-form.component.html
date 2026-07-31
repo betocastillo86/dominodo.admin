@@ -97,13 +97,16 @@
 
               <div class="col-12 col-md-4">
                 <label class="form-label" for="ann-category">Categoría</label>
-                <input
+                <select
                   id="ann-category"
-                  type="text"
-                  class="form-control"
-                  formControlName="category"
-                  placeholder="Ej. Mantenimiento, Seguridad…"
-                />
+                  class="form-select"
+                  formControlName="categoryId"
+                >
+                  <option value="">Sin categoría</option>
+                  @for (cat of categories(); track cat.id) {
+                    <option [value]="cat.id">{{ cat.name }}</option>
+                  }
+                </select>
               </div>
             </div>
 

@@ -5,6 +5,7 @@ import { provideTablerIcons } from 'angular-tabler-icons';
 import {
   IconApps,
   IconBell,
+  IconBook,
   IconBuildingCommunity,
   IconChevronRight,
   IconDeviceMobile,
@@ -39,6 +40,7 @@ export const appConfig: ApplicationConfig = {
     provideTablerIcons({
       IconShieldLock,
       IconSpeakerphone,
+      IconBook,
       IconUserCircle,
       IconLogout,
       IconMenu2,

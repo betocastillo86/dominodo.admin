@@ -9,7 +9,7 @@ export interface AnnouncementDto {
   id: string;
   tenantId: string;
   title: string;
-  category: string | null;
+  categoryId: string | null;
   priority: number;
   status: AnnouncementStatus;
   audienceType: AudienceType;
@@ -23,7 +23,7 @@ export interface AnnouncementDetailDto {
   tenantId: string;
   title: string;
   body: string;
-  category: string | null;
+  categoryId: string | null;
   priority: number;
   status: AnnouncementStatus;
   audienceType: AudienceType;
@@ -43,7 +43,7 @@ export interface CreateAnnouncementRequest {
   priority: number;
   audienceType: AudienceType;
   audienceFilter?: string | null;
-  category?: string | null;
+  categoryId?: string | null;
   expiresAtUtc?: string | null;
 }
 
@@ -53,6 +53,6 @@ export interface UpdateAnnouncementRequest {
   priority: number;
   audienceType: AudienceType;
   audienceFilter?: string | null;
-  category?: string | null;
+  categoryId?: string | null;
   expiresAtUtc?: string | null;
 }

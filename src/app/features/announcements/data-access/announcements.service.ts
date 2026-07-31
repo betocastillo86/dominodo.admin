@@ -34,7 +34,7 @@ export class AnnouncementsService {
     page: number,
     pageSize: number,
     status?: AnnouncementStatus,
-    category?: string,
+    categoryIds?: string[],
     tenantId?: string,
   ): void {
     this._loading.set(true);
@@ -42,7 +42,7 @@ export class AnnouncementsService {
 
     let params = new HttpParams().set('page', page).set('pageSize', pageSize);
     if (status) params = params.set('status', status);
-    if (category) params = params.set('category', category);
+    for (const id of categoryIds ?? []) params = params.append('categoryIds', id);
     if (tenantId) params = params.set('tenantId', tenantId);
 
     this.http.get<PagedResult<AnnouncementDto>>(this.base, { params }).subscribe({
