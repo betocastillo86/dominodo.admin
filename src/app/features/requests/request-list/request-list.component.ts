@@ -12,7 +12,7 @@ import { RequestsService, RequestFilters } from '../data-access/requests.service
 import {
   REQUEST_PRIORITY_LABELS,
   REQUEST_STATUS_LABELS,
-  REQUEST_TYPE_LABELS,
+  REQUEST_VISIBILITY_LABELS,
   RequestCategoryDto,
   RequestDto,
   RequestPriority,
@@ -98,9 +98,9 @@ export class RequestListComponent {
     },
     { header: 'Título', value: (r) => r.title },
     {
-      header: 'Tipo',
-      value: (r) => REQUEST_TYPE_LABELS[r.type as RequestType] ?? r.type,
-      badgeClass: () => 'badge bg-blue-lt',
+      header: 'Visibilidad',
+      value: (r) => REQUEST_VISIBILITY_LABELS[r.visibility as RequestVisibility] ?? r.visibility,
+      badgeClass: (r) => r.visibility === 'Public' ? 'badge bg-teal-lt' : 'badge bg-secondary-lt',
     },
     {
       header: 'Estado',

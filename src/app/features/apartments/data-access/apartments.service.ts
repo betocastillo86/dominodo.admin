@@ -1,6 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { map, Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { PagedResult } from '../../../core/models/paged-result';
 import {
@@ -37,6 +37,11 @@ export class ApartmentsService {
     return this.http.get<ResidentDto[]>(`${this.base}/${apartmentId}/residents`, {
       headers: { 'X-Tenant': tenantSlug },
     });
+  }
+
+  /** Returns all apartments for a tenant (up to 500) as a plain array — for catalog/lookup selects. */
+  listForTenant(tenantSlug: string): Observable<ApartmentDto[]> {
+    return this.query(tenantSlug, 1, 500).pipe(map((r) => r.items));
   }
 
   getById(id: string, tenantSlug: string): Observable<ApartmentDetailDto> {

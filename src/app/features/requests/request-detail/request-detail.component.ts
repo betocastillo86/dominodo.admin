@@ -9,10 +9,12 @@ import {
   distinctUntilChanged,
   finalize,
   forkJoin,
+  from,
   Observable,
   of,
   OperatorFunction,
   switchMap,
+  throwError,
 } from 'rxjs';
 import { NgbTypeahead, NgbTypeaheadSelectItemEvent } from '@ng-bootstrap/ng-bootstrap';
 import { TablerIconComponent } from 'angular-tabler-icons';
@@ -29,6 +31,7 @@ import {
   REQUEST_STATUS_LABELS,
   REQUEST_TYPE_LABELS,
   REQUEST_VISIBILITY_LABELS,
+  RequestAttachmentDto,
   RequestCategoryDto,
   RequestDetailDto,
   RequestParticipantDto,
@@ -70,6 +73,7 @@ export class RequestDetailComponent implements OnInit {
   readonly tenantName = signal<string | null>(null);
   readonly detail = signal<RequestDetailDto | null>(null);
   readonly categories = signal<RequestCategoryDto[]>([]);
+  readonly attachments = signal<RequestAttachmentDto[]>([]);
 
   readonly loadingInit = signal(false);
   readonly loadError = signal<string | null>(null);
@@ -82,6 +86,9 @@ export class RequestDetailComponent implements OnInit {
 
   readonly savingParticipant = signal(false);
   readonly participantError = signal<string | null>(null);
+
+  readonly uploadingFile = signal(false);
+  readonly uploadError = signal<string | null>(null);
 
   readonly pageTitle = computed(() => {
     const d = this.detail();
@@ -292,6 +299,87 @@ export class RequestDetailComponent implements OnInit {
       });
   }
 
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    const slug = this.tenantSlug();
+    if (!slug) return;
+
+    const contentType = file.type || 'application/octet-stream';
+    this.uploadingFile.set(true);
+    this.uploadError.set(null);
+
+    this.requestsService
+      .getUploadUrl(this.id, file.name, contentType, slug)
+      .pipe(
+        switchMap((ticket) =>
+          from(
+            fetch(ticket.uploadUrl, {
+              method: 'PUT',
+              body: file,
+              headers: {
+                'Content-Type': contentType,
+                'x-ms-blob-type': 'BlockBlob',
+              },
+            }),
+          ).pipe(
+            switchMap((response) =>
+              response.ok
+                ? of(ticket)
+                : throwError(() => new Error(`Error al subir el archivo (${response.status})`)),
+            ),
+          ),
+        ),
+        switchMap((ticket) =>
+          this.requestsService.confirmAttachment(
+            this.id,
+            { key: ticket.key, fileName: file.name, contentType },
+            slug,
+          ),
+        ),
+        finalize(() => {
+          this.uploadingFile.set(false);
+          input.value = '';
+        }),
+      )
+      .subscribe({
+        next: () => {
+          this.notifications.success('Archivo adjunto guardado');
+          this.reloadAttachments();
+        },
+        error: (err: unknown) =>
+          this.uploadError.set(this.toMessage(err, 'No se pudo adjuntar el archivo.')),
+      });
+  }
+
+  onDownload(attachment: RequestAttachmentDto): void {
+    const slug = this.tenantSlug();
+    if (!slug) return;
+    this.requestsService
+      .getDownloadUrl(this.id, attachment.id, slug)
+      .pipe(
+        switchMap(({ url }) => from(fetch(url))),
+        switchMap((response) =>
+          response.ok
+            ? from(response.blob())
+            : throwError(() => new Error(`Error al descargar (${response.status})`)),
+        ),
+      )
+      .subscribe({
+        next: (blob) => {
+          const objectUrl = URL.createObjectURL(blob);
+          const anchor = document.createElement('a');
+          anchor.href = objectUrl;
+          anchor.download = attachment.fileName;
+          anchor.click();
+          URL.revokeObjectURL(objectUrl);
+        },
+        error: (err: unknown) =>
+          this.notifications.error(this.toMessage(err, 'No se pudo descargar el archivo.')),
+      });
+  }
+
   labelFor(value: string, labels: Record<string, string>): string {
     return labels[value] ?? value;
   }
@@ -355,13 +443,17 @@ export class RequestDetailComponent implements OnInit {
             categories: this.requestsService
               .categoryCatalog(tenant.slug)
               .pipe(catchError(() => of([] as RequestCategoryDto[]))),
+            attachments: this.requestsService
+              .listAttachments(this.id, tenant.slug)
+              .pipe(catchError(() => of([] as RequestAttachmentDto[]))),
           });
         }),
         finalize(() => this.loadingInit.set(false)),
       )
       .subscribe({
-        next: ({ detail, categories }) => {
+        next: ({ detail, categories, attachments }) => {
           this.categories.set(categories);
+          this.attachments.set(attachments);
           this.applyDetail(detail);
         },
         error: (err: unknown) => this.loadError.set(this.toMessage(err, 'No se pudo cargar la solicitud.')),
@@ -374,6 +466,15 @@ export class RequestDetailComponent implements OnInit {
     this.requestsService.getById(this.id, slug).subscribe({
       next: (d) => this.applyDetail(d),
       error: () => { /* silently ignore reload errors */ },
+    });
+  }
+
+  private reloadAttachments(): void {
+    const slug = this.tenantSlug();
+    if (!slug) return;
+    this.requestsService.listAttachments(this.id, slug).subscribe({
+      next: (list) => this.attachments.set(list),
+      error: () => { /* silently ignore */ },
     });
   }
 

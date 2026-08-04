@@ -7,7 +7,11 @@ import { ProblemDetails } from '../../../core/http/problem-details';
 import { TenantDto } from '../../tenants/data-access/tenant.models';
 import {
   AddRequestParticipantRequest,
+  AttachmentDownloadUrlDto,
   ChangeRequestStatusRequest,
+  ConfirmAttachmentRequest,
+  RequestAttachmentDto,
+  RequestAttachmentUploadTicketDto,
   RequestCategoryDto,
   RequestDetailDto,
   RequestDto,
@@ -117,6 +121,46 @@ export class RequestsService {
     return this.http.post<void>(`${this.base}/${id}/participants`, body, {
       headers: { 'X-Tenant': tenantSlug },
     });
+  }
+
+  listAttachments(id: string, tenantSlug: string): Observable<RequestAttachmentDto[]> {
+    return this.http.get<RequestAttachmentDto[]>(`${this.base}/${id}/attachments`, {
+      headers: { 'X-Tenant': tenantSlug },
+    });
+  }
+
+  getUploadUrl(
+    id: string,
+    fileName: string,
+    contentType: string,
+    tenantSlug: string,
+  ): Observable<RequestAttachmentUploadTicketDto> {
+    return this.http.post<RequestAttachmentUploadTicketDto>(
+      `${this.base}/${id}/attachments/upload-url`,
+      { fileName, contentType },
+      { headers: { 'X-Tenant': tenantSlug } },
+    );
+  }
+
+  confirmAttachment(
+    id: string,
+    body: ConfirmAttachmentRequest,
+    tenantSlug: string,
+  ): Observable<RequestAttachmentDto> {
+    return this.http.post<RequestAttachmentDto>(`${this.base}/${id}/attachments`, body, {
+      headers: { 'X-Tenant': tenantSlug },
+    });
+  }
+
+  getDownloadUrl(
+    id: string,
+    attachmentId: string,
+    tenantSlug: string,
+  ): Observable<AttachmentDownloadUrlDto> {
+    return this.http.get<AttachmentDownloadUrlDto>(
+      `${this.base}/${id}/attachments/${attachmentId}/download-url`,
+      { headers: { 'X-Tenant': tenantSlug } },
+    );
   }
 
   private toError(error: unknown): string {

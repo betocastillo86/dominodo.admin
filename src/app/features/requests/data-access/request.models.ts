@@ -142,3 +142,34 @@ export interface ChangeRequestStatusRequest {
 export interface AddRequestParticipantRequest {
   userId: string;
 }
+
+/** Attachment as returned by `GET /requests/{id}/attachments` and `POST /requests/{id}/attachments`. */
+export interface RequestAttachmentDto {
+  id: string;
+  requestId: string;
+  requestUpdateId: string | null;
+  fileName: string;
+  contentType: string;
+  uploadedByUserId: string;
+  createdAtUtc: string;
+}
+
+/** Response from `POST /requests/{id}/attachments/upload-url`. */
+export interface RequestAttachmentUploadTicketDto {
+  uploadUrl: string;
+  key: string;
+}
+
+/** `POST /requests/{id}/attachments` — confirm an upload after the file was PUT to the signed URL. */
+export interface ConfirmAttachmentRequest {
+  key: string;
+  fileName: string;
+  contentType: string;
+  requestUpdateId?: string | null;
+}
+
+/** Response from `GET /requests/{id}/attachments/{attachmentId}/download-url`. */
+export interface AttachmentDownloadUrlDto {
+  url: string;
+  expiresAtUtc: string;
+}

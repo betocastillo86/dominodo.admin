@@ -1,0 +1,228 @@
+<app-page-header
+  [title]="mode === 'edit' ? 'Editar publicación' : 'Nueva publicación'"
+  pretitle="Administración"
+/>
+
+<div class="page-body">
+  <div class="container-xl">
+    <div class="card">
+      <div class="card-body">
+        @if (notFound()) {
+          <div class="alert alert-warning" role="alert">
+            <div class="d-flex">
+              <div><tabler-icon name="info-circle" class="alert-icon" /></div>
+              <div>
+                No se encontró la publicación. Por favor vuelve al
+                <a routerLink="/listings">listado</a> y selecciónala desde allí.
+              </div>
+            </div>
+          </div>
+        } @else {
+          <form [formGroup]="form" (ngSubmit)="onSubmit()">
+
+            <!-- ── Selector de conjunto y apartamento ── -->
+            <div class="row g-3 mb-3">
+              <div class="col-12 col-md-6">
+                <label class="form-label" [class.required]="mode === 'create'" for="listing-tenant">
+                  Conjunto
+                </label>
+                @if (loadingTenants()) {
+                  <div class="text-secondary small py-1">Cargando conjuntos…</div>
+                } @else {
+                  <select
+                    id="listing-tenant"
+                    class="form-select"
+                    [formControl]="tenantControl"
+                  >
+                    <option value="">Selecciona un conjunto…</option>
+                    @for (t of tenants(); track t.id) {
+                      <option [value]="t.id">{{ t.name }}</option>
+                    }
+                  </select>
+                }
+              </div>
+
+              <div class="col-12 col-md-6">
+                <label
+                  class="form-label"
+                  [class.required]="mode === 'create'"
+                  for="listing-apartment"
+                >
+                  Apartamento
+                </label>
+                @if (loadingApartments()) {
+                  <div class="text-secondary small py-1">Cargando apartamentos…</div>
+                } @else if (mode === 'edit') {
+                  <!-- In edit mode, apartment is immutable; show as read-only select -->
+                  <select
+                    id="listing-apartment"
+                    class="form-select"
+                    formControlName="apartmentId"
+                  >
+                    @for (apt of apartments(); track apt.id) {
+                      <option [value]="apt.id">{{ aptLabel(apt) }}</option>
+                    }
+                  </select>
+                  <small class="form-hint">El apartamento no puede modificarse una vez creada la publicación.</small>
+                } @else {
+                  <select
+                    id="listing-apartment"
+                    class="form-select"
+                    formControlName="apartmentId"
+                    [class.is-invalid]="form.controls.apartmentId.invalid && form.controls.apartmentId.touched"
+                  >
+                    <option value="">
+                      @if (!tenantControl.value) {
+                        Primero selecciona un conjunto…
+                      } @else {
+                        Selecciona un apartamento…
+                      }
+                    </option>
+                    @for (apt of apartments(); track apt.id) {
+                      <option [value]="apt.id">{{ aptLabel(apt) }}</option>
+                    }
+                  </select>
+                  @if (form.controls.apartmentId.invalid && form.controls.apartmentId.touched) {
+                    <div class="invalid-feedback">
+                      @if (form.controls.apartmentId.errors?.['server']) {
+                        {{ form.controls.apartmentId.errors?.['server'] }}
+                      } @else {
+                        Selecciona un apartamento.
+                      }
+                    </div>
+                  }
+                }
+              </div>
+            </div>
+
+            <!-- ── Tipo y Estado ── -->
+            <div class="row g-3 mb-3">
+              <div class="col-12 col-md-6">
+                <label class="form-label required" for="listing-kind">Tipo</label>
+                <select
+                  id="listing-kind"
+                  class="form-select"
+                  formControlName="kind"
+                >
+                  <option value="Sale">Venta</option>
+                  <option value="Rent">Arriendo</option>
+                </select>
+              </div>
+
+              @if (mode === 'edit') {
+                <div class="col-12 col-md-6">
+                  <label class="form-label required" for="listing-status">Estado</label>
+                  <select
+                    id="listing-status"
+                    class="form-select"
+                    formControlName="status"
+                  >
+                    <option value="Active">Activo</option>
+                    <option value="Withdrawn">Retirado</option>
+                    <option value="Closed">Cerrado</option>
+                  </select>
+                </div>
+              }
+            </div>
+
+            <!-- ── Descripción ── -->
+            <div class="mb-3">
+              <label class="form-label" for="listing-description">Descripción</label>
+              <textarea
+                id="listing-description"
+                class="form-control"
+                formControlName="description"
+                rows="3"
+                placeholder="Descripción de la propiedad…"
+              ></textarea>
+            </div>
+
+            <!-- ── Precio, Área, Habitaciones ── -->
+            <div class="row g-3 mb-3">
+              <div class="col-12 col-md-4">
+                <label class="form-label" for="listing-price">Precio</label>
+                <input
+                  id="listing-price"
+                  type="number"
+                  class="form-control"
+                  formControlName="price"
+                  min="0"
+                  placeholder="0"
+                  [class.is-invalid]="form.controls.price.invalid && form.controls.price.touched"
+                />
+                @if (form.controls.price.errors?.['server'] && form.controls.price.touched) {
+                  <div class="invalid-feedback">{{ form.controls.price.errors?.['server'] }}</div>
+                }
+              </div>
+
+              <div class="col-12 col-md-4">
+                <label class="form-label" for="listing-area">Área (m²)</label>
+                <input
+                  id="listing-area"
+                  type="number"
+                  class="form-control"
+                  formControlName="area"
+                  min="0"
+                  step="0.01"
+                  placeholder="0"
+                  [class.is-invalid]="form.controls.area.invalid && form.controls.area.touched"
+                />
+                @if (form.controls.area.errors?.['server'] && form.controls.area.touched) {
+                  <div class="invalid-feedback">{{ form.controls.area.errors?.['server'] }}</div>
+                }
+              </div>
+
+              <div class="col-12 col-md-4">
+                <label class="form-label" for="listing-bedrooms">Habitaciones</label>
+                <input
+                  id="listing-bedrooms"
+                  type="number"
+                  class="form-control"
+                  formControlName="bedrooms"
+                  min="0"
+                  step="1"
+                  placeholder="0"
+                  [class.is-invalid]="form.controls.bedrooms.invalid && form.controls.bedrooms.touched"
+                />
+                @if (form.controls.bedrooms.errors?.['server'] && form.controls.bedrooms.touched) {
+                  <div class="invalid-feedback">{{ form.controls.bedrooms.errors?.['server'] }}</div>
+                }
+              </div>
+            </div>
+
+            <!-- ── Teléfono de contacto ── -->
+            <div class="mb-3">
+              <label class="form-label" for="listing-phone">Teléfono de contacto</label>
+              <input
+                id="listing-phone"
+                type="text"
+                class="form-control"
+                formControlName="contactPhone"
+                placeholder="Ej. +57 300 000 0000"
+                [class.is-invalid]="form.controls.contactPhone.invalid && form.controls.contactPhone.touched"
+              />
+              @if (form.controls.contactPhone.errors?.['server'] && form.controls.contactPhone.touched) {
+                <div class="invalid-feedback">{{ form.controls.contactPhone.errors?.['server'] }}</div>
+              }
+            </div>
+
+            @if (error()) {
+              <div class="alert alert-danger" role="alert">{{ error() }}</div>
+            }
+
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn btn-primary" [disabled]="saving()">
+                @if (saving()) {
+                  <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                }
+                Guardar
+              </button>
+              <a routerLink="/listings" class="btn btn-link">Cancelar</a>
+            </div>
+
+          </form>
+        }
+      </div>
+    </div>
+  </div>
+</div>

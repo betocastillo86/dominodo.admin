@@ -10,7 +10,7 @@
           @for (col of columns(); track col.header) {
             <th [class]="col.class ?? ''">{{ col.header }}</th>
           }
-          @if (actionLink()) {
+          @if (actionLink() || actionFn()) {
             <th class="w-1"></th>
           }
         </tr>
@@ -37,11 +37,17 @@
                   <tabler-icon [name]="actionIcon()" />
                 </a>
               </td>
+            } @else if (actionFn(); as fn) {
+              <td class="text-end">
+                <button type="button" class="btn btn-icon btn-sm" (click)="fn(row)">
+                  <tabler-icon [name]="actionIcon()" />
+                </button>
+              </td>
             }
           </tr>
         } @empty {
           <tr>
-            <td [attr.colspan]="columns().length + (actionLink() ? 1 : 0)" class="text-center text-secondary py-4">
+            <td [attr.colspan]="columns().length + (actionLink() || actionFn() ? 1 : 0)" class="text-center text-secondary py-4">
               No hay registros para mostrar.
             </td>
           </tr>

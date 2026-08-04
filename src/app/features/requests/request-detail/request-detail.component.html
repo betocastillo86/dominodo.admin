@@ -353,6 +353,68 @@
         </div>
       }
 
+      <!-- Attachments -->
+      <div class="card mb-3">
+        <div class="card-header">
+          <h3 class="card-title">Adjuntos ({{ attachments().length }})</h3>
+        </div>
+        @if (attachments().length > 0) {
+          <div class="table-responsive">
+            <table class="table card-table table-vcenter">
+              <thead>
+                <tr>
+                  <th>Archivo</th>
+                  <th>Tipo</th>
+                  <th>Subido por</th>
+                  <th>Fecha</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (a of attachments(); track a.id) {
+                  <tr>
+                    <td>{{ a.fileName }}</td>
+                    <td class="text-secondary small">{{ a.contentType }}</td>
+                    <td class="text-secondary font-monospace small">{{ a.uploadedByUserId.slice(0, 8) }}…</td>
+                    <td class="text-secondary">{{ a.createdAtUtc | date:'short' }}</td>
+                    <td>
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-secondary"
+                        aria-label="Descargar"
+                        (click)="onDownload(a)"
+                      >
+                        <tabler-icon name="download" />
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+        <div class="card-footer">
+          @if (uploadError()) {
+            <div class="alert alert-danger mb-3" role="alert">{{ uploadError() }}</div>
+          }
+          <label class="btn btn-primary" [class.disabled]="uploadingFile()">
+            @if (uploadingFile()) {
+              <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+              Subiendo…
+            } @else {
+              <tabler-icon name="upload" class="me-1" />
+              Adjuntar archivo
+            }
+            <input
+              type="file"
+              class="d-none"
+              [disabled]="uploadingFile()"
+              (change)="onFileSelected($event)"
+            />
+          </label>
+        </div>
+      </div>
+
     }
   </div>
 </div>

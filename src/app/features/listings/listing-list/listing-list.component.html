@@ -1,0 +1,37 @@
+<app-page-header title="Publicaciones" pretitle="Administración">
+  <a routerLink="/listings/new" actions class="btn btn-primary">+ Nueva publicación</a>
+</app-page-header>
+
+<div class="page-body">
+  <div class="card">
+    <div class="card-header">
+      <div class="row g-2">
+        <div class="col-12 col-sm-6 col-lg-4">
+          <select class="form-select" [formControl]="kindControl">
+            <option value="">Todos los tipos</option>
+            <option value="Sale">Venta</option>
+            <option value="Rent">Arriendo</option>
+          </select>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-4">
+          <select class="form-select" [formControl]="statusControl">
+            <option value="">Todos los estados</option>
+            <option value="Active">Activo</option>
+            <option value="Withdrawn">Retirado</option>
+            <option value="Closed">Cerrado</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <app-data-table
+      [columns]="columns"
+      [rows]="listings()"
+      [paging]="paging()"
+      [loading]="loading()"
+      [error]="error()"
+      [rowKey]="rowKey"
+      [actionFn]="editFn"
+      (pageChange)="onPageChange($event)"
+    />
+  </div>
+</div>

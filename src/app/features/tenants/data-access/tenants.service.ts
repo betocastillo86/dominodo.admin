@@ -1,6 +1,6 @@
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
-import { Observable } from 'rxjs';
+import { map, Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { PagedResult } from '../../../core/models/paged-result';
 import { ProblemDetails } from '../../../core/http/problem-details';
@@ -58,6 +58,14 @@ export class TenantsService {
         this._loading.set(false);
       },
     });
+  }
+
+  /** Returns all tenants (up to 500) as a plain array — for catalog/lookup selects. */
+  listAll(): Observable<TenantDto[]> {
+    const params = new HttpParams().set('page', 1).set('pageSize', 500);
+    return this.http
+      .get<PagedResult<TenantDto>>(this.base, { params })
+      .pipe(map((r) => r.items));
   }
 
   getById(id: string): Observable<TenantDetailDto> {

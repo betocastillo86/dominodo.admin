@@ -41,6 +41,8 @@ export class DataTableComponent<T> {
   readonly actionIcon = input<string>('edit');
   /** Optional query params merged into each row's action link. */
   readonly actionQueryParams = input<((row: T) => Record<string, string>) | null>(null);
+  /** Alternative to actionLink: invokes a callback with the row instead of navigating. */
+  readonly actionFn = input<((row: T) => void) | null>(null);
 
   readonly pageChange = output<number>();
 

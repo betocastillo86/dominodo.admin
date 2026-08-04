@@ -82,6 +82,11 @@ export const routes: Routes = [
             (m) => m.requestCategoriesRoutes,
           ),
       },
+      {
+        path: 'listings',
+        loadChildren: () =>
+          import('./features/listings/listings.routes').then((m) => m.listingsRoutes),
+      },
       { path: '', pathMatch: 'full', redirectTo: 'roles' },
     ],
   },

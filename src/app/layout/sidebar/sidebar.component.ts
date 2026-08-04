@@ -47,6 +47,7 @@ export class SidebarComponent {
         { label: 'Categorías', path: '/request-categories' },
       ],
     },
+    { label: 'Publicaciones', path: '/listings', icon: 'building-store' },
     { label: 'Configuración', path: '/system-settings', icon: 'settings' },
     {
       label: 'Notificaciones',
