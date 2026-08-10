@@ -60,6 +60,27 @@
               ],
               "outputHashing": "all"
             },
+            "stage": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "1.2MB",
+                  "maximumError": "2MB"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "2kB",
+                  "maximumError": "4kB"
+                }
+              ],
+              "outputHashing": "all",
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.stage.ts"
+                }
+              ]
+            },
             "development": {
               "optimization": false,
               "extractLicenses": false,

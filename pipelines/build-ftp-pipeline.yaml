@@ -1,0 +1,45 @@
+trigger:
+  branches:
+    include: [ 'main', 'develop' ]
+    exclude: [ 'refs/pull/*/merge' ]
+pr:
+  branches:
+    exclude: [ '*' ]
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  - ${{ if eq(variables['Build.SourceBranchName'], 'main') }}:
+    - group: dominodo-admin-prod      # FTP_HOST, FTP_USERNAME, FTP_PASSWORD, FTP_REMOTE_DIR
+    - name: BUILD_CONFIG
+      value: production
+  - ${{ if eq(variables['Build.SourceBranchName'], 'develop') }}:
+    - group: dominodo-admin-stage     # FTP_HOST, FTP_USERNAME, FTP_PASSWORD, FTP_REMOTE_DIR
+    - name: BUILD_CONFIG
+      value: stage
+
+steps:
+  - task: NodeTool@0
+    inputs:
+      versionSpec: '20.x'
+    displayName: 'Install Node.js 20'
+
+  - script: npm ci
+    displayName: 'npm ci (respects .npmrc legacy-peer-deps)'
+
+  - script: npx ng build --configuration $(BUILD_CONFIG)
+    displayName: 'Build Angular ($(BUILD_CONFIG))'
+
+  - task: FtpUpload@2
+    displayName: 'FTP Upload to $(FTP_REMOTE_DIR)'
+    inputs:
+      credentialsOption: 'inputs'
+      serverUrl: '$(FTP_HOST)'          # e.g. ftp://winXXXX.site4now.net/
+      username: '$(FTP_USERNAME)'
+      password: '$(FTP_PASSWORD)'
+      rootDirectory: '$(Build.SourcesDirectory)/dist/dominodo-admin/browser'
+      filePatterns: '**'
+      remoteDirectory: '$(FTP_REMOTE_DIR)'   # e.g. /dominodoadmin/ or /dominodoadmin-stage/
+      clean: false
+      preservePaths: true

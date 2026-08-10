@@ -16,6 +16,8 @@ Angular SPA: the Dominodo **super administrator** panel. Consumes the `dominodo.
 ## Commands
 - `npm start` — dev server at `http://localhost:4200`.
 - `npm run build` — production build.
+- `npm run build:stage` — build for **stage** (`--configuration stage`, stage API URL).
+- `npm run build:prod` — build for **prod** (`--configuration production`, prod API URL).
 - API base URL lives in `src/environments/` (`apiBaseUrl = http://localhost:5083/api/v1`).
 - API Swagger: `http://localhost:5083/swagger/index.html`.
 
@@ -29,6 +31,9 @@ Angular SPA: the Dominodo **super administrator** panel. Consumes the `dominodo.
 - `layout/` — panel chrome ported from Tabler: `shell/`, `sidebar/`, `navbar/`.
 - `shared/ui/` — reusable presentational pieces: `data-table/` (generic paged table), `page-header/`, `spinner/`.
 - `features/<name>/` — lazy-loaded domains; each splits `data-access/` (services + models) from components.
+
+**Env & hosting artifacts:** `src/environments/environment.stage.ts` holds stage config (prod is
+`environment.ts`); `public/web.config` is the IIS SPA-fallback, copied to the deploy root at build time.
 
 ## Conventions
 - `changeDetection: OnPush`; use `inject()`, not constructor DI.
@@ -53,4 +58,5 @@ Angular SPA: the Dominodo **super administrator** panel. Consumes the `dominodo.
 
 ## Docs
 - `docs/architecture.md` — authoritative architecture, structure, and API contract.
+- `docs/deployment.md` — stage/prod FTP deployment: branch→env mapping, build configs, `web.config`, Azure DevOps pipeline + variable groups.
 - `plan_init.md` — phased implementation plan for the first slice (auth + roles).
