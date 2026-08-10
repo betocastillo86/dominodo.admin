@@ -9,7 +9,7 @@ Azure DevOps. This mirrors the `pollaya.admin.front` pattern, modernized for Ang
 | Environment | Branch    | Build configuration | Front-end URL                       | API base URL (`apiBaseUrl`)                                  | FTP variable group      |
 | ----------- | --------- | ------------------- | ----------------------------------- | ------------------------------------------------------------ | ----------------------- |
 | **prod**    | `main`    | `production`        | *(TBD)*                             | `https://api.dominodo.com/api/v1` *(PLACEHOLDER)*            | `dominodo-admin-prod`   |
-| **stage**   | `develop` | `stage`             | `https://admin.stage.dominodo.com`  | `https://app-dominodo-api-stage.azurewebsites.net/api/v1`     | `dominodo-admin-stage`  |
+| **stage**   | `develop` | `stage`             | `https://adminstage.dominodo.com`   | `https://app-dominodo-api-stage.azurewebsites.net/api/v1`     | `dominodo-admin-stage`  |
 
 The **stage** API URL is live (`app-dominodo-api-stage.azurewebsites.net`). The **prod** API URL is
 still a **placeholder** — the prod API is not deployed yet. Update it once the API is live (see
@@ -96,5 +96,5 @@ The API's `cors_allowed_origins` (`dominodo.api/infra/envs/*/*.tfvars`) is curre
 before cross-origin login works. This is an API-repo action, but it is a hard prerequisite for a green
 login on either hosted environment.
 
-- **stage** — add `https://admin.stage.dominodo.com` to the stage API's `cors_allowed_origins`.
+- **stage** — add `https://adminstage.dominodo.com` to the stage API's `cors_allowed_origins`.
 - **prod** — add the prod front-end URL (TBD) once it is defined.
