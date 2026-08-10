@@ -36,6 +36,19 @@ export interface AdminPushMessageDto {
   createdAtUtc: string; // date-time
 }
 
+/** Materialized WhatsApp message as returned by `GET /messages/whatsapp`. */
+export interface AdminWhatsAppMessageDto {
+  id: string; // uuid
+  tenantId: string; // uuid
+  to: string;
+  body: string;
+  status: AdminDeliveryStatus;
+  attempts: number;
+  scheduledAtUtc?: string | null; // date-time
+  sentAtUtc?: string | null; // date-time
+  createdAtUtc: string; // date-time
+}
+
 /** Materialized in-app notification as returned by `GET /messages/inapp`. */
 export interface AdminInAppMessageDto {
   id: string; // uuid
@@ -68,6 +81,15 @@ export interface PushMessageFilters {
   status?: AdminDeliveryStatus;
   search?: string;
   recipientUserId?: string;
+  from?: string;
+  to?: string;
+}
+
+/** Query filters for `GET /messages/whatsapp`. All optional; omit to skip the filter. */
+export interface WhatsAppMessageFilters {
+  status?: AdminDeliveryStatus;
+  search?: string;
+  recipient?: string;
   from?: string;
   to?: string;
 }

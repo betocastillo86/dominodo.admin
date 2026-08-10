@@ -42,7 +42,7 @@ export class UserFormComponent implements OnInit {
       nonNullable: true,
       validators: [Validators.required, Validators.maxLength(100)],
     }),
-    /** Optional; immutable in edit mode per panel policy. */
+    /** Optional; editable in both create and edit mode. */
     email: new FormControl('', {
       nonNullable: true,
       validators: [Validators.email],
@@ -75,7 +75,6 @@ export class UserFormComponent implements OnInit {
   ngOnInit(): void {
     if (this.mode === 'edit') {
       this.form.controls.phone.disable();
-      this.form.controls.email.disable();
       this.form.controls.password.disable();
       this.loadUser(this.id!);
     }

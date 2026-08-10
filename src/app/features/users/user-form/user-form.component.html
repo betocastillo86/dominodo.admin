@@ -103,12 +103,6 @@
                 formControlName="email"
                 [class.is-invalid]="form.controls.email.invalid && form.controls.email.touched"
               />
-              @if (mode === 'edit') {
-                <small class="form-hint">
-                  <tabler-icon name="info-circle" />
-                  El email no puede modificarse desde el panel.
-                </small>
-              }
               @if (form.controls.email.invalid && form.controls.email.touched) {
                 <div class="invalid-feedback">
                   @if (form.controls.email.errors?.['server']) {

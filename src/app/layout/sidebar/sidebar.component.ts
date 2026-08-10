@@ -57,6 +57,7 @@ export class SidebarComponent {
         { label: 'Correos', path: '/notification-messages/email' },
         { label: 'Push', path: '/notification-messages/push' },
         { label: 'En la app', path: '/notification-messages/in-app' },
+        { label: 'WhatsApp', path: '/notification-messages/whatsapp' },
       ],
     },
   ];

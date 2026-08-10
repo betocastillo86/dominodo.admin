@@ -43,5 +43,19 @@ export const notificationMessagesRoutes: Routes = [
         (m) => m.InAppMessageDetailComponent,
       ),
   },
+  {
+    path: 'whatsapp',
+    loadComponent: () =>
+      import('./whatsapp-message-list/whatsapp-message-list.component').then(
+        (m) => m.WhatsAppMessageListComponent,
+      ),
+  },
+  {
+    path: 'whatsapp/:id',
+    loadComponent: () =>
+      import('./whatsapp-message-detail/whatsapp-message-detail.component').then(
+        (m) => m.WhatsAppMessageDetailComponent,
+      ),
+  },
   { path: '', pathMatch: 'full', redirectTo: 'email' },
 ];

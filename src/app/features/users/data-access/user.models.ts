@@ -39,7 +39,7 @@ export interface RegisterUserRequest {
 export interface UpdateUserRequest {
   firstName: string;
   lastName: string;
-  /** Send the original value — email is immutable in the admin panel UI. */
+  /** Editable from the admin panel; null clears the address. */
   email?: string | null;
   preferredLanguage: string;
 }
