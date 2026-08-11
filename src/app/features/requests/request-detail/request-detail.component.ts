@@ -23,6 +23,8 @@ import { SpinnerComponent } from '../../../shared/ui/spinner/spinner.component';
 import { NotificationService } from '../../../core/notifications/notification.service';
 import { ProblemDetails } from '../../../core/http/problem-details';
 import { TenantsService } from '../../tenants/data-access/tenants.service';
+import { ApartmentsService } from '../../apartments/data-access/apartments.service';
+import { ApartmentDetailDto } from '../../apartments/data-access/apartment.models';
 import { MembershipsService } from '../../memberships/data-access/memberships.service';
 import { MembershipDto } from '../../memberships/data-access/membership.models';
 import { RequestsService } from '../data-access/requests.service';
@@ -63,6 +65,7 @@ export class RequestDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly requestsService = inject(RequestsService);
   private readonly tenantsService = inject(TenantsService);
+  private readonly apartmentsService = inject(ApartmentsService);
   private readonly membershipsService = inject(MembershipsService);
   private readonly notifications = inject(NotificationService);
 
@@ -74,6 +77,18 @@ export class RequestDetailComponent implements OnInit {
   readonly detail = signal<RequestDetailDto | null>(null);
   readonly categories = signal<RequestCategoryDto[]>([]);
   readonly attachments = signal<RequestAttachmentDto[]>([]);
+
+  /** Apartment linked to the request (fetched when the detail has an apartmentId). */
+  readonly apartment = signal<ApartmentDetailDto | null>(null);
+
+  /** Router link to the request's conjunto (tenant) edit page. */
+  readonly conjuntoLink = this.tenantId ? ['/tenants', this.tenantId, 'edit'] : null;
+
+  /** Query params for the apartment edit page (tenant context is required there). */
+  readonly apartmentLinkQueryParams = computed(() => ({
+    tenant: this.tenantSlug(),
+    tenantId: this.tenantId,
+  }));
 
   readonly loadingInit = signal(false);
   readonly loadError = signal<string | null>(null);
@@ -400,6 +415,11 @@ export class RequestDetailComponent implements OnInit {
     return REQUEST_VISIBILITY_LABELS[visibility as RequestVisibility] ?? visibility;
   }
 
+  /** Router link to the apartment's edit page. */
+  apartmentLink(apartmentId: string): unknown[] {
+    return ['/apartments', apartmentId, 'edit'];
+  }
+
   statusBadge(status: string): string {
     const map: Record<string, string> = {
       New: 'badge bg-blue-lt',
@@ -455,9 +475,20 @@ export class RequestDetailComponent implements OnInit {
           this.categories.set(categories);
           this.attachments.set(attachments);
           this.applyDetail(detail);
+          if (detail.apartmentId) this.loadApartment(detail.apartmentId);
         },
         error: (err: unknown) => this.loadError.set(this.toMessage(err, 'No se pudo cargar la solicitud.')),
       });
+  }
+
+  /** Loads the linked apartment; supplementary info, so failures are ignored silently. */
+  private loadApartment(apartmentId: string): void {
+    const slug = this.tenantSlug();
+    if (!slug) return;
+    this.apartmentsService.getById(apartmentId, slug).subscribe({
+      next: (a) => this.apartment.set(a),
+      error: () => { /* silently ignore — apartment info is supplementary */ },
+    });
   }
 
   private reloadDetail(): void {

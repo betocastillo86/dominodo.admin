@@ -16,8 +16,19 @@
         <div class="card-header">
           <h3 class="card-title">Datos de la solicitud</h3>
           <div class="card-options text-secondary small">
-            Conjunto: <strong>{{ tenantName() ?? d.tenantId }}</strong>
+            Conjunto:
+            @if (conjuntoLink) {
+              <a [routerLink]="conjuntoLink"><strong>{{ tenantName() ?? d.tenantId }}</strong></a>
+            } @else {
+              <strong>{{ tenantName() ?? d.tenantId }}</strong>
+            }
             &nbsp;·&nbsp; Código: <strong>{{ d.code }}</strong>
+            @if (apartment(); as a) {
+              &nbsp;·&nbsp; Apto:
+              <a [routerLink]="apartmentLink(a.id)" [queryParams]="apartmentLinkQueryParams()">
+                <strong>{{ a.tower ? a.tower + '-' : '' }}{{ a.number }}</strong>
+              </a>
+            }
           </div>
         </div>
         <div class="card-body">
