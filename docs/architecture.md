@@ -53,6 +53,11 @@ modules follow the same conventions described here.
 > Two contract rules worth knowing up front: a role's `scope` is set on create and **immutable** on edit,
 > and **system roles** (`isSystem`) are treated as read-only in the panel.
 
+- **Chat simulation:** `POST /chat-simulation` (`{phone,text}` → `{reply}`) forwards a simulated message
+  to Domi and returns the agent's reply; `DELETE /chat-simulation/{phone}` resets Domi's session (`204`).
+  Both accept an **optional** `X-Tenant` header, but the panel sends **phone only** — Domi resolves the
+  tenant from the number. A `502` means Domi is unreachable. Conversations are **not persisted** anywhere.
+
 ---
 
 ## 4. Project structure
@@ -81,7 +86,8 @@ src/app/
     ├── requests/               # cross-tenant PQRS list + detail/edit page (edit, status, participant)
     ├── request-categories/     # cross-tenant catalog: list, create, edit of PQRS categories
     ├── announcements/          # cross-tenant list (status/category/tenant filters) + create/edit form
-    └── knowledge-resources/    # cross-tenant list (status/category/tenant filters) + create/edit form
+    ├── knowledge-resources/    # cross-tenant list (status/category/tenant filters) + create/edit form
+    └── chat-simulation/        # ephemeral Domi chat tester (phone gate → bubble chat), not persisted
 ```
 
 - **`core/`**: single instances and cross-cutting concerns; no business UI.

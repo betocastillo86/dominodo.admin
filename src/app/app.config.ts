@@ -3,12 +3,15 @@ import { provideRouter } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideTablerIcons } from 'angular-tabler-icons';
 import {
+  IconAlertCircle,
   IconApps,
   IconBell,
   IconBook,
   IconBuildingCommunity,
   IconBuildingStore,
+  IconCheck,
   IconChevronRight,
+  IconClock,
   IconDeviceMobile,
   IconDownload,
   IconEdit,
@@ -18,6 +21,10 @@ import {
   IconLogout,
   IconMail,
   IconMenu2,
+  IconMessageChatbot,
+  IconMessages,
+  IconRefresh,
+  IconSend,
   IconSettings,
   IconShieldLock,
   IconSpeakerphone,
@@ -65,6 +72,13 @@ export const appConfig: ApplicationConfig = {
       IconX,
       IconDownload,
       IconUpload,
+      IconMessageChatbot,
+      IconMessages,
+      IconRefresh,
+      IconSend,
+      IconClock,
+      IconCheck,
+      IconAlertCircle,
     }),
     // WYSIWYG editor (notification-templates email body). Toolbar kept intentionally small.
     provideQuillConfig({

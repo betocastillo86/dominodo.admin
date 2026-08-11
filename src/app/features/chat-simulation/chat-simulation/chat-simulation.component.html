@@ -1,0 +1,163 @@
+<app-page-header title="Simulador de Domi" pretitle="Administración">
+  @if (phone(); as activePhone) {
+    <div actions class="btn-list">
+      <button
+        type="button"
+        class="btn btn-outline-secondary"
+        [disabled]="sending() || resetting()"
+        (click)="resetConversation()"
+      >
+        @if (resetting()) {
+          <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+        } @else {
+          <tabler-icon name="refresh" class="me-2" />
+        }
+        Nueva conversación
+      </button>
+      <button
+        type="button"
+        class="btn btn-link"
+        [disabled]="sending() || resetting()"
+        (click)="changePhone()"
+      >
+        Cambiar número
+      </button>
+    </div>
+  }
+</app-page-header>
+
+<div class="page-body">
+  <div class="container-xl">
+    @if (phone() === null) {
+      <!-- ── Phone gate ── -->
+      <div class="card">
+        <div class="card-body">
+          <form [formGroup]="phoneForm" (ngSubmit)="startConversation()">
+            <div class="mb-3">
+              <label class="form-label required" for="chat-phone">Número telefónico</label>
+              <input
+                id="chat-phone"
+                type="tel"
+                class="form-control"
+                formControlName="phone"
+                placeholder="Ej. +573000000000"
+                autocomplete="off"
+                [class.is-invalid]="phoneControl.invalid && phoneControl.touched"
+              />
+              @if (phoneControl.invalid && phoneControl.touched) {
+                <div class="invalid-feedback">
+                  Ingresa un número telefónico válido (6 a 15 dígitos, con prefijo opcional +).
+                </div>
+              }
+              <small class="form-hint">
+                Domi resuelve el conjunto a partir del número. La conversación no se guarda.
+              </small>
+            </div>
+            <button type="submit" class="btn btn-primary">
+              <tabler-icon name="message-chatbot" class="me-2" />
+              Iniciar conversación
+            </button>
+          </form>
+        </div>
+      </div>
+    } @else {
+      <!-- ── Chat surface ── -->
+      <div class="card chat-card">
+        <div class="card-header">
+          <div class="d-flex align-items-center gap-2">
+            <span class="avatar avatar-sm bg-primary-lt">
+              <tabler-icon name="message-chatbot" />
+            </span>
+            <div>
+              <div class="fw-bold">Domi</div>
+              <div class="text-secondary small">{{ phone() }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-body chat-body">
+          @if (messages().length === 0) {
+            <div class="empty">
+              <div class="empty-icon">
+                <tabler-icon name="messages" />
+              </div>
+              <p class="empty-title">Sin mensajes</p>
+              <p class="empty-subtitle text-secondary">
+                Escribe un mensaje para iniciar la conversación con Domi.
+              </p>
+            </div>
+          } @else {
+            <div class="chat-thread">
+              @for (message of messages(); track message.id) {
+                <div
+                  class="chat-row"
+                  [class.chat-row-outgoing]="message.direction === 'outgoing'"
+                  [class.chat-row-incoming]="message.direction === 'incoming'"
+                >
+                  <div
+                    class="chat-bubble"
+                    [class.chat-bubble-outgoing]="message.direction === 'outgoing'"
+                    [class.chat-bubble-incoming]="message.direction === 'incoming'"
+                    [class.chat-bubble-error]="message.status === 'error'"
+                  >
+                    <div class="chat-text">{{ message.text }}</div>
+                    <div class="chat-meta">
+                      <span>{{ message.sentAt | date: 'HH:mm' }}</span>
+                      @if (message.direction === 'outgoing') {
+                        @switch (message.status) {
+                          @case ('sending') {
+                            <tabler-icon name="clock" class="chat-status" />
+                          }
+                          @case ('sent') {
+                            <tabler-icon name="check" class="chat-status" />
+                          }
+                          @case ('error') {
+                            <tabler-icon name="alert-circle" class="chat-status text-danger" />
+                          }
+                        }
+                      }
+                    </div>
+                  </div>
+                </div>
+              }
+
+              @if (sending()) {
+                <div class="chat-row chat-row-incoming">
+                  <div class="chat-bubble chat-bubble-incoming chat-typing">
+                    Domi está escribiendo…
+                  </div>
+                </div>
+              }
+            </div>
+            <div #scrollAnchor></div>
+          }
+        </div>
+
+        @if (error()) {
+          <div class="px-3">
+            <div class="alert alert-danger mb-0" role="alert">{{ error() }}</div>
+          </div>
+        }
+
+        <div class="card-footer">
+          <form class="d-flex gap-2" [formGroup]="messageForm" (ngSubmit)="sendMessage()">
+            <input
+              type="text"
+              class="form-control"
+              formControlName="message"
+              placeholder="Escribe un mensaje…"
+              autocomplete="off"
+            />
+            <button
+              type="submit"
+              class="btn btn-primary"
+              [disabled]="sending() || !messageControl.value.trim()"
+            >
+              <tabler-icon name="send" />
+            </button>
+          </form>
+        </div>
+      </div>
+    }
+  </div>
+</div>

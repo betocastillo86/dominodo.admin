@@ -87,6 +87,13 @@ export const routes: Routes = [
         loadChildren: () =>
           import('./features/listings/listings.routes').then((m) => m.listingsRoutes),
       },
+      {
+        path: 'chat-simulation',
+        loadChildren: () =>
+          import('./features/chat-simulation/chat-simulation.routes').then(
+            (m) => m.chatSimulationRoutes,
+          ),
+      },
       { path: '', pathMatch: 'full', redirectTo: 'roles' },
     ],
   },

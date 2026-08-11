@@ -48,6 +48,7 @@ export class SidebarComponent {
       ],
     },
     { label: 'Publicaciones', path: '/listings', icon: 'building-store' },
+    { label: 'Simulador de Domi', path: '/chat-simulation', icon: 'message-chatbot' },
     { label: 'Configuración', path: '/system-settings', icon: 'settings' },
     {
       label: 'Notificaciones',
