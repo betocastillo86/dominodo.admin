@@ -101,6 +101,15 @@
                     [class.chat-bubble-error]="message.status === 'error'"
                   >
                     <div class="chat-text">{{ message.text }}</div>
+                    <button
+                      type="button"
+                      class="chat-copy"
+                      title="Copiar mensaje"
+                      aria-label="Copiar mensaje"
+                      (click)="copyMessage(message)"
+                    >
+                      <tabler-icon [name]="copiedId() === message.id ? 'check' : 'copy'" />
+                    </button>
                     <div class="chat-meta">
                       <span>{{ message.sentAt | date: 'HH:mm' }}</span>
                       @if (message.direction === 'outgoing') {

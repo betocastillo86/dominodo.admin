@@ -153,6 +153,24 @@ export class ChatSimulationComponent {
     this.messageControl.reset('');
   }
 
+  /** Id of the message whose text was just copied; drives the transient "copied" feedback. */
+  readonly copiedId = signal<string | null>(null);
+  private copiedTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /** Copies a bubble's text to the clipboard and briefly flags it as copied. */
+  copyMessage(message: ChatBubble): void {
+    navigator.clipboard
+      .writeText(message.text)
+      .then(() => {
+        this.copiedId.set(message.id);
+        if (this.copiedTimer) {
+          clearTimeout(this.copiedTimer);
+        }
+        this.copiedTimer = setTimeout(() => this.copiedId.set(null), 1500);
+      })
+      .catch(() => this.notifications.error('No se pudo copiar el mensaje.'));
+  }
+
   private markStatus(id: string, status: ChatBubble['status']): void {
     this.messages.update((list) =>
       list.map((m) => (m.id === id ? { ...m, status } : m)),
