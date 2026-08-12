@@ -57,7 +57,7 @@
   </div>
 
   @if (paging(); as p) {
-    <div class="card-footer d-flex align-items-center">
+    <div class="card-footer d-flex align-items-center flex-wrap gap-2">
       <p class="m-0 text-secondary">
         Página {{ p.page }} de {{ p.totalPages }} · {{ p.totalCount }} registros
       </p>
@@ -67,6 +67,17 @@
             Anterior
           </button>
         </li>
+        @for (item of pages(); track $index) {
+          @if (item === 'ellipsis') {
+            <li class="page-item disabled">
+              <span class="page-link">…</span>
+            </li>
+          } @else {
+            <li class="page-item" [class.active]="item === p.page">
+              <button type="button" class="page-link" (click)="goTo(item)">{{ item }}</button>
+            </li>
+          }
+        }
         <li class="page-item" [class.disabled]="p.page >= p.totalPages">
           <button
             type="button"
@@ -78,6 +89,26 @@
           </button>
         </li>
       </ul>
+
+      @if (showJump()) {
+        <div class="d-flex align-items-center gap-2">
+          <label class="text-secondary m-0" [attr.for]="'jump-' + p.page">Ir a la página</label>
+          <input
+            #jump
+            [id]="'jump-' + p.page"
+            type="number"
+            min="1"
+            [max]="p.totalPages"
+            class="form-control form-control-sm"
+            style="width: 5rem"
+            aria-label="Ir a la página"
+            (keyup.enter)="goToInput(jump.value); jump.value = ''"
+          />
+          <button type="button" class="btn btn-sm" (click)="goToInput(jump.value); jump.value = ''">
+            Ir
+          </button>
+        </div>
+      }
     </div>
   }
 }
