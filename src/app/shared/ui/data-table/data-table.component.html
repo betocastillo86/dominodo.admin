@@ -8,7 +8,15 @@
       <thead>
         <tr>
           @for (col of columns(); track col.header) {
-            <th [class]="col.class ?? ''">{{ col.header }}</th>
+            <th [class]="col.class ?? ''">
+              @if (col.sortKey; as key) {
+                <button type="button" class="table-sort" [class]="sortClass(key)" (click)="toggleSort(key)">
+                  {{ col.header }}
+                </button>
+              } @else {
+                {{ col.header }}
+              }
+            </th>
           }
           @if (actionLink() || actionFn()) {
             <th class="w-1"></th>

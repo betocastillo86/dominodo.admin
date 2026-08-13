@@ -3,7 +3,7 @@ import { AbstractControl, FormControl, ReactiveFormsModule } from '@angular/form
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
 import { PageHeaderComponent } from '../../../shared/ui/page-header/page-header.component';
-import { DataTableComponent, TableColumn } from '../../../shared/ui/data-table/data-table.component';
+import { DataTableComponent, TableColumn, TableSort } from '../../../shared/ui/data-table/data-table.component';
 import {
   MultiSelectComponent,
   MultiSelectOption,
@@ -16,6 +16,7 @@ import {
   RequestCategoryDto,
   RequestDto,
   RequestPriority,
+  RequestSortBy,
   RequestStatus,
   RequestType,
   RequestVisibility,
@@ -45,6 +46,9 @@ export class RequestListComponent {
   readonly priorityControl = new FormControl<RequestPriority | ''>('', { nonNullable: true });
   readonly visibilityControl = new FormControl<RequestVisibility | ''>('', { nonNullable: true });
   readonly tenantControl = new FormControl<string>('', { nonNullable: true });
+
+  /** Column sort state; defaults to newest first (Date/Desc). */
+  readonly sort = signal<TableSort>({ key: 'Date', direction: 'desc' });
   /** Disabled until a tenant is selected — categories are tenant-scoped. */
   readonly categoryControl = new FormControl<string[]>({ value: [], disabled: true }, { nonNullable: true });
 
@@ -61,13 +65,9 @@ export class RequestListComponent {
 
   readonly statusOptions: MultiSelectOption[] = [
     { value: 'New', label: 'Nuevo' },
-    { value: 'InReview', label: 'En revisión' },
     { value: 'InProgress', label: 'En progreso' },
     { value: 'Resolved', label: 'Resuelto' },
     { value: 'Closed', label: 'Cerrado' },
-    { value: 'Rejected', label: 'Rechazado' },
-    { value: 'Cancelled', label: 'Cancelado' },
-    { value: 'Reopened', label: 'Reabierto' },
   ];
 
   /** Category options for the multi-select, derived from the selected tenant's catalog. */
@@ -106,13 +106,20 @@ export class RequestListComponent {
       header: 'Estado',
       value: (r) => REQUEST_STATUS_LABELS[r.status as RequestStatus] ?? r.status,
       badgeClass: (r) => this.statusBadge(r.status),
+      sortKey: 'Status',
     },
     {
       header: 'Prioridad',
       value: (r) => REQUEST_PRIORITY_LABELS[r.priority as RequestPriority] ?? r.priority,
       badgeClass: (r) => this.priorityBadge(r.priority),
+      sortKey: 'Priority',
     },
-    { header: 'Registro', value: (r) => this.formatDate(r.createdAtUtc), class: 'text-secondary text-nowrap' },
+    {
+      header: 'Registro',
+      value: (r) => this.formatDate(r.createdAtUtc),
+      class: 'text-secondary text-nowrap',
+      sortKey: 'Date',
+    },
   ]);
 
   readonly rowKey = (r: RequestDto): string => r.id;
@@ -181,16 +188,18 @@ export class RequestListComponent {
     this.reload(page);
   }
 
+  /** A header sort click: store the new state and reload from the first page. */
+  onSortChange(sort: TableSort): void {
+    this.sort.set(sort);
+    this.reload(1);
+  }
+
   private statusBadge(status: string): string {
     const map: Record<string, string> = {
       New: 'badge bg-blue-lt',
-      InReview: 'badge bg-yellow-lt',
       InProgress: 'badge bg-orange-lt',
       Resolved: 'badge bg-green-lt',
       Closed: 'badge bg-secondary-lt',
-      Rejected: 'badge bg-red-lt',
-      Cancelled: 'badge bg-secondary-lt',
-      Reopened: 'badge bg-purple-lt',
     };
     return map[status] ?? 'badge';
   }
@@ -213,6 +222,7 @@ export class RequestListComponent {
   private reload(page: number): void {
     const statuses = this.statusControl.value;
     const categoryIds = this.categoryControl.value;
+    const sort = this.sort();
     const filters: RequestFilters = {
       search: this.searchControl.value || undefined,
       statuses: statuses.length ? statuses : undefined,
@@ -221,6 +231,8 @@ export class RequestListComponent {
       visibility: (this.visibilityControl.value as RequestVisibility) || undefined,
       tenantId: this.tenantControl.value || undefined,
       categoryIds: categoryIds.length ? categoryIds : undefined,
+      sortBy: sort.key as RequestSortBy,
+      direction: sort.direction === 'asc' ? 'Asc' : 'Desc',
     };
     this.requestsService.list(page, this.pageSize, filters);
   }

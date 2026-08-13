@@ -112,13 +112,9 @@ export class RequestDetailComponent implements OnInit {
 
   readonly statusOptions: { value: RequestStatus; label: string }[] = [
     { value: 'New', label: 'Nuevo' },
-    { value: 'InReview', label: 'En revisión' },
     { value: 'InProgress', label: 'En progreso' },
     { value: 'Resolved', label: 'Resuelto' },
     { value: 'Closed', label: 'Cerrado' },
-    { value: 'Rejected', label: 'Rechazado' },
-    { value: 'Cancelled', label: 'Cancelado' },
-    { value: 'Reopened', label: 'Reabierto' },
   ];
 
   readonly typeOptions: { value: RequestType; label: string }[] = [
@@ -423,13 +419,9 @@ export class RequestDetailComponent implements OnInit {
   statusBadge(status: string): string {
     const map: Record<string, string> = {
       New: 'badge bg-blue-lt',
-      InReview: 'badge bg-yellow-lt',
       InProgress: 'badge bg-orange-lt',
       Resolved: 'badge bg-green-lt',
       Closed: 'badge bg-secondary-lt',
-      Rejected: 'badge bg-red-lt',
-      Cancelled: 'badge bg-secondary-lt',
-      Reopened: 'badge bg-purple-lt',
     };
     return map[status] ?? 'badge';
   }

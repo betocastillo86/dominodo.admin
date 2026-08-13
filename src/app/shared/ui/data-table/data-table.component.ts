@@ -14,6 +14,14 @@ export interface TableColumn<T> {
   badgeClass?: (row: T) => string;
   /** Optional CSS class applied to the header and cells. */
   class?: string;
+  /** When set, the header becomes a Tabler sort button emitting this key. */
+  sortKey?: string;
+}
+
+/** Current sort state: which column key and in which direction. */
+export interface TableSort {
+  key: string;
+  direction: 'asc' | 'desc';
 }
 
 /**
@@ -47,7 +55,11 @@ export class DataTableComponent<T> {
   /** Pages rendered to each side of the current one in the numbered window. */
   readonly windowSize = input(1);
 
+  /** Current sort state (controlled); drives the asc/desc arrow on headers. */
+  readonly sort = input<TableSort | null>(null);
+
   readonly pageChange = output<number>();
+  readonly sortChange = output<TableSort>();
 
   /** True when the page count is large enough to warrant the "jump to page" input. */
   readonly showJump = computed(() => (this.paging()?.totalPages ?? 0) > 5);
@@ -85,6 +97,26 @@ export class DataTableComponent<T> {
     }
     return result;
   });
+
+  /**
+   * CSS class for a sortable header button: `asc`/`desc` when this column is the
+   * active sort, empty otherwise (Tabler renders the direction arrow from it).
+   */
+  sortClass(key: string): string {
+    const sort = this.sort();
+    return sort?.key === key ? sort.direction : '';
+  }
+
+  /**
+   * Toggle sorting for a column: flip direction if it is already the active
+   * sort, otherwise start it descending. Emits the new state for the parent.
+   */
+  toggleSort(key: string): void {
+    const sort = this.sort();
+    const direction: 'asc' | 'desc' =
+      sort?.key === key && sort.direction === 'desc' ? 'asc' : 'desc';
+    this.sortChange.emit({ key, direction });
+  }
 
   goTo(page: number): void {
     const paging = this.paging();

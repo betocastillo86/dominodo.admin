@@ -1,25 +1,18 @@
 export type RequestType = 'Peticion' | 'Queja' | 'Reclamo' | 'Sugerencia' | 'Maintenance';
-export type RequestStatus =
-  | 'New'
-  | 'InReview'
-  | 'InProgress'
-  | 'Resolved'
-  | 'Closed'
-  | 'Rejected'
-  | 'Cancelled'
-  | 'Reopened';
+export type RequestStatus = 'New' | 'InProgress' | 'Resolved' | 'Closed';
 export type RequestPriority = 'Low' | 'Medium' | 'High';
 export type RequestVisibility = 'Private' | 'Public';
 
+/** Sort key accepted by `GET /requests` (`sortBy` query param). */
+export type RequestSortBy = 'Date' | 'Priority' | 'Status';
+/** Sort direction accepted by `GET /requests` (`direction` query param). */
+export type SortDirection = 'Asc' | 'Desc';
+
 export const REQUEST_STATUS_LABELS: Record<RequestStatus, string> = {
   New: 'Nuevo',
-  InReview: 'En revisión',
   InProgress: 'En progreso',
   Resolved: 'Resuelto',
   Closed: 'Cerrado',
-  Rejected: 'Rechazado',
-  Cancelled: 'Cancelado',
-  Reopened: 'Reabierto',
 };
 
 export const REQUEST_TYPE_LABELS: Record<RequestType, string> = {

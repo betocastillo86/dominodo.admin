@@ -69,7 +69,9 @@
       [rowKey]="rowKey"
       [actionLink]="editLink"
       [actionQueryParams]="editQueryParams"
+      [sort]="sort()"
       (pageChange)="onPageChange($event)"
+      (sortChange)="onSortChange($event)"
     />
   </div>
 </div>
