@@ -219,73 +219,75 @@
   </div>
 </div>
 
-@if (mode === 'edit' && currentStatus()) {
+@if (mode === 'edit' && tenantSlug()) {
   <div class="page-body pt-0">
     <div class="container-xl">
       <div class="card mb-3">
         <div class="card-header">
-          <h3 class="card-title">Estado del conjunto</h3>
+          <h3 class="card-title">Apartamentos</h3>
           <div class="card-options">
-            <span [class]="TENANT_STATUS_BADGES[currentStatus()!]">
-              {{ TENANT_STATUS_LABELS[currentStatus()!] }}
-            </span>
+            <a
+              [routerLink]="['/apartments', 'new']"
+              [queryParams]="{ tenant: tenantSlug(), tenantId }"
+              class="btn btn-sm btn-primary"
+            >+ Nuevo apartamento</a>
           </div>
         </div>
-        <div class="card-body">
-          <p class="text-secondary mb-3">
-            Cambia el estado del conjunto. Esta acción es independiente de los datos del formulario.
-          </p>
-          <div class="row g-2 align-items-end">
-            <div class="col-auto">
-              <label class="form-label" for="tenant-status">Nuevo estado</label>
-              <select
-                id="tenant-status"
-                class="form-select"
-                [value]="selectedStatus()"
-                [disabled]="confirmingStatus() || changingStatus()"
-                (change)="onStatusChange($any($event.target).value)"
-              >
-                @for (s of ALL_STATUSES; track s) {
-                  <option [value]="s">{{ TENANT_STATUS_LABELS[s] }}</option>
-                }
-              </select>
-            </div>
-            <div class="col-auto">
-              @if (!confirmingStatus()) {
-                <button
-                  type="button"
-                  class="btn btn-warning"
-                  [disabled]="changingStatus() || selectedStatus() === currentStatus()"
-                  (click)="requestStatusChange()"
-                >
-                  @if (changingStatus()) {
-                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                  }
-                  Cambiar estado
-                </button>
-              } @else {
-                <div class="d-flex align-items-center gap-2">
-                  <span class="text-warning fw-medium">
-                    ¿Cambiar a <strong>{{ TENANT_STATUS_LABELS[selectedStatus()!] }}</strong>?
-                  </span>
+        <div class="card-body border-bottom py-3">
+          <div class="row g-2">
+            <div class="col-12 col-sm-6">
+              <input
+                type="text"
+                class="form-control"
+                autocomplete="off"
+                placeholder="Buscar por usuario (nombre o teléfono)…"
+                [formControl]="residentSearch"
+                [ngbTypeahead]="searchResidents"
+                [resultFormatter]="residentFormatter"
+                [inputFormatter]="residentFormatter"
+                [editable]="false"
+                (selectItem)="onSelectResident($event)"
+                (input)="onResidentInput()"
+              />
+              <small class="form-hint">Filtra los apartamentos por un residente activo del conjunto.</small>
+              @if (selectedResident(); as u) {
+                <div class="mt-2 d-flex align-items-center gap-2 p-2 border rounded bg-secondary-lt">
+                  <div class="flex-fill">
+                    <div class="fw-medium">{{ u.userName }}</div>
+                    <div class="text-secondary small">{{ u.phone }}</div>
+                  </div>
                   <button
                     type="button"
-                    class="btn btn-danger"
-                    (click)="submitStatusChange()"
-                  >Confirmar</button>
-                  <button
-                    type="button"
-                    class="btn btn-ghost-secondary"
-                    (click)="cancelStatusChange()"
-                  >Cancelar</button>
+                    class="btn btn-icon btn-sm"
+                    aria-label="Quitar filtro de usuario"
+                    (click)="clearSelectedResident()"
+                  >
+                    <tabler-icon name="x" />
+                  </button>
                 </div>
               }
             </div>
+            <div class="col-12 col-sm-6">
+              <input
+                type="text"
+                class="form-control"
+                placeholder="Buscar por apartamento…"
+                [formControl]="numberSearch"
+              />
+            </div>
           </div>
-          @if (statusError()) {
-            <div class="alert alert-danger mt-3 mb-0">{{ statusError() }}</div>
-          }
         </div>
+        <app-data-table
+          [columns]="apartmentColumns"
+          [rows]="filteredApartments()"
+          [paging]="apartmentsPaging()"
+          [loading]="loadingApartments()"
+          [error]="apartmentsError()"
+          [rowKey]="apartmentRowKey"
+          [actionLink]="apartmentEditLink"
+          [actionQueryParams]="apartmentQueryParams"
+          (pageChange)="loadApartmentsPage($event)"
+        />
       </div>
     </div>
   </div>
@@ -412,51 +414,73 @@
   </div>
 }
 
-@if (mode === 'edit' && tenantSlug()) {
+@if (mode === 'edit' && currentStatus()) {
   <div class="page-body pt-0">
     <div class="container-xl">
-      <div class="card">
+      <div class="card mb-3">
         <div class="card-header">
-          <h3 class="card-title">Apartamentos</h3>
+          <h3 class="card-title">Estado del conjunto</h3>
           <div class="card-options">
-            <a
-              [routerLink]="['/apartments', 'new']"
-              [queryParams]="{ tenant: tenantSlug(), tenantId }"
-              class="btn btn-sm btn-primary"
-            >+ Nuevo apartamento</a>
+            <span [class]="TENANT_STATUS_BADGES[currentStatus()!]">
+              {{ TENANT_STATUS_LABELS[currentStatus()!] }}
+            </span>
           </div>
         </div>
-        <div class="card-body border-bottom py-3">
-          <div class="row g-2">
-            <div class="col-12 col-sm-6">
-              <input
-                type="text"
-                class="form-control"
-                placeholder="Buscar por torre…"
-                [formControl]="towerSearch"
-              />
+        <div class="card-body">
+          <p class="text-secondary mb-3">
+            Cambia el estado del conjunto. Esta acción es independiente de los datos del formulario.
+          </p>
+          <div class="row g-2 align-items-end">
+            <div class="col-auto">
+              <label class="form-label" for="tenant-status">Nuevo estado</label>
+              <select
+                id="tenant-status"
+                class="form-select"
+                [value]="selectedStatus()"
+                [disabled]="confirmingStatus() || changingStatus()"
+                (change)="onStatusChange($any($event.target).value)"
+              >
+                @for (s of ALL_STATUSES; track s) {
+                  <option [value]="s">{{ TENANT_STATUS_LABELS[s] }}</option>
+                }
+              </select>
             </div>
-            <div class="col-12 col-sm-6">
-              <input
-                type="text"
-                class="form-control"
-                placeholder="Buscar por apartamento…"
-                [formControl]="numberSearch"
-              />
+            <div class="col-auto">
+              @if (!confirmingStatus()) {
+                <button
+                  type="button"
+                  class="btn btn-warning"
+                  [disabled]="changingStatus() || selectedStatus() === currentStatus()"
+                  (click)="requestStatusChange()"
+                >
+                  @if (changingStatus()) {
+                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                  }
+                  Cambiar estado
+                </button>
+              } @else {
+                <div class="d-flex align-items-center gap-2">
+                  <span class="text-warning fw-medium">
+                    ¿Cambiar a <strong>{{ TENANT_STATUS_LABELS[selectedStatus()!] }}</strong>?
+                  </span>
+                  <button
+                    type="button"
+                    class="btn btn-danger"
+                    (click)="submitStatusChange()"
+                  >Confirmar</button>
+                  <button
+                    type="button"
+                    class="btn btn-ghost-secondary"
+                    (click)="cancelStatusChange()"
+                  >Cancelar</button>
+                </div>
+              }
             </div>
           </div>
+          @if (statusError()) {
+            <div class="alert alert-danger mt-3 mb-0">{{ statusError() }}</div>
+          }
         </div>
-        <app-data-table
-          [columns]="apartmentColumns"
-          [rows]="filteredApartments()"
-          [paging]="apartmentsPaging()"
-          [loading]="loadingApartments()"
-          [error]="apartmentsError()"
-          [rowKey]="apartmentRowKey"
-          [actionLink]="apartmentEditLink"
-          [actionQueryParams]="apartmentQueryParams"
-          (pageChange)="loadApartmentsPage($event)"
-        />
       </div>
     </div>
   </div>

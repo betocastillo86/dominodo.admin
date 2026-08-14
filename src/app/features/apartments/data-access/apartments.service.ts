@@ -22,10 +22,10 @@ export class ApartmentsService {
     tenantSlug: string,
     page: number,
     pageSize: number,
-    tower?: string,
+    residentUserId?: string,
   ): Observable<PagedResult<ApartmentDto>> {
     let params = new HttpParams().set('page', page).set('pageSize', pageSize);
-    if (tower) params = params.set('tower', tower);
+    if (residentUserId) params = params.set('residentUserId', residentUserId);
     return this.http.get<PagedResult<ApartmentDto>>(this.base, {
       params,
       headers: { 'X-Tenant': tenantSlug },

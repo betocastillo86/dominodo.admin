@@ -3,7 +3,18 @@ import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { debounceTime, distinctUntilChanged, finalize } from 'rxjs';
+import {
+  catchError,
+  debounceTime,
+  distinctUntilChanged,
+  finalize,
+  Observable,
+  of,
+  OperatorFunction,
+  switchMap,
+} from 'rxjs';
+import { NgbTypeahead, NgbTypeaheadSelectItemEvent } from '@ng-bootstrap/ng-bootstrap';
+import { TablerIconComponent } from 'angular-tabler-icons';
 import { PageHeaderComponent } from '../../../shared/ui/page-header/page-header.component';
 import { SpinnerComponent } from '../../../shared/ui/spinner/spinner.component';
 import { DataTableComponent, TableColumn } from '../../../shared/ui/data-table/data-table.component';
@@ -25,12 +36,22 @@ import {
   APARTMENT_TYPE_LABELS,
   ApartmentDto,
 } from '../../apartments/data-access/apartment.models';
+import { MembershipsService } from '../../memberships/data-access/memberships.service';
+import { MembershipDto } from '../../memberships/data-access/membership.models';
 
 /** Create or edit a tenant (conjunto). Mode is resolved from the presence of `:id` in the route. */
 @Component({
   selector: 'app-tenant-form',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink, PageHeaderComponent, SpinnerComponent, DataTableComponent],
+  imports: [
+    ReactiveFormsModule,
+    RouterLink,
+    PageHeaderComponent,
+    SpinnerComponent,
+    DataTableComponent,
+    NgbTypeahead,
+    TablerIconComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './tenant-form.component.html',
 })
@@ -39,6 +60,7 @@ export class TenantFormComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly tenantsService = inject(TenantsService);
   private readonly apartmentsService = inject(ApartmentsService);
+  private readonly membershipsService = inject(MembershipsService);
   private readonly notifications = inject(NotificationService);
 
   private readonly id = this.route.snapshot.paramMap.get('id');
@@ -97,11 +119,33 @@ export class TenantFormComponent implements OnInit {
   readonly loadingApartments = signal(false);
   readonly apartmentsError = signal<string | null>(null);
 
-  // Simple search: `tower` is filtered server-side; `number` is filtered client-side
+  // Resident search: an autocomplete over the tenant's memberships (name/phone). Picking a
+  // user filters apartments server-side by `residentUserId`. `number` is filtered client-side
   // over the loaded page because the list endpoint does not accept a number param.
-  readonly towerSearch = new FormControl('', { nonNullable: true });
+  readonly residentSearch = new FormControl<string | MembershipDto>('', { nonNullable: true });
+  readonly selectedResident = signal<MembershipDto | null>(null);
   readonly numberSearch = new FormControl('', { nonNullable: true });
   private readonly numberFilter = signal('');
+
+  /** Typeahead search: debounced, tenant-scoped free-text lookup against GET /memberships. */
+  readonly searchResidents: OperatorFunction<string, readonly MembershipDto[]> = (
+    text$: Observable<string>,
+  ) =>
+    text$.pipe(
+      debounceTime(300),
+      distinctUntilChanged(),
+      switchMap((term) => {
+        const slug = this.tenantSlug();
+        if (!slug || term.trim().length < 2) return of([] as MembershipDto[]);
+        return this.membershipsService
+          .search(slug, term.trim())
+          .pipe(catchError(() => of([] as MembershipDto[])));
+      }),
+    );
+
+  /** Renders a result row / the selected value as "Usuario · teléfono". */
+  readonly residentFormatter = (m: MembershipDto | string): string =>
+    typeof m === 'string' ? m : `${m.userName} · ${m.phone}`;
 
   readonly filteredApartments = computed(() => {
     const term = this.numberFilter().trim().toLowerCase();
@@ -152,14 +196,28 @@ export class TenantFormComponent implements OnInit {
   });
 
   constructor() {
-    // Tower search hits the server; number search is applied client-side.
-    this.towerSearch.valueChanges
-      .pipe(debounceTime(300), distinctUntilChanged(), takeUntilDestroyed())
-      .subscribe(() => this.loadApartmentsPage(1));
-
+    // Number search is applied client-side over the loaded page.
     this.numberSearch.valueChanges
       .pipe(debounceTime(300), distinctUntilChanged(), takeUntilDestroyed())
       .subscribe((value) => this.numberFilter.set(value));
+  }
+
+  /** A user was picked from the typeahead: filter apartments by that resident. */
+  onSelectResident(event: NgbTypeaheadSelectItemEvent<MembershipDto>): void {
+    this.selectedResident.set(event.item);
+    this.loadApartmentsPage(1);
+  }
+
+  /** Clears the pending selection whenever the user edits the search text again. */
+  onResidentInput(): void {
+    if (this.selectedResident()) this.selectedResident.set(null);
+  }
+
+  /** Removes the resident filter and reloads the full list. */
+  clearSelectedResident(): void {
+    this.selectedResident.set(null);
+    this.residentSearch.setValue('');
+    this.loadApartmentsPage(1);
   }
 
   ngOnInit(): void {
@@ -328,10 +386,10 @@ export class TenantFormComponent implements OnInit {
   loadApartmentsPage(page: number): void {
     const slug = this.tenantSlug();
     if (!slug) return;
-    const tower = this.towerSearch.value.trim() || undefined;
+    const residentUserId = this.selectedResident()?.userId;
     this.loadingApartments.set(true);
     this.apartmentsService
-      .query(slug, page, 10, tower)
+      .query(slug, page, 10, residentUserId)
       .pipe(finalize(() => this.loadingApartments.set(false)))
       .subscribe({
         next: (result) => {
