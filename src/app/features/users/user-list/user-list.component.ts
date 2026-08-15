@@ -38,7 +38,7 @@ export class UserListComponent {
 
   private readonly pageSize = 20;
 
-  readonly nameControl = new FormControl('', { nonNullable: true });
+  readonly searchControl = new FormControl('', { nonNullable: true });
   readonly statusControl = new FormControl<UserStatus | ''>('', { nonNullable: true });
   readonly tenantControl = new FormControl('', { nonNullable: true });
 
@@ -63,7 +63,7 @@ export class UserListComponent {
   readonly editLink = (user: UserListItemDto): unknown[] => ['/users', user.id, 'edit'];
 
   constructor() {
-    this.nameControl.valueChanges.pipe(
+    this.searchControl.valueChanges.pipe(
       debounceTime(300),
       distinctUntilChanged(),
       takeUntilDestroyed(),
@@ -88,10 +88,10 @@ export class UserListComponent {
   }
 
   private reload(page: number): void {
-    const name = this.nameControl.value || undefined;
+    const search = this.searchControl.value || undefined;
     const status = (this.statusControl.value as UserStatus) || undefined;
     const tenantId = this.tenantControl.value || undefined;
-    this.usersService.list(page, this.pageSize, name, status, tenantId);
+    this.usersService.list(page, this.pageSize, search, status, tenantId);
   }
 
   private formatDate(iso?: string | null): string {
