@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -120,12 +120,11 @@ export class TenantFormComponent implements OnInit {
   readonly apartmentsError = signal<string | null>(null);
 
   // Resident search: an autocomplete over the tenant's memberships (name/phone). Picking a
-  // user filters apartments server-side by `residentUserId`. `number` is filtered client-side
-  // over the loaded page because the list endpoint does not accept a number param.
+  // user filters apartments server-side by `residentUserId`. The number box is also filtered
+  // server-side via the list endpoint's `search` param.
   readonly residentSearch = new FormControl<string | MembershipDto>('', { nonNullable: true });
   readonly selectedResident = signal<MembershipDto | null>(null);
   readonly numberSearch = new FormControl('', { nonNullable: true });
-  private readonly numberFilter = signal('');
 
   /** Typeahead search: debounced, tenant-scoped free-text lookup against GET /memberships. */
   readonly searchResidents: OperatorFunction<string, readonly MembershipDto[]> = (
@@ -146,12 +145,6 @@ export class TenantFormComponent implements OnInit {
   /** Renders a result row / the selected value as "Usuario · teléfono". */
   readonly residentFormatter = (m: MembershipDto | string): string =>
     typeof m === 'string' ? m : `${m.userName} · ${m.phone}`;
-
-  readonly filteredApartments = computed(() => {
-    const term = this.numberFilter().trim().toLowerCase();
-    if (!term) return this.tenantApartments();
-    return this.tenantApartments().filter((a) => a.number.toLowerCase().includes(term));
-  });
 
   readonly apartmentColumns: readonly TableColumn<ApartmentDto>[] = [
     { header: 'Número', value: (a) => a.number },
@@ -196,10 +189,10 @@ export class TenantFormComponent implements OnInit {
   });
 
   constructor() {
-    // Number search is applied client-side over the loaded page.
+    // Number search is sent to the API; reset to the first page on each change.
     this.numberSearch.valueChanges
       .pipe(debounceTime(300), distinctUntilChanged(), takeUntilDestroyed())
-      .subscribe((value) => this.numberFilter.set(value));
+      .subscribe(() => this.loadApartmentsPage(1));
   }
 
   /** A user was picked from the typeahead: filter apartments by that resident. */
@@ -387,9 +380,10 @@ export class TenantFormComponent implements OnInit {
     const slug = this.tenantSlug();
     if (!slug) return;
     const residentUserId = this.selectedResident()?.userId;
+    const search = this.numberSearch.value.trim() || undefined;
     this.loadingApartments.set(true);
     this.apartmentsService
-      .query(slug, page, 10, residentUserId)
+      .query(slug, page, 10, residentUserId, search)
       .pipe(finalize(() => this.loadingApartments.set(false)))
       .subscribe({
         next: (result) => {

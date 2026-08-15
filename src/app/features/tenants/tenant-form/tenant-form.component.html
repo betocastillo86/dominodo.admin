@@ -279,7 +279,7 @@
         </div>
         <app-data-table
           [columns]="apartmentColumns"
-          [rows]="filteredApartments()"
+          [rows]="tenantApartments()"
           [paging]="apartmentsPaging()"
           [loading]="loadingApartments()"
           [error]="apartmentsError()"
