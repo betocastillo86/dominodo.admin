@@ -32,6 +32,7 @@ export interface RequestFilters {
   visibility?: RequestVisibility;
   tenantId?: string;
   categoryIds?: string[];
+  participantUserId?: string;
   sortBy?: RequestSortBy;
   direction?: SortDirection;
 }
@@ -66,6 +67,7 @@ export class RequestsService {
     if (filters.priority) params = params.set('priority', filters.priority);
     if (filters.visibility) params = params.set('visibility', filters.visibility);
     if (filters.tenantId) params = params.set('tenantId', filters.tenantId);
+    if (filters.participantUserId) params = params.set('participantUserId', filters.participantUserId);
     if (filters.sortBy) params = params.set('sortBy', filters.sortBy);
     if (filters.direction) params = params.set('direction', filters.direction);
 

@@ -1,13 +1,24 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { AbstractControl, FormControl, ReactiveFormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { debounceTime, distinctUntilChanged } from 'rxjs';
+import {
+  catchError,
+  debounceTime,
+  distinctUntilChanged,
+  Observable,
+  of,
+  OperatorFunction,
+  switchMap,
+} from 'rxjs';
+import { NgbTypeahead, NgbTypeaheadSelectItemEvent } from '@ng-bootstrap/ng-bootstrap';
 import { PageHeaderComponent } from '../../../shared/ui/page-header/page-header.component';
 import { DataTableComponent, TableColumn, TableSort } from '../../../shared/ui/data-table/data-table.component';
 import {
   MultiSelectComponent,
   MultiSelectOption,
 } from '../../../shared/ui/multi-select/multi-select.component';
+import { MembershipsService } from '../../memberships/data-access/memberships.service';
+import { MembershipDto } from '../../memberships/data-access/membership.models';
 import { RequestsService, RequestFilters } from '../data-access/requests.service';
 import {
   REQUEST_PRIORITY_LABELS,
@@ -26,12 +37,19 @@ import { TenantDto } from '../../tenants/data-access/tenant.models';
 @Component({
   selector: 'app-request-list',
   standalone: true,
-  imports: [PageHeaderComponent, DataTableComponent, MultiSelectComponent, ReactiveFormsModule],
+  imports: [
+    PageHeaderComponent,
+    DataTableComponent,
+    MultiSelectComponent,
+    ReactiveFormsModule,
+    NgbTypeahead,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './request-list.component.html',
 })
 export class RequestListComponent {
   private readonly requestsService = inject(RequestsService);
+  private readonly membershipsService = inject(MembershipsService);
 
   readonly requests = this.requestsService.requests;
   readonly paging = this.requestsService.paging;
@@ -52,6 +70,15 @@ export class RequestListComponent {
   /** Disabled until a tenant is selected — categories are tenant-scoped. */
   readonly categoryControl = new FormControl<string[]>({ value: [], disabled: true }, { nonNullable: true });
 
+  /**
+   * Participant filter — the typeahead's raw input model (a typed string or the
+   * picked membership). Cross-tenant: works without a conjunto selected; when
+   * one is selected the search is scoped to it.
+   */
+  readonly participantControl = new FormControl<string | MembershipDto>('', { nonNullable: true });
+  /** The membership picked from the typeahead; drives the participantUserId filter. */
+  readonly selectedParticipant = signal<MembershipDto | null>(null);
+
   readonly tenants = signal<TenantDto[]>([]);
   /** Categories of the currently selected tenant; empty when no tenant is chosen. */
   readonly categories = signal<RequestCategoryDto[]>([]);
@@ -62,6 +89,28 @@ export class RequestListComponent {
     for (const t of this.tenants()) m.set(t.id, t.name);
     return m;
   });
+
+  /**
+   * Typeahead search: debounced, cross-tenant free-text lookup against GET /memberships.
+   * When a conjunto is selected the search is scoped to it via tenantId.
+   */
+  readonly searchUsers: OperatorFunction<string, readonly MembershipDto[]> = (
+    text$: Observable<string>,
+  ) =>
+    text$.pipe(
+      debounceTime(300),
+      distinctUntilChanged(),
+      switchMap((term) => {
+        if (term.trim().length < 2) return of([] as MembershipDto[]);
+        return this.membershipsService
+          .searchAcrossTenants(term.trim(), this.tenantControl.value || undefined)
+          .pipe(catchError(() => of([] as MembershipDto[])));
+      }),
+    );
+
+  /** Renders a result row / the selected value as "Usuario · teléfono". */
+  readonly userFormatter = (m: string | MembershipDto): string =>
+    typeof m === 'string' ? m : `${m.userName} · ${m.phone}`;
 
   readonly statusOptions: MultiSelectOption[] = [
     { value: 'New', label: 'Nuevo' },
@@ -163,6 +212,19 @@ export class RequestListComponent {
     this.reload(1);
   }
 
+  onSelectParticipant(event: NgbTypeaheadSelectItemEvent<MembershipDto>): void {
+    this.selectedParticipant.set(event.item);
+    this.reload(1);
+  }
+
+  /** Clears the participant filter (the "x" button or picking a new tenant). */
+  clearParticipant(): void {
+    if (!this.selectedParticipant() && !this.participantControl.value) return;
+    this.selectedParticipant.set(null);
+    this.participantControl.setValue('', { emitEvent: false });
+    this.reload(1);
+  }
+
   private onTenantChange(tenantId: string): void {
     this.categoryControl.setValue([], { emitEvent: false });
     this.categories.set([]);
@@ -231,6 +293,7 @@ export class RequestListComponent {
       visibility: (this.visibilityControl.value as RequestVisibility) || undefined,
       tenantId: this.tenantControl.value || undefined,
       categoryIds: categoryIds.length ? categoryIds : undefined,
+      participantUserId: this.selectedParticipant()?.userId,
       sortBy: sort.key as RequestSortBy,
       direction: sort.direction === 'asc' ? 'Asc' : 'Desc',
     };

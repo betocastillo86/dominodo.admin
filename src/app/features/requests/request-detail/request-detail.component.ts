@@ -27,6 +27,8 @@ import { ApartmentsService } from '../../apartments/data-access/apartments.servi
 import { ApartmentDetailDto } from '../../apartments/data-access/apartment.models';
 import { MembershipsService } from '../../memberships/data-access/memberships.service';
 import { MembershipDto } from '../../memberships/data-access/membership.models';
+import { UsersService } from '../../users/data-access/users.service';
+import { UserDetailDto } from '../../users/data-access/user.models';
 import { RequestsService } from '../data-access/requests.service';
 import {
   REQUEST_PRIORITY_LABELS,
@@ -67,6 +69,7 @@ export class RequestDetailComponent implements OnInit {
   private readonly tenantsService = inject(TenantsService);
   private readonly apartmentsService = inject(ApartmentsService);
   private readonly membershipsService = inject(MembershipsService);
+  private readonly usersService = inject(UsersService);
   private readonly notifications = inject(NotificationService);
 
   private readonly id = this.route.snapshot.paramMap.get('id')!;
@@ -80,6 +83,9 @@ export class RequestDetailComponent implements OnInit {
 
   /** Apartment linked to the request (fetched when the detail has an apartmentId). */
   readonly apartment = signal<ApartmentDetailDto | null>(null);
+
+  /** Resolved participant users keyed by userId, so the table can show name + phone. */
+  readonly participantUsers = signal<Record<string, UserDetailDto>>({});
 
   /** Router link to the request's conjunto (tenant) edit page. */
   readonly conjuntoLink = this.tenantId ? ['/tenants', this.tenantId, 'edit'] : null;
@@ -198,8 +204,13 @@ export class RequestDetailComponent implements OnInit {
       }),
     );
 
-  /** Renders a result row / the selected value as "Usuario · teléfono". */
-  readonly userFormatter = (m: MembershipDto): string => `${m.userName} · ${m.phone}`;
+  /**
+   * Renders a result row / the selected value as "Usuario · teléfono".
+   * Guards against the initial empty-string model so the input shows the
+   * placeholder instead of "undefined · undefined".
+   */
+  readonly userFormatter = (m: string | MembershipDto): string =>
+    typeof m === 'string' ? m : `${m.userName} · ${m.phone}`;
 
   ngOnInit(): void {
     if (!this.tenantId) {
@@ -514,6 +525,34 @@ export class RequestDetailComponent implements OnInit {
       visibility: d.visibility as RequestVisibility,
     });
     this.statusForm.patchValue({ status: d.status as RequestStatus });
+    this.loadParticipantUsers(d.participants);
+  }
+
+  /**
+   * Resolves each participant's user via GET /users/{id} so the table can show
+   * name + phone instead of the raw id. One request per not-yet-resolved user;
+   * failures are ignored so the row falls back to the id.
+   */
+  private loadParticipantUsers(participants: RequestParticipantDto[]): void {
+    const known = this.participantUsers();
+    const missing = [...new Set(participants.map((p) => p.userId))].filter((id) => !known[id]);
+    for (const userId of missing) {
+      this.usersService.getById(userId).subscribe({
+        next: (user) => this.participantUsers.update((map) => ({ ...map, [userId]: user })),
+        error: () => { /* silently ignore — the row falls back to the userId */ },
+      });
+    }
+  }
+
+  /** Full name of a resolved participant, or null if not resolved yet. */
+  participantName(userId: string): string | null {
+    const user = this.participantUsers()[userId];
+    return user ? `${user.firstName} ${user.lastName}`.trim() : null;
+  }
+
+  /** Phone of a resolved participant, or null if not resolved yet. */
+  participantPhone(userId: string): string | null {
+    return this.participantUsers()[userId]?.phone ?? null;
   }
 
   private toMessage(err: unknown, fallback: string): string {

@@ -151,107 +151,82 @@
         </div>
       </div>
 
-      <!-- Status & Participant — two columns -->
-      <div class="row g-3 mb-3">
-
-        <!-- Change status -->
-        <div class="col-12 col-md-6">
-          <div class="card h-100">
-            <div class="card-header">
-              <h3 class="card-title">Cambiar estado</h3>
-              <div class="card-options">
-                <span [class]="statusBadge(d.status)">{{ statusLabel(d.status) }}</span>
-              </div>
-            </div>
-            <div class="card-body">
-              <form [formGroup]="statusForm" (ngSubmit)="onSubmitStatus()">
-                <div class="mb-3">
-                  <label class="form-label required" for="req-status">Nuevo estado</label>
-                  <select id="req-status" class="form-select" formControlName="status">
-                    @for (opt of statusOptions; track opt.value) {
-                      <option [value]="opt.value">{{ opt.label }}</option>
-                    }
-                  </select>
-                </div>
-                <div class="mb-3">
-                  <label class="form-label" for="req-status-note">Nota (opcional)</label>
-                  <textarea
-                    id="req-status-note"
-                    class="form-control"
-                    formControlName="note"
-                    rows="2"
-                  ></textarea>
-                </div>
-                @if (statusError()) {
-                  <div class="alert alert-danger" role="alert">{{ statusError() }}</div>
-                }
-                <button type="submit" class="btn btn-warning" [disabled]="savingStatus()">
-                  @if (savingStatus()) {
-                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                  }
-                  Cambiar estado
-                </button>
-              </form>
-            </div>
+      <!-- Change status -->
+      <div class="card mb-3">
+        <div class="card-header">
+          <h3 class="card-title">Cambiar estado</h3>
+          <div class="card-options">
+            <span [class]="statusBadge(d.status)">{{ statusLabel(d.status) }}</span>
           </div>
+        </div>
+        <div class="card-body">
+          <form [formGroup]="statusForm" (ngSubmit)="onSubmitStatus()">
+            <div class="mb-3">
+              <label class="form-label required" for="req-status">Nuevo estado</label>
+              <select id="req-status" class="form-select" formControlName="status">
+                @for (opt of statusOptions; track opt.value) {
+                  <option [value]="opt.value">{{ opt.label }}</option>
+                }
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="req-status-note">Nota (opcional)</label>
+              <textarea
+                id="req-status-note"
+                class="form-control"
+                formControlName="note"
+                rows="2"
+              ></textarea>
+            </div>
+            @if (statusError()) {
+              <div class="alert alert-danger" role="alert">{{ statusError() }}</div>
+            }
+            <button type="submit" class="btn btn-warning" [disabled]="savingStatus()">
+              @if (savingStatus()) {
+                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+              }
+              Cambiar estado
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Participants: add form on top, then the list -->
+      <div class="card mb-3">
+        <div class="card-header">
+          <h3 class="card-title">Participantes ({{ d.participants.length }})</h3>
         </div>
 
         <!-- Add participant -->
-        <div class="col-12 col-md-6">
-          <div class="card h-100">
-            <div class="card-header">
-              <h3 class="card-title">Agregar participante</h3>
-            </div>
-            <div class="card-body">
-              <form (ngSubmit)="onSubmitParticipant()">
-                <div class="mb-3">
-                  <label class="form-label required" for="req-user-search">Buscar usuario</label>
-                  <input
-                    id="req-user-search"
-                    type="text"
-                    class="form-control"
-                    autocomplete="off"
-                    placeholder="Nombre, teléfono o correo…"
-                    [formControl]="participantSearch"
-                    [ngbTypeahead]="searchUsers"
-                    [resultFormatter]="userFormatter"
-                    [inputFormatter]="userFormatter"
-                    [editable]="false"
-                    (selectItem)="onSelectUser($event)"
-                    (input)="onSearchInput()"
-                    [class.is-invalid]="participantSubmitted() && !selectedUser()"
-                  >
-                  <small class="form-hint">Se buscan usuarios con membresía en este conjunto.</small>
-                  @if (participantSubmitted() && !selectedUser()) {
-                    <div class="text-danger small mt-1">Selecciona un usuario de la lista.</div>
-                  }
-                </div>
-
-                @if (selectedUser(); as u) {
-                  <div class="mb-3 d-flex align-items-center gap-2 p-2 border rounded bg-secondary-lt">
-                    <div class="flex-fill">
-                      <div class="fw-medium">{{ u.userName }}</div>
-                      <div class="text-secondary small">
-                        {{ u.phone }}{{ u.email ? ' · ' + u.email : '' }} · {{ u.roleName }}
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      class="btn btn-icon btn-sm"
-                      aria-label="Quitar selección"
-                      (click)="clearSelectedUser()"
-                    >
-                      <tabler-icon name="x" />
-                    </button>
-                  </div>
+        <div class="card-body border-bottom">
+          <form (ngSubmit)="onSubmitParticipant()">
+            <div class="row g-2 align-items-end">
+              <div class="col-12 col-md">
+                <label class="form-label required" for="req-user-search">Buscar usuario</label>
+                <input
+                  id="req-user-search"
+                  type="text"
+                  class="form-control"
+                  autocomplete="off"
+                  placeholder="Nombre, teléfono o correo…"
+                  [formControl]="participantSearch"
+                  [ngbTypeahead]="searchUsers"
+                  [resultFormatter]="userFormatter"
+                  [inputFormatter]="userFormatter"
+                  [editable]="false"
+                  (selectItem)="onSelectUser($event)"
+                  (input)="onSearchInput()"
+                  [class.is-invalid]="participantSubmitted() && !selectedUser()"
+                >
+                <small class="form-hint">Se buscan usuarios con membresía en este conjunto.</small>
+                @if (participantSubmitted() && !selectedUser()) {
+                  <div class="text-danger small mt-1">Selecciona un usuario de la lista.</div>
                 }
-
-                @if (participantError()) {
-                  <div class="alert alert-danger" role="alert">{{ participantError() }}</div>
-                }
+              </div>
+              <div class="col-12 col-md-auto">
                 <button
                   type="submit"
-                  class="btn btn-primary"
+                  class="btn btn-primary w-100"
                   [disabled]="savingParticipant() || !selectedUser()"
                 >
                   @if (savingParticipant()) {
@@ -260,23 +235,42 @@
                   <tabler-icon name="user-plus" class="me-1" />
                   Agregar
                 </button>
-              </form>
+              </div>
             </div>
-          </div>
-        </div>
-      </div>
 
-      <!-- Participants list -->
-      @if (d.participants.length > 0) {
-        <div class="card mb-3">
-          <div class="card-header">
-            <h3 class="card-title">Participantes ({{ d.participants.length }})</h3>
-          </div>
+            @if (selectedUser(); as u) {
+              <div class="mt-3 d-flex align-items-center gap-2 p-2 border rounded bg-secondary-lt">
+                <div class="flex-fill">
+                  <div class="fw-medium">{{ u.userName }}</div>
+                  <div class="text-secondary small">
+                    {{ u.phone }}{{ u.email ? ' · ' + u.email : '' }} · {{ u.roleName }}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  class="btn btn-icon btn-sm"
+                  aria-label="Quitar selección"
+                  (click)="clearSelectedUser()"
+                >
+                  <tabler-icon name="x" />
+                </button>
+              </div>
+            }
+
+            @if (participantError()) {
+              <div class="alert alert-danger mt-3 mb-0" role="alert">{{ participantError() }}</div>
+            }
+          </form>
+        </div>
+
+        <!-- Participants list -->
+        @if (d.participants.length > 0) {
           <div class="table-responsive">
             <table class="table card-table table-vcenter">
               <thead>
                 <tr>
-                  <th>Usuario ID</th>
+                  <th>Usuario</th>
+                  <th>Teléfono</th>
                   <th>Tipo</th>
                   <th>Fuente</th>
                   <th>Desde</th>
@@ -285,7 +279,14 @@
               <tbody>
                 @for (p of d.participants; track trackParticipant($index, p)) {
                   <tr>
-                    <td class="text-secondary font-monospace small">{{ p.userId }}</td>
+                    <td>
+                      @if (participantName(p.userId); as name) {
+                        {{ name }}
+                      } @else {
+                        <span class="text-secondary font-monospace small">{{ p.userId }}</span>
+                      }
+                    </td>
+                    <td class="text-secondary">{{ participantPhone(p.userId) ?? '—' }}</td>
                     <td><span class="badge bg-blue-lt">{{ p.participantType }}</span></td>
                     <td class="text-secondary">{{ p.source }}</td>
                     <td class="text-secondary">{{ p.joinedAtUtc | date:'short' }}</td>
@@ -294,8 +295,10 @@
               </tbody>
             </table>
           </div>
-        </div>
-      }
+        } @else {
+          <div class="card-body text-secondary">Aún no hay participantes.</div>
+        }
+      </div>
 
       <!-- Status history -->
       @if (d.statusHistory.length > 0) {

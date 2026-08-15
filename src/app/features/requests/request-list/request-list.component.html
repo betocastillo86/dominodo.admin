@@ -58,6 +58,35 @@
             emptyText="Este conjunto no tiene categorías"
           />
         </div>
+        <div class="col-12 col-sm-4 col-lg-4">
+          <div class="input-group">
+            <input
+              type="text"
+              class="form-control"
+              autocomplete="off"
+              placeholder="Filtrar por participante…"
+              [formControl]="participantControl"
+              [ngbTypeahead]="searchUsers"
+              [resultFormatter]="userFormatter"
+              [inputFormatter]="userFormatter"
+              [editable]="false"
+              (selectItem)="onSelectParticipant($event)"
+            />
+            @if (selectedParticipant()) {
+              <button
+                type="button"
+                class="btn"
+                aria-label="Quitar filtro de participante"
+                (click)="clearParticipant()"
+              >
+                ✕
+              </button>
+            }
+          </div>
+          @if (selectedParticipant(); as p) {
+            <small class="form-hint">Participante: {{ p.userName }} · {{ p.phone }}</small>
+          }
+        </div>
       </div>
     </div>
     <app-data-table
