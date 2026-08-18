@@ -23,6 +23,7 @@ import { ProblemDetails } from '../../../core/http/problem-details';
 import { PagedResult } from '../../../core/models/paged-result';
 import { TenantsService } from '../data-access/tenants.service';
 import {
+  ContactInfoDto,
   TENANT_STATUS_BADGES,
   TENANT_STATUS_LABELS,
   TenantFeatureDto,
@@ -100,6 +101,22 @@ export class TenantFormComponent implements OnInit {
       validators: [Validators.required, Validators.maxLength(100)],
     }),
     confirmInvitationRequired: new FormControl(false, { nonNullable: true }),
+    // Public contact details shown to residents (all optional).
+    contactInfo: new FormGroup({
+      phone: new FormControl('', {
+        nonNullable: true,
+        validators: [Validators.required, Validators.maxLength(50)],
+      }),
+      address: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(200)] }),
+      additionalInfo: new FormControl('', {
+        nonNullable: true,
+        validators: [Validators.maxLength(500)],
+      }),
+      schedules: new FormControl('', {
+        nonNullable: true,
+        validators: [Validators.required, Validators.maxLength(200)],
+      }),
+    }),
     // Create-only fields (not part of the update contract; disabled on edit).
     branding: new FormControl('', { nonNullable: true }),
     settings: new FormControl('', { nonNullable: true }),
@@ -240,6 +257,7 @@ export class TenantFormComponent implements OnInit {
     const address = raw.address.trim();
     const city = raw.city.trim();
     const country = raw.country.trim();
+    const contactInfo = this.buildContactInfo(raw.contactInfo);
 
     if (this.mode === 'create') {
       this.tenantsService
@@ -251,6 +269,7 @@ export class TenantFormComponent implements OnInit {
           city,
           country,
           legalId,
+          contactInfo,
           confirmInvitationRequired: raw.confirmInvitationRequired,
           branding: raw.branding.trim() || null,
           settings: raw.settings.trim() || null,
@@ -262,13 +281,36 @@ export class TenantFormComponent implements OnInit {
         });
     } else {
       this.tenantsService
-        .update(this.id!, { name, legalId, address, city, country, confirmInvitationRequired: raw.confirmInvitationRequired })
+        .update(this.id!, {
+          name,
+          legalId,
+          address,
+          city,
+          country,
+          contactInfo,
+          confirmInvitationRequired: raw.confirmInvitationRequired,
+        })
         .pipe(finalize(() => this.saving.set(false)))
         .subscribe({
           next: () => this.onSuccess('Conjunto actualizado'),
           error: (err: unknown) => this.handleError(err),
         });
     }
+  }
+
+  /** Trims each contact field, sending `null` for blanks; the whole object is `null` if all are empty. */
+  private buildContactInfo(raw: {
+    phone: string;
+    address: string;
+    additionalInfo: string;
+    schedules: string;
+  }): ContactInfoDto | null {
+    const phone = raw.phone.trim() || null;
+    const address = raw.address.trim() || null;
+    const additionalInfo = raw.additionalInfo.trim() || null;
+    const schedules = raw.schedules.trim() || null;
+    if (!phone && !address && !additionalInfo && !schedules) return null;
+    return { phone, address, additionalInfo, schedules };
   }
 
   private loadTenant(id: string): void {
@@ -287,6 +329,12 @@ export class TenantFormComponent implements OnInit {
             city: tenant.city,
             country: tenant.country,
             confirmInvitationRequired: tenant.confirmInvitationRequired,
+            contactInfo: {
+              phone: tenant.contactInfo?.phone ?? '',
+              address: tenant.contactInfo?.address ?? '',
+              additionalInfo: tenant.contactInfo?.additionalInfo ?? '',
+              schedules: tenant.contactInfo?.schedules ?? '',
+            },
             branding: tenant.branding ?? '',
             settings: tenant.settings ?? '',
           });

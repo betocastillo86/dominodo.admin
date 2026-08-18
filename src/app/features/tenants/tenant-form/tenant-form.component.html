@@ -175,6 +175,121 @@
               <small class="form-hint">Si está activo, el usuario deberá confirmar la invitación antes de acceder al conjunto.</small>
             </div>
 
+            <div class="hr-text">Información de contacto</div>
+
+            <div formGroupName="contactInfo">
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label required" for="tenant-contact-phone">Teléfono</label>
+                  <input
+                    id="tenant-contact-phone"
+                    type="text"
+                    class="form-control"
+                    formControlName="phone"
+                    [class.is-invalid]="
+                      form.controls.contactInfo.controls.phone.invalid &&
+                      form.controls.contactInfo.controls.phone.touched
+                    "
+                  />
+                  @if (
+                    form.controls.contactInfo.controls.phone.invalid &&
+                    form.controls.contactInfo.controls.phone.touched
+                  ) {
+                    <div class="invalid-feedback">
+                      @if (form.controls.contactInfo.controls.phone.errors?.['server']) {
+                        {{ form.controls.contactInfo.controls.phone.errors?.['server'] }}
+                      } @else if (form.controls.contactInfo.controls.phone.errors?.['required']) {
+                        El teléfono es obligatorio.
+                      } @else if (form.controls.contactInfo.controls.phone.errors?.['maxlength']) {
+                        El teléfono no puede superar los 50 caracteres.
+                      }
+                    </div>
+                  }
+                </div>
+
+                <div class="col-md-6 mb-3">
+                  <label class="form-label required" for="tenant-contact-schedules">Horarios</label>
+                  <input
+                    id="tenant-contact-schedules"
+                    type="text"
+                    class="form-control"
+                    formControlName="schedules"
+                    [class.is-invalid]="
+                      form.controls.contactInfo.controls.schedules.invalid &&
+                      form.controls.contactInfo.controls.schedules.touched
+                    "
+                  />
+                  <small class="form-hint">P. ej. Lun a Vie 8:00–17:00.</small>
+                  @if (
+                    form.controls.contactInfo.controls.schedules.invalid &&
+                    form.controls.contactInfo.controls.schedules.touched
+                  ) {
+                    <div class="invalid-feedback">
+                      @if (form.controls.contactInfo.controls.schedules.errors?.['server']) {
+                        {{ form.controls.contactInfo.controls.schedules.errors?.['server'] }}
+                      } @else if (form.controls.contactInfo.controls.schedules.errors?.['required']) {
+                        Los horarios son obligatorios.
+                      } @else if (form.controls.contactInfo.controls.schedules.errors?.['maxlength']) {
+                        Los horarios no pueden superar los 200 caracteres.
+                      }
+                    </div>
+                  }
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label" for="tenant-contact-address">Dirección de contacto</label>
+                <input
+                  id="tenant-contact-address"
+                  type="text"
+                  class="form-control"
+                  formControlName="address"
+                  [class.is-invalid]="
+                    form.controls.contactInfo.controls.address.invalid &&
+                    form.controls.contactInfo.controls.address.touched
+                  "
+                />
+                @if (
+                  form.controls.contactInfo.controls.address.invalid &&
+                  form.controls.contactInfo.controls.address.touched
+                ) {
+                  <div class="invalid-feedback">
+                    @if (form.controls.contactInfo.controls.address.errors?.['server']) {
+                      {{ form.controls.contactInfo.controls.address.errors?.['server'] }}
+                    } @else if (form.controls.contactInfo.controls.address.errors?.['maxlength']) {
+                      La dirección de contacto no puede superar los 200 caracteres.
+                    }
+                  </div>
+                }
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label" for="tenant-contact-additionalInfo">Información adicional</label>
+                <textarea
+                  id="tenant-contact-additionalInfo"
+                  class="form-control"
+                  formControlName="additionalInfo"
+                  rows="2"
+                  [class.is-invalid]="
+                    form.controls.contactInfo.controls.additionalInfo.invalid &&
+                    form.controls.contactInfo.controls.additionalInfo.touched
+                  "
+                ></textarea>
+                @if (
+                  form.controls.contactInfo.controls.additionalInfo.invalid &&
+                  form.controls.contactInfo.controls.additionalInfo.touched
+                ) {
+                  <div class="invalid-feedback">
+                    @if (form.controls.contactInfo.controls.additionalInfo.errors?.['server']) {
+                      {{ form.controls.contactInfo.controls.additionalInfo.errors?.['server'] }}
+                    } @else if (form.controls.contactInfo.controls.additionalInfo.errors?.['maxlength']) {
+                      La información adicional no puede superar los 500 caracteres.
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+
             @if (mode === 'create') {
               <div class="mb-3">
                 <label class="form-label" for="tenant-branding">Branding</label>
