@@ -54,9 +54,14 @@ modules follow the same conventions described here.
 > and **system roles** (`isSystem`) are treated as read-only in the panel.
 
 - **Chat simulation:** `POST /chat-simulation` (`{phone,text}` → `{reply}`) forwards a simulated message
-  to Domi and returns the agent's reply; `DELETE /chat-simulation/{phone}` resets Domi's session (`204`).
-  Both accept an **optional** `X-Tenant` header, but the panel sends **phone only** — Domi resolves the
-  tenant from the number. A `502` means Domi is unreachable. Conversations are **not persisted** anywhere.
+  to Domi; `DELETE /chat-simulation/{phone}` resets the session (`204`);
+  `GET /chat-simulation/{phone}/messages?afterTurn=N` returns `{ conversationId, cursor, messages[] }` —
+  cursor pattern (ADR-0027): `afterTurn=0` rehydrates the full thread, subsequent calls pass the returned
+  `cursor` for deltas. The panel polls this endpoint every 4 s and merges new turns by `turnNumber`; the
+  `POST` reply is no longer painted directly — all turns (including the agent's response and system nudges)
+  arrive through the transcript. Both write endpoints accept an **optional** `X-Tenant` header, but the
+  panel sends **phone only** — Domi resolves the tenant from the number. A `502` means Domi is unreachable.
+  Conversations are **not persisted** server-side.
 
 ---
 
@@ -87,7 +92,7 @@ src/app/
     ├── request-categories/     # cross-tenant catalog: list, create, edit of PQRS categories
     ├── announcements/          # cross-tenant list (status/category/tenant filters) + create/edit form
     ├── knowledge-resources/    # cross-tenant list (status/category/tenant filters) + create/edit form
-    └── chat-simulation/        # ephemeral Domi chat tester (phone gate → bubble chat), not persisted
+    └── chat-simulation/        # ephemeral Domi chat tester (phone gate → bubble chat); polls GET …/messages?afterTurn= for async turns
 ```
 
 - **`core/`**: single instances and cross-cutting concerns; no business UI.

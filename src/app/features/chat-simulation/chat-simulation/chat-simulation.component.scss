@@ -104,3 +104,37 @@
   font-style: italic;
   opacity: 0.8;
 }
+
+.chat-bubble-system {
+  background-color: var(--tblr-azure-lt, #ecf4fb);
+  color: var(--tblr-azure, #206bc4);
+  border-bottom-left-radius: 0.25rem;
+}
+
+.chat-system-badge {
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  opacity: 0.8;
+  margin-bottom: 0.125rem;
+}
+
+.chat-live-dot {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background-color: currentColor;
+  animation: chat-live-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes chat-live-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}

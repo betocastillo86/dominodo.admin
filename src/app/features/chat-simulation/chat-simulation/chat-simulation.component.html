@@ -73,7 +73,33 @@
               <div class="text-secondary small">{{ phone() }}</div>
             </div>
           </div>
+          <div class="card-options">
+            @if (polling()) {
+              <span class="d-flex align-items-center gap-1 text-success small me-2">
+                <span class="chat-live-dot"></span>
+                En vivo
+              </span>
+            }
+            <button
+              type="button"
+              class="btn btn-sm btn-ghost-secondary"
+              [title]="polling() ? 'Pausar actualización' : 'Reanudar actualización'"
+              (click)="togglePolling()"
+            >
+              @if (polling()) {
+                <tabler-icon name="player-pause" />
+              } @else {
+                <tabler-icon name="player-play" />
+              }
+            </button>
+          </div>
         </div>
+
+        @if (pollError()) {
+          <div class="px-3 pt-2">
+            <div class="alert alert-warning py-2 small mb-0" role="alert">{{ pollError() }}</div>
+          </div>
+        }
 
         <div class="card-body chat-body">
           @if (messages().length === 0) {
@@ -97,9 +123,13 @@
                   <div
                     class="chat-bubble"
                     [class.chat-bubble-outgoing]="message.direction === 'outgoing'"
-                    [class.chat-bubble-incoming]="message.direction === 'incoming'"
+                    [class.chat-bubble-incoming]="message.direction === 'incoming' && message.role !== 'System'"
+                    [class.chat-bubble-system]="message.role === 'System'"
                     [class.chat-bubble-error]="message.status === 'error'"
                   >
+                    @if (message.role === 'System') {
+                      <div class="chat-system-badge">Sistema</div>
+                    }
                     <div class="chat-text">{{ message.text }}</div>
                     <button
                       type="button"

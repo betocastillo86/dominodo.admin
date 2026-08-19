@@ -9,6 +9,22 @@ export interface AdminSimulateChatResponse {
   reply: string;
 }
 
+export type ChatMessageRole = 'Unknown' | 'User' | 'Assistant' | 'System';
+
+export interface ChatMessageResponse {
+  turnNumber: number;
+  role: ChatMessageRole;
+  text: string;
+  createdAtUtc: string;
+  correlationId: string | null;
+}
+
+export interface ChatTranscriptResponse {
+  conversationId: string | null;
+  cursor: number;
+  messages: ChatMessageResponse[];
+}
+
 /** Direction of a chat bubble relative to the operator simulating the user. */
 export type ChatDirection = 'outgoing' | 'incoming';
 
@@ -25,4 +41,6 @@ export interface ChatBubble {
   text: string;
   sentAt: Date;
   status: ChatBubbleStatus;
+  turnNumber?: number;
+  role?: ChatMessageRole;
 }
