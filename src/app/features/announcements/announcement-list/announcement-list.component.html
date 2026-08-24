@@ -6,7 +6,7 @@
   <div class="card">
     <div class="card-header">
       <div class="row g-2">
-        <div class="col-12 col-sm-4 col-lg-4">
+        <div class="col-12 col-sm-6 col-lg-3">
           <select class="form-select" [formControl]="statusControl">
             <option value="">Todos los estados</option>
             <option value="Draft">Borrador</option>
@@ -14,7 +14,15 @@
             <option value="Archived">Archivado</option>
           </select>
         </div>
-        <div class="col-12 col-sm-4 col-lg-4">
+        <div class="col-12 col-sm-6 col-lg-3">
+          <select class="form-select" [formControl]="priorityControl">
+            <option value="">Todas las prioridades</option>
+            <option value="High">Alta</option>
+            <option value="Medium">Media</option>
+            <option value="Low">Baja</option>
+          </select>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3">
           <app-multi-select
             [formControl]="categoryControl"
             [options]="categoryOptions()"
@@ -22,7 +30,7 @@
             emptyText="No hay categorías disponibles"
           />
         </div>
-        <div class="col-12 col-sm-4 col-lg-4">
+        <div class="col-12 col-sm-6 col-lg-3">
           <select class="form-select" [formControl]="tenantControl">
             <option value="">Todos los conjuntos</option>
             @for (tenant of tenants(); track tenant.id) {

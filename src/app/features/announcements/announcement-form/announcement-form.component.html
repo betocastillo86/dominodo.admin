@@ -57,22 +57,22 @@
             <div class="row g-3 mb-3">
               <div class="col-12 col-md-4">
                 <label class="form-label required" for="ann-priority">Prioridad</label>
-                <input
+                <select
                   id="ann-priority"
-                  type="number"
-                  class="form-control"
+                  class="form-select"
                   formControlName="priority"
-                  min="0"
                   [class.is-invalid]="form.controls.priority.invalid && form.controls.priority.touched"
-                />
+                >
+                  <option value="High">Alta</option>
+                  <option value="Medium">Media</option>
+                  <option value="Low">Baja</option>
+                </select>
                 @if (form.controls.priority.invalid && form.controls.priority.touched) {
                   <div class="invalid-feedback">
                     @if (form.controls.priority.errors?.['server']) {
                       {{ form.controls.priority.errors?.['server'] }}
-                    } @else if (form.controls.priority.errors?.['required']) {
+                    } @else {
                       La prioridad es obligatoria.
-                    } @else if (form.controls.priority.errors?.['min']) {
-                      La prioridad debe ser 0 o mayor.
                     }
                   </div>
                 }

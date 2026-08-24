@@ -8,6 +8,7 @@ import { TenantDto } from '../../tenants/data-access/tenant.models';
 import {
   AnnouncementDetailDto,
   AnnouncementDto,
+  AnnouncementPriority,
   AnnouncementStatus,
   CreateAnnouncementRequest,
   UpdateAnnouncementRequest,
@@ -36,6 +37,7 @@ export class AnnouncementsService {
     status?: AnnouncementStatus,
     categoryIds?: string[],
     tenantId?: string,
+    priority?: AnnouncementPriority,
   ): void {
     this._loading.set(true);
     this._error.set(null);
@@ -44,6 +46,7 @@ export class AnnouncementsService {
     if (status) params = params.set('status', status);
     for (const id of categoryIds ?? []) params = params.append('categoryIds', id);
     if (tenantId) params = params.set('tenantId', tenantId);
+    if (priority) params = params.set('priority', priority);
 
     this.http.get<PagedResult<AnnouncementDto>>(this.base, { params }).subscribe({
       next: (result) => {
