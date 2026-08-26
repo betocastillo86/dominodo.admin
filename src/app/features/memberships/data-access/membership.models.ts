@@ -18,6 +18,8 @@ export interface InviteMemberRequest {
   phone: string;
   roleId: number;
   email?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
   apartmentId?: string | null;
   relationType?: ResidentRelationType;
   livesHere?: boolean | null;
