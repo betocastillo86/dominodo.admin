@@ -1,5 +1,11 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
-import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  FormArray,
+  FormControl,
+  FormGroup,
+  ReactiveFormsModule,
+  Validators,
+} from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { finalize } from 'rxjs';
@@ -56,17 +62,27 @@ export class NotificationTemplateFormComponent implements OnInit {
     emailEnabled: new FormControl(false, { nonNullable: true }),
     pushEnabled: new FormControl(false, { nonNullable: true }),
     inAppEnabled: new FormControl(false, { nonNullable: true }),
+    whatsAppEnabled: new FormControl(false, { nonNullable: true }),
     // Channel content.
     emailSubject: new FormControl('', { nonNullable: true }),
     emailBodyHtml: new FormControl('', { nonNullable: true }),
     inAppText: new FormControl('', { nonNullable: true }),
     pushText: new FormControl('', { nonNullable: true }),
+    whatsAppText: new FormControl('', { nonNullable: true }),
+    whatsAppContentSid: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.maxLength(64)],
+    }),
+    /** One control per Content template variable, in `{{1}}`, `{{2}}`, … order. */
+    whatsAppVariableMap: new FormArray<FormControl<string>>([]),
     // Global state.
     isActive: new FormControl(false, { nonNullable: true }),
   });
 
   readonly typeLabels = NOTIFICATION_TYPE_LABELS;
   readonly types = NOTIFICATION_TYPES;
+  /** Typed accessor for the WhatsApp variable map, used by the template. */
+  readonly whatsAppVariableMap = this.form.controls.whatsAppVariableMap;
   /** Placeholders available for this template's channel content. Informative only. */
   readonly parameters = signal<AdminNotificationParameterDto[]>([]);
   readonly loadingDetail = signal(false);
@@ -99,10 +115,16 @@ export class NotificationTemplateFormComponent implements OnInit {
         emailEnabled: raw.emailEnabled,
         pushEnabled: raw.pushEnabled,
         inAppEnabled: raw.inAppEnabled,
+        whatsAppEnabled: raw.whatsAppEnabled,
         emailSubject: raw.emailEnabled ? raw.emailSubject.trim() || null : null,
         emailBodyHtml: raw.emailEnabled ? raw.emailBodyHtml || null : null,
         inAppText: raw.inAppEnabled ? raw.inAppText.trim() || null : null,
         pushText: raw.pushEnabled ? raw.pushText.trim() || null : null,
+        whatsAppText: raw.whatsAppEnabled ? raw.whatsAppText.trim() || null : null,
+        whatsAppContentSid: raw.whatsAppEnabled ? raw.whatsAppContentSid.trim() || null : null,
+        whatsAppVariableMap: raw.whatsAppEnabled
+          ? raw.whatsAppVariableMap.map((key) => key.trim()).filter((key) => !!key)
+          : [],
         isActive: raw.isActive,
         localization: this.loadedLocalization,
       })
@@ -111,6 +133,21 @@ export class NotificationTemplateFormComponent implements OnInit {
         next: () => this.onSuccess('Plantilla actualizada'),
         error: (err: unknown) => this.handleError(err),
       });
+  }
+
+  addWhatsAppVariable(): void {
+    this.whatsAppVariableMap.push(new FormControl('', { nonNullable: true }));
+  }
+
+  removeWhatsAppVariable(index: number): void {
+    this.whatsAppVariableMap.removeAt(index);
+  }
+
+  private setVariableMap(keys: string[]): void {
+    this.whatsAppVariableMap.clear();
+    for (const key of keys) {
+      this.whatsAppVariableMap.push(new FormControl(key, { nonNullable: true }));
+    }
   }
 
   private loadTemplate(): void {
@@ -130,12 +167,16 @@ export class NotificationTemplateFormComponent implements OnInit {
             emailEnabled: template.emailEnabled,
             pushEnabled: template.pushEnabled,
             inAppEnabled: template.inAppEnabled,
+            whatsAppEnabled: template.whatsAppEnabled,
             emailSubject: template.emailSubject ?? '',
             emailBodyHtml: template.emailBodyHtml ?? '',
             inAppText: template.inAppText ?? '',
             pushText: template.pushText ?? '',
+            whatsAppText: template.whatsAppText ?? '',
+            whatsAppContentSid: template.whatsAppContentSid ?? '',
             isActive: template.isActive,
           });
+          this.setVariableMap(template.whatsAppVariableMap ?? []);
         },
         error: (err: unknown) =>
           this.error.set(this.toMessage(err, 'No se pudo cargar la plantilla.')),

@@ -42,6 +42,8 @@ export interface AdminWhatsAppMessageDto {
   tenantId: string; // uuid
   to: string;
   body: string;
+  /** Twilio Content SID used for the send; null when the free-form body was sent. */
+  contentSid?: string | null;
   status: AdminDeliveryStatus;
   attempts: number;
   scheduledAtUtc?: string | null; // date-time

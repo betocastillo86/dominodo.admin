@@ -198,6 +198,115 @@
               </div>
             }
 
+            <!-- WhatsApp channel -->
+            <div class="mb-3">
+              <label class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" formControlName="whatsAppEnabled" />
+                <span class="form-check-label d-inline-flex align-items-center gap-1">
+                  <tabler-icon name="brand-whatsapp" />
+                  WhatsApp
+                </span>
+              </label>
+            </div>
+            @if (form.controls.whatsAppEnabled.value) {
+              <div class="card card-sm mb-3">
+                <div class="card-body">
+                  <div class="mb-3">
+                    <label class="form-label" for="tpl-whatsapp-text">Texto</label>
+                    <textarea
+                      id="tpl-whatsapp-text"
+                      class="form-control"
+                      formControlName="whatsAppText"
+                      rows="3"
+                    ></textarea>
+                    <small class="form-hint">
+                      Mensaje libre. Se usa cuando el envío ocurre dentro de la ventana de 24 horas
+                      o cuando no hay una plantilla aprobada configurada.
+                    </small>
+                  </div>
+
+                  <div class="mb-3">
+                    <label class="form-label" for="tpl-whatsapp-content-sid">Content SID</label>
+                    <input
+                      id="tpl-whatsapp-content-sid"
+                      type="text"
+                      class="form-control font-monospace"
+                      formControlName="whatsAppContentSid"
+                      placeholder="HXxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                      [class.is-invalid]="
+                        form.controls.whatsAppContentSid.invalid &&
+                        form.controls.whatsAppContentSid.touched
+                      "
+                    />
+                    @if (
+                      form.controls.whatsAppContentSid.invalid &&
+                      form.controls.whatsAppContentSid.touched
+                    ) {
+                      <div class="invalid-feedback">
+                        @if (form.controls.whatsAppContentSid.errors?.['server']) {
+                          {{ form.controls.whatsAppContentSid.errors?.['server'] }}
+                        } @else if (form.controls.whatsAppContentSid.errors?.['maxlength']) {
+                          El Content SID no puede superar los 64 caracteres.
+                        }
+                      </div>
+                    }
+                    <small class="form-hint">
+                      Identificador de la plantilla aprobada en Twilio. Opcional: si se deja vacío,
+                      se envía el texto libre.
+                    </small>
+                  </div>
+
+                  <div>
+                    <label class="form-label">Variables de la plantilla</label>
+                    <p class="text-secondary small">
+                      Cada fila corresponde, en orden, a una variable de la plantilla aprobada
+                      (<code>{{ '{{' }}1{{ '}}' }}</code>, <code>{{ '{{' }}2{{ '}}' }}</code>, …).
+                      Escribe la clave del parámetro que debe ocupar esa posición.
+                    </p>
+                    <div formArrayName="whatsAppVariableMap">
+                      @for (variable of whatsAppVariableMap.controls; track $index) {
+                        <div class="input-group mb-2">
+                          <span class="input-group-text font-monospace">
+                            {{ '{{' }}{{ $index + 1 }}{{ '}}' }}
+                          </span>
+                          <input
+                            type="text"
+                            class="form-control"
+                            [formControlName]="$index"
+                            list="tpl-whatsapp-parameter-keys"
+                            placeholder="clave del parámetro"
+                          />
+                          <button
+                            type="button"
+                            class="btn btn-outline-danger"
+                            (click)="removeWhatsAppVariable($index)"
+                            aria-label="Quitar variable"
+                          >
+                            <tabler-icon name="trash" />
+                          </button>
+                        </div>
+                      } @empty {
+                        <p class="text-secondary">Sin variables configuradas.</p>
+                      }
+                    </div>
+                    <datalist id="tpl-whatsapp-parameter-keys">
+                      @for (param of parameters(); track param.key) {
+                        <option [value]="param.key"></option>
+                      }
+                    </datalist>
+                    <button
+                      type="button"
+                      class="btn btn-outline-primary btn-sm"
+                      (click)="addWhatsAppVariable()"
+                    >
+                      <tabler-icon name="plus" class="me-1" />
+                      Agregar variable
+                    </button>
+                  </div>
+                </div>
+              </div>
+            }
+
             @if (error()) {
               <div class="alert alert-danger" role="alert">{{ error() }}</div>
             }

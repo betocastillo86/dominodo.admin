@@ -23,6 +23,16 @@
               <div class="datagrid-content">{{ m.body }}</div>
             </div>
             <div class="datagrid-item">
+              <div class="datagrid-title">Content SID</div>
+              <div class="datagrid-content">
+                @if (m.contentSid) {
+                  <span class="text-secondary font-monospace">{{ m.contentSid }}</span>
+                } @else {
+                  <span class="text-secondary">—</span>
+                }
+              </div>
+            </div>
+            <div class="datagrid-item">
               <div class="datagrid-title">Estado</div>
               <div class="datagrid-content"><span [class]="statusBadge(m)">{{ statusLabel(m) }}</span></div>
             </div>
