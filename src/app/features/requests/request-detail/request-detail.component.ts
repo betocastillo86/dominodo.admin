@@ -31,9 +31,11 @@ import { UsersService } from '../../users/data-access/users.service';
 import { UserDetailDto } from '../../users/data-access/user.models';
 import { RequestsService } from '../data-access/requests.service';
 import {
+  AddRequestUpdateRequest,
   REQUEST_PRIORITY_LABELS,
   REQUEST_STATUS_LABELS,
   REQUEST_TYPE_LABELS,
+  REQUEST_UPDATE_TYPE_LABELS,
   REQUEST_VISIBILITY_LABELS,
   RequestAttachmentDto,
   RequestCategoryDto,
@@ -44,6 +46,7 @@ import {
   RequestStatusHistoryDto,
   RequestType,
   RequestUpdateDto,
+  RequestUpdateType,
   RequestVisibility,
 } from '../data-access/request.models';
 
@@ -108,6 +111,9 @@ export class RequestDetailComponent implements OnInit {
   readonly savingParticipant = signal(false);
   readonly participantError = signal<string | null>(null);
 
+  readonly savingUpdate = signal(false);
+  readonly updateError = signal<string | null>(null);
+
   readonly uploadingFile = signal(false);
   readonly uploadError = signal<string | null>(null);
 
@@ -135,6 +141,13 @@ export class RequestDetailComponent implements OnInit {
     { value: 'Low', label: 'Baja' },
     { value: 'Medium', label: 'Media' },
     { value: 'High', label: 'Alta' },
+  ];
+
+  readonly updateTypeOptions: { value: RequestUpdateType; label: string }[] = [
+    { value: 'Comment', label: 'Comentario' },
+    { value: 'Progress', label: 'Avance' },
+    { value: 'Evidence', label: 'Evidencia' },
+    { value: 'Resolution', label: 'Resolución' },
   ];
 
   readonly visibilityOptions: { value: RequestVisibility; label: string }[] = [
@@ -179,6 +192,19 @@ export class RequestDetailComponent implements OnInit {
       validators: [Validators.required],
     }),
     note: new FormControl('', { nonNullable: true }),
+  });
+
+  /** Add a timeline update (comment by default) to the request. */
+  readonly updateForm = new FormGroup({
+    type: new FormControl<RequestUpdateType>('Comment', {
+      nonNullable: true,
+      validators: [Validators.required],
+    }),
+    body: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required, Validators.maxLength(2000)],
+    }),
+    isInternal: new FormControl(false, { nonNullable: true }),
   });
 
   /** Add participant: the typeahead's raw input model (a typed string or the selected membership). */
@@ -279,6 +305,38 @@ export class RequestDetailComponent implements OnInit {
           this.reloadDetail();
         },
         error: (err: unknown) => this.statusError.set(this.toMessage(err, 'No se pudo cambiar el estado.')),
+      });
+  }
+
+  onSubmitUpdate(): void {
+    if (this.updateForm.invalid) {
+      this.updateForm.markAllAsTouched();
+      return;
+    }
+    const slug = this.tenantSlug();
+    if (!slug) return;
+
+    this.savingUpdate.set(true);
+    this.updateError.set(null);
+
+    const raw = this.updateForm.getRawValue();
+    const body: AddRequestUpdateRequest = {
+      type: raw.type,
+      body: raw.body.trim(),
+      isInternal: raw.isInternal,
+    };
+
+    this.requestsService
+      .addUpdate(this.id, body, slug)
+      .pipe(finalize(() => this.savingUpdate.set(false)))
+      .subscribe({
+        next: () => {
+          this.notifications.success('Actualización agregada');
+          this.updateForm.reset({ type: raw.type, body: '', isInternal: raw.isInternal });
+          this.reloadDetail();
+        },
+        error: (err: unknown) =>
+          this.updateError.set(this.toMessage(err, 'No se pudo agregar la actualización.')),
       });
   }
 
@@ -422,6 +480,10 @@ export class RequestDetailComponent implements OnInit {
     return REQUEST_VISIBILITY_LABELS[visibility as RequestVisibility] ?? visibility;
   }
 
+  updateTypeLabel(type: string): string {
+    return REQUEST_UPDATE_TYPE_LABELS[type as RequestUpdateType] ?? type;
+  }
+
   /** Router link to the apartment's edit page. */
   apartmentLink(apartmentId: string): unknown[] {
     return ['/apartments', apartmentId, 'edit'];
@@ -525,17 +587,20 @@ export class RequestDetailComponent implements OnInit {
       visibility: d.visibility as RequestVisibility,
     });
     this.statusForm.patchValue({ status: d.status as RequestStatus });
-    this.loadParticipantUsers(d.participants);
+    this.loadUsers([
+      ...d.participants.map((p) => p.userId),
+      ...d.updates.map((u) => u.authorUserId),
+    ]);
   }
 
   /**
-   * Resolves each participant's user via GET /users/{id} so the table can show
+   * Resolves participants and update authors via GET /users/{id} so the UI can show
    * name + phone instead of the raw id. One request per not-yet-resolved user;
    * failures are ignored so the row falls back to the id.
    */
-  private loadParticipantUsers(participants: RequestParticipantDto[]): void {
+  private loadUsers(userIds: string[]): void {
     const known = this.participantUsers();
-    const missing = [...new Set(participants.map((p) => p.userId))].filter((id) => !known[id]);
+    const missing = [...new Set(userIds)].filter((id) => !known[id]);
     for (const userId of missing) {
       this.usersService.getById(userId).subscribe({
         next: (user) => this.participantUsers.update((map) => ({ ...map, [userId]: user })),

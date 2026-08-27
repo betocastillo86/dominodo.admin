@@ -2,6 +2,7 @@ export type RequestType = 'Peticion' | 'Queja' | 'Reclamo' | 'Sugerencia' | 'Mai
 export type RequestStatus = 'New' | 'InProgress' | 'Resolved' | 'Closed';
 export type RequestPriority = 'Low' | 'Medium' | 'High';
 export type RequestVisibility = 'Private' | 'Public';
+export type RequestUpdateType = 'Progress' | 'Comment' | 'Evidence' | 'Resolution';
 
 /** Sort key accepted by `GET /requests` (`sortBy` query param). */
 export type RequestSortBy = 'Date' | 'Priority' | 'Status';
@@ -32,6 +33,13 @@ export const REQUEST_PRIORITY_LABELS: Record<RequestPriority, string> = {
 export const REQUEST_VISIBILITY_LABELS: Record<RequestVisibility, string> = {
   Private: 'Privada',
   Public: 'Pública',
+};
+
+export const REQUEST_UPDATE_TYPE_LABELS: Record<RequestUpdateType, string> = {
+  Progress: 'Avance',
+  Comment: 'Comentario',
+  Evidence: 'Evidencia',
+  Resolution: 'Resolución',
 };
 
 /** A request category (tenant-scoped catalog) as returned by `GET /request-categories`. */
@@ -129,6 +137,13 @@ export interface UpdateRequestRequest {
 export interface ChangeRequestStatusRequest {
   status: RequestStatus;
   note: string | null;
+}
+
+/** `POST /requests/{id}/updates` */
+export interface AddRequestUpdateRequest {
+  type: RequestUpdateType;
+  body: string | null;
+  isInternal: boolean;
 }
 
 /** `POST /requests/{id}/participants` */

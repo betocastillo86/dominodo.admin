@@ -7,6 +7,7 @@ import { ProblemDetails } from '../../../core/http/problem-details';
 import { TenantDto } from '../../tenants/data-access/tenant.models';
 import {
   AddRequestParticipantRequest,
+  AddRequestUpdateRequest,
   AttachmentDownloadUrlDto,
   ChangeRequestStatusRequest,
   ConfirmAttachmentRequest,
@@ -127,6 +128,13 @@ export class RequestsService {
     tenantSlug: string,
   ): Observable<void> {
     return this.http.post<void>(`${this.base}/${id}/participants`, body, {
+      headers: { 'X-Tenant': tenantSlug },
+    });
+  }
+
+  /** Adds a timeline update (comment, progress note, evidence or resolution). */
+  addUpdate(id: string, body: AddRequestUpdateRequest, tenantSlug: string): Observable<void> {
+    return this.http.post<void>(`${this.base}/${id}/updates`, body, {
       headers: { 'X-Tenant': tenantSlug },
     });
   }

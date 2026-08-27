@@ -339,18 +339,76 @@
         </div>
       }
 
-      <!-- Updates / timeline -->
-      @if (d.updates.length > 0) {
-        <div class="card mb-3">
-          <div class="card-header">
-            <h3 class="card-title">Actualizaciones</h3>
-          </div>
+      <!-- Updates / timeline: add form on top, then the feed -->
+      <div class="card mb-3">
+        <div class="card-header">
+          <h3 class="card-title">Actualizaciones ({{ d.updates.length }})</h3>
+        </div>
+
+        <!-- Add update -->
+        <div class="card-body border-bottom">
+          <form [formGroup]="updateForm" (ngSubmit)="onSubmitUpdate()">
+            <div class="row g-2">
+              <div class="col-12 col-md-4">
+                <label class="form-label required" for="req-update-type">Tipo</label>
+                <select id="req-update-type" class="form-select" formControlName="type">
+                  @for (opt of updateTypeOptions; track opt.value) {
+                    <option [value]="opt.value">{{ opt.label }}</option>
+                  }
+                </select>
+              </div>
+              <div class="col-12">
+                <label class="form-label required" for="req-update-body">Comentario</label>
+                <textarea
+                  id="req-update-body"
+                  class="form-control"
+                  formControlName="body"
+                  rows="3"
+                  placeholder="Escribe una actualización para esta solicitud…"
+                  [class.is-invalid]="updateForm.controls.body.touched && updateForm.controls.body.invalid"
+                ></textarea>
+                @if (updateForm.controls.body.touched && updateForm.controls.body.invalid) {
+                  <div class="invalid-feedback d-block">
+                    @if (updateForm.controls.body.hasError('required')) {
+                      El comentario es obligatorio.
+                    } @else {
+                      Máximo 2000 caracteres.
+                    }
+                  </div>
+                }
+              </div>
+              <div class="col-12">
+                <label class="form-check">
+                  <input type="checkbox" class="form-check-input" formControlName="isInternal">
+                  <span class="form-check-label">Nota interna</span>
+                </label>
+                <small class="form-hint">Las notas internas no son visibles para los residentes.</small>
+              </div>
+            </div>
+
+            @if (updateError()) {
+              <div class="alert alert-danger mt-3" role="alert">{{ updateError() }}</div>
+            }
+
+            <button type="submit" class="btn btn-primary mt-3" [disabled]="savingUpdate()">
+              @if (savingUpdate()) {
+                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+              } @else {
+                <tabler-icon name="message-plus" class="me-1" />
+              }
+              Agregar actualización
+            </button>
+          </form>
+        </div>
+
+        <!-- Updates feed -->
+        @if (d.updates.length > 0) {
           <div class="card-body p-0">
             <ul class="list-group list-group-flush">
               @for (u of d.updates; track trackUpdate($index, u)) {
                 <li class="list-group-item">
                   <div class="d-flex align-items-center mb-1">
-                    <span class="badge bg-secondary-lt me-2">{{ u.type }}</span>
+                    <span class="badge bg-secondary-lt me-2">{{ updateTypeLabel(u.type) }}</span>
                     @if (u.isInternal) {
                       <span class="badge bg-yellow-lt me-2">Interno</span>
                     }
@@ -359,13 +417,19 @@
                   @if (u.body) {
                     <p class="mb-0">{{ u.body }}</p>
                   }
-                  <small class="text-secondary font-monospace">{{ u.authorUserId.slice(0, 8) }}…</small>
+                  @if (participantName(u.authorUserId); as name) {
+                    <small class="text-secondary">{{ name }}</small>
+                  } @else {
+                    <small class="text-secondary font-monospace">{{ u.authorUserId.slice(0, 8) }}…</small>
+                  }
                 </li>
               }
             </ul>
           </div>
-        </div>
-      }
+        } @else {
+          <div class="card-body text-secondary">Aún no hay actualizaciones.</div>
+        }
+      </div>
 
       <!-- Attachments -->
       <div class="card mb-3">
