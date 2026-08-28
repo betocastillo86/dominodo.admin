@@ -2,3 +2,13 @@
 // Order matters: variable overrides first, then the Tabler theme.
 @import 'variables';
 @import 'tabler';
+
+// App utilities layered on top of Tabler.
+
+// Opts a single table cell out of the table-wide `text-nowrap`: the text wraps
+// and the column is capped so long values no longer stretch the table sideways.
+.cell-wrap {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  max-width: 28rem;
+}
