@@ -50,6 +50,52 @@ It rewrites any request that is **not** a real file/directory and **not** under 
 `/index.html`, so deep-route reloads (e.g. `/roles`, `/requests/123`) resolve to the SPA instead of a
 404. It also maps `.json` / `.webmanifest` MIME types.
 
+## Cache strategy — why a deploy is visible immediately
+
+**The problem this solves.** The hosting applies `Cache-Control: max-age=31536000` (one year) to
+every static file it serves, `index.html` included — verifiable with
+`curl -sSI https://<host>/ | grep -i cache-control`. A browser therefore never revalidates
+`index.html`, and a stale `index.html` keeps referencing the **previous** build's hashed bundles,
+which are still on disk (`clean: false`). Everything loads fine and the new release is simply never
+picked up, for days. This is exactly the symptom users reported: "I have to clear my cache to see
+the changes".
+
+`public/web.config` fixes it by carving out one exception:
+
+| Resource | `Cache-Control` | Why |
+| --- | --- | --- |
+| `index.html` (and every SPA-rewritten route) | `no-cache` + `Expires: -1` | It is the pointer to everything else — always revalidate it (a cheap `304` when unchanged) |
+| `*-<hash>.js`, `*-<hash>.css` | `max-age=31536000` | Content-addressed by `outputHashing: "all"`; a new build emits new filenames |
+| `favicon.*` | `max-age=86400` | Copied verbatim from `public/`, so **not** hashed |
+
+Implemented with `<staticContent><clientCache>` for the 1-year default and
+`<location path="index.html">` with `cacheControlMode="DisableCache"` for the exception. `<location>`
+config is resolved *after* the URL Rewrite module runs, so it covers SPA deep links too, not just a
+literal request for `/index.html`.
+
+> ⚠️ The 1-year default is only safe because **every** JS/CSS filename is content-hashed. If
+> `outputHashing` is ever turned off, or an unhashed file is added to `public/`, it gets cached for a
+> year — give it its own `<location>` block. Today the only unhashed files in the deploy root are
+> `index.html`, `favicon.*` and `web.config` (IIS never serves the last one).
+
+**Nothing else is needed.** Cloudflare fronts the site but returns `cf-cache-status: DYNAMIC` for
+HTML — it does not cache it — and the hashed bundles change filename every release, so there is
+nothing to purge. No pipeline change, no cache-busting query strings, no edge rules.
+
+### Verifying after a deploy
+
+```bash
+HOST=https://adminstage.dominodo.com
+curl -sSI "$HOST/" | grep -i cache-control          # expect: no-cache
+curl -sSI "$HOST/roles"    | grep -i cache-control   # expect: no-cache (SPA rewrite path)
+
+ASSET=$(curl -sS "$HOST/" | grep -o 'main-[A-Za-z0-9]*\.js' | head -1)
+curl -sSI "$HOST/$ASSET" | grep -i cache-control    # expect: max-age=31536000
+```
+
+If `/` still shows `max-age=31536000`, the `web.config` did not take effect — check that it reached
+the deploy root and that the site returns 200 and not a `500.19` configuration error.
+
 ## Pipeline — `pipelines/build-ftp-pipeline.yaml`
 
 One Azure DevOps pipeline, branch-scoped:

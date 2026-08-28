@@ -35,6 +35,10 @@ Angular SPA: the Dominodo **super administrator** panel. Consumes the `dominodo.
 **Env & hosting artifacts:** `src/environments/environment.stage.ts` holds stage config (prod is
 `environment.ts`); `public/web.config` is the IIS SPA-fallback, copied to the deploy root at build time.
 
+**Caching (do not regress):** the hosting caches every static file for a year, so `public/web.config`
+carves out `index.html` as `no-cache` — otherwise deploys stay invisible to users for days. Never add an
+unhashed file to `public/` without its own `<location>` block.
+
 ## Conventions
 - `changeDetection: OnPush`; use `inject()`, not constructor DI.
 - Native control flow `@if` / `@for` (never `*ngIf` / `*ngFor`).
@@ -58,5 +62,5 @@ Angular SPA: the Dominodo **super administrator** panel. Consumes the `dominodo.
 
 ## Docs
 - `docs/architecture.md` — authoritative architecture, structure, and API contract.
-- `docs/deployment.md` — stage/prod FTP deployment: branch→env mapping, build configs, `web.config`, Azure DevOps pipeline + variable groups.
+- `docs/deployment.md` — stage/prod FTP deployment: branch→env mapping, build configs, `web.config`, the **cache strategy**, Azure DevOps pipeline + variable groups.
 - `plan_init.md` — phased implementation plan for the first slice (auth + roles).
