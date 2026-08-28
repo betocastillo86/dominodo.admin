@@ -39,6 +39,10 @@ Angular SPA: the Dominodo **super administrator** panel. Consumes the `dominodo.
 carves out `index.html` as `no-cache` — otherwise deploys stay invisible to users for days. Never add an
 unhashed file to `public/` without its own `<location>` block.
 
+**Version banner:** the pipeline stamps `$(Build.BuildId)` into `core/version/app-version.ts` and
+`public/version.json`; `VersionCheckService` polls the latter and prompts open tabs to reload. The
+navbar shows the running version. Keep the `___buildid___` placeholder intact in both files.
+
 ## Conventions
 - `changeDetection: OnPush`; use `inject()`, not constructor DI.
 - Native control flow `@if` / `@for` (never `*ngIf` / `*ngFor`).

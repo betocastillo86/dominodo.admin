@@ -82,6 +82,36 @@ literal request for `/index.html`.
 HTML — it does not cache it — and the hashed bundles change filename every release, so there is
 nothing to purge. No pipeline change, no cache-busting query strings, no edge rules.
 
+### Version stamping and the "new version available" banner
+
+The `no-cache` on `index.html` only kicks in when the browser asks for it again — a reload, or
+reopening the tab. A tab left open all afternoon never does, because Angular swaps components on
+route changes without reloading the document. These pieces close that gap:
+
+| Piece | What it does |
+| --- | --- |
+| `src/app/core/version/app-version.ts` | `APP_VERSION` placeholder compiled **into the bundle** |
+| `public/version.json` | the same placeholder, published as a **separate file** at `/version.json` |
+| `Stamp build version` pipeline step | one `sed` replaces `___buildid___` with `$(Build.BuildId)` in **both**, before `ng build` |
+| `core/version/version-check.service.ts` | polls `/version.json` every 5 min (and on tab focus) and compares it to `APP_VERSION` |
+| `shared/ui/version-banner/` | renders the "Actualizar ahora" prompt when they differ |
+
+Because a single pipeline run stamps both files with the same id, the bundle knows which release it
+is and the server publishes which release is current — a mismatch means a deploy happened since the
+tab was opened.
+
+Notes:
+
+- `version.json` gets its own `<location>` block with `DisableCache` in `web.config`. Without it the
+  poll would read a cached copy and report the old release forever.
+- The check uses `fetch`, not `HttpClient`, on purpose: `errorInterceptor` turns failed requests into
+  user-facing error toasts, and a background poll must stay silent when the user is offline.
+- The banner **prompts**, it does not auto-reload — a forced refresh would discard a half-written form.
+- Local dev builds never run the stamp step, so the placeholder survives; `IS_VERSION_STAMPED` detects
+  that, skips the polling entirely, and the header shows `vdev`.
+- The running version is shown in the header next to the user menu, so a user reporting a bug can say
+  which build they are on.
+
 ### Verifying after a deploy
 
 ```bash
