@@ -3,6 +3,7 @@ import {
   afterNextRender,
   ChangeDetectionStrategy,
   Component,
+  computed,
   DestroyRef,
   ElementRef,
   inject,
@@ -11,7 +12,14 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  AbstractControl,
+  FormControl,
+  FormGroup,
+  ReactiveFormsModule,
+  ValidationErrors,
+  Validators,
+} from '@angular/forms';
 import { EMPTY, interval, Subscription, catchError, finalize, startWith, switchMap } from 'rxjs';
 import { TablerIconComponent } from 'angular-tabler-icons';
 import { PageHeaderComponent } from '../../../shared/ui/page-header/page-header.component';
@@ -21,19 +29,50 @@ import {
   ChatBubble,
   ChatDirection,
   ChatMessageRole,
+  ChatThreadItem,
   ChatTranscriptResponse,
 } from '../data-access/chat-simulation.models';
 
 const POLL_INTERVAL_MS = 4000;
 
+/** Separators the operator may paste inside a number; Domi strips them too. */
+const PHONE_SEPARATORS = /[\s().-]/g;
+
+/** Domi's canonical sender id (ADR-0012): bare E.164, no leading zero. */
+const E164 = /^\+[1-9]\d{6,14}$/;
+
 /**
- * Domi chat simulator. The operator enters a phone number, then exchanges
- * messages with Domi in a chat-style UI. Conversations are ephemeral: state
- * lives only in this component and can be reset via the API.
+ * Canonical form of whatever the operator typed. Any spelling of a number resolves to
+ * the same conversation on Domi's side, so the panel sends the canonical one and the
+ * transcript, the reset and the session all key off the same string.
+ */
+function canonicalPhone(value: string): string {
+  const cleaned = value.trim().replace(PHONE_SEPARATORS, '');
+  return cleaned.startsWith('+') ? cleaned : `+${cleaned}`;
+}
+
+function e164Validator(control: AbstractControl): ValidationErrors | null {
+  const value = (control.value as string | null)?.trim();
+  if (!value) {
+    return null;
+  }
+  return E164.test(canonicalPhone(value)) ? null : { e164: true };
+}
+
+/**
+ * Domi chat simulator. The operator enters a phone number, then exchanges messages
+ * with Domi in a chat-style UI.
  *
- * The component polls GET …/messages?afterTurn= every POLL_INTERVAL_MS ms and
- * merges new turns into the bubble list deduplicating by turnNumber. The POST
- * reply is not painted directly — all turns arrive through the transcript.
+ * The component polls GET …/messages?afterTurn= every POLL_INTERVAL_MS ms and merges
+ * new turns into the bubble list deduplicating by turnNumber. The POST reply is not
+ * painted directly — all turns arrive through the transcript.
+ *
+ * Reset semantics (Domi ADR-0013): DELETE clears the agent's conversational state but
+ * NEVER deletes the transcript — it stamps a cut on it, reported back as
+ * `resetAfterTurn`, and the pull hides everything up to that cut by default. So the
+ * screen empties after a reset while the audit trail survives, readable on demand via
+ * `includeBeforeReset`. A 404 on the reset means the number simply never wrote: a
+ * benign outcome, not a failure.
  */
 @Component({
   selector: 'app-chat-simulation',
@@ -60,9 +99,47 @@ export class ChatSimulationComponent {
   readonly polling = signal(false);
   readonly pollError = signal<string | null>(null);
 
+  /** Highest turn belonging to a conversation already reset; 0 = never reset. */
+  readonly resetAfterTurn = signal(0);
+  /** When on, the pull ignores the cut and returns the whole audit trail. */
+  readonly includeBeforeReset = signal(false);
+
+  /** True when this number carries archived turns the default view is hiding. */
+  readonly hasArchivedHistory = computed(() => this.resetAfterTurn() > 0);
+
+  /**
+   * The rendered thread: bubbles plus the cut marker, inserted before the first turn
+   * that survives the reset. It only shows up once archived turns are on screen, so
+   * the default view (which starts after the cut) never renders a dangling separator.
+   */
+  readonly thread = computed<ChatThreadItem[]>(() => {
+    const cut = this.resetAfterTurn();
+    const bubbles = this.messages();
+    const isArchived = (b: ChatBubble) => b.turnNumber != null && b.turnNumber <= cut;
+
+    if (cut <= 0 || !bubbles.some(isArchived)) {
+      return bubbles.map((message) => ({ kind: 'message', id: message.id, message }) as const);
+    }
+
+    const items: ChatThreadItem[] = [];
+    let divided = false;
+    for (const message of bubbles) {
+      if (!divided && !isArchived(message)) {
+        items.push({ kind: 'reset', id: `reset-${cut}`, turnNumber: cut });
+        divided = true;
+      }
+      items.push({ kind: 'message', id: message.id, message });
+    }
+    // Reset with no turn since: the cut closes the thread.
+    if (!divided) {
+      items.push({ kind: 'reset', id: `reset-${cut}`, turnNumber: cut });
+    }
+    return items;
+  });
+
   readonly phoneControl = new FormControl('', {
     nonNullable: true,
-    validators: [Validators.required, Validators.pattern(/^\+?[0-9]{6,15}$/)],
+    validators: [Validators.required, e164Validator],
   });
   readonly phoneForm = new FormGroup({ phone: this.phoneControl });
 
@@ -78,11 +155,14 @@ export class ChatSimulationComponent {
       this.phoneControl.markAsTouched();
       return;
     }
-    this.cursor.set(0);
+    this.phone.set(canonicalPhone(this.phoneControl.value));
+    this.includeBeforeReset.set(false);
+    this.resetAfterTurn.set(0);
     this.conversationId.set(null);
-    this.phone.set(this.phoneControl.value.trim());
     this.messages.set([]);
+    this.cursor.set(0);
     this.error.set(null);
+    this.pollError.set(null);
     this.startPolling();
   }
 
@@ -123,13 +203,20 @@ export class ChatSimulationComponent {
       });
   }
 
-  /** Resets Domi's session for the current phone, clears the on-screen chat, and restarts polling. */
+  /**
+   * Resets Domi's conversation for the current phone. On success the screen empties:
+   * the transcript survives behind the cut, so nothing is lost — it moves out of the
+   * default view. A 404 means there was nothing to reset, which lands the operator in
+   * the same place, so it is reported as information rather than an error. Any other
+   * failure leaves the thread untouched: nothing was reset, and saying otherwise lies.
+   */
   resetConversation(): void {
     const phone = this.phone();
     if (!phone || this.sending() || this.resetting()) {
       return;
     }
 
+    const wasPolling = this.polling();
     this.resetting.set(true);
     this.stopPolling();
     this.chatService
@@ -137,44 +224,53 @@ export class ChatSimulationComponent {
       .pipe(finalize(() => this.resetting.set(false)))
       .subscribe({
         next: () => {
-          this.messages.set([]);
-          this.error.set(null);
-          this.cursor.set(0);
-          this.conversationId.set(null);
-          this.pollError.set(null);
-          this.notifications.success('Conversación reiniciada.');
-          this.startPolling();
+          this.afterReset();
+          this.notifications.success(
+            'Conversación reiniciada. El historial anterior queda archivado.',
+          );
         },
         error: (err: unknown) => {
-          // Best-effort: still clear locally so the operator can continue.
-          this.messages.set([]);
-          this.cursor.set(0);
-          this.conversationId.set(null);
-          this.pollError.set(null);
-          this.notifications.error(this.chatService.toError(err));
-          this.startPolling();
+          const failure = this.chatService.toResetFailure(err);
+          if (failure.kind === 'no-conversation') {
+            this.afterReset();
+            this.notifications.info(failure.message);
+            return;
+          }
+          // Nothing changed upstream, so the thread stays and the live view goes back
+          // to whatever the operator had it on.
+          this.notifications.error(failure.message);
+          if (wasPolling) {
+            this.startPolling();
+          }
         },
       });
   }
 
-  /** Returns to the phone gate, stopping polling and resetting Domi's session fire-and-forget. */
+  /** Returns to the phone gate. The conversation on Domi is left as it is. */
   changePhone(): void {
-    const phone = this.phone();
     if (this.sending() || this.resetting()) {
       return;
     }
     this.stopPolling();
-    if (phone) {
-      this.chatService.reset(phone).subscribe({ error: () => undefined });
-    }
     this.phone.set(null);
     this.messages.set([]);
     this.error.set(null);
     this.cursor.set(0);
     this.conversationId.set(null);
     this.pollError.set(null);
+    this.resetAfterTurn.set(0);
+    this.includeBeforeReset.set(false);
     this.phoneControl.reset('');
     this.messageControl.reset('');
+  }
+
+  /** Switches between the post-reset view and the full audit trail, then rehydrates. */
+  toggleHistory(): void {
+    if (this.sending() || this.resetting()) {
+      return;
+    }
+    this.includeBeforeReset.update((value) => !value);
+    this.rehydrate();
   }
 
   /** Pauses or resumes the live polling. */
@@ -204,6 +300,29 @@ export class ChatSimulationComponent {
       .catch(() => this.notifications.error('No se pudo copiar el mensaje.'));
   }
 
+  /** Clears the local thread after a reset landed; the cut is re-read from the next pull. */
+  private afterReset(): void {
+    this.messages.set([]);
+    this.error.set(null);
+    this.cursor.set(0);
+    this.pollError.set(null);
+    // The new default view starts after the fresh cut; the archive stays one click away.
+    this.includeBeforeReset.set(false);
+    this.startPolling();
+  }
+
+  /** Drops the on-screen thread and pulls it again from turn 0 under the current view. */
+  private rehydrate(): void {
+    this.messages.set([]);
+    this.cursor.set(0);
+    this.pollError.set(null);
+    if (this.polling()) {
+      this.startPolling();
+    } else {
+      this.pullOnce();
+    }
+  }
+
   private startPolling(): void {
     this.stopPolling();
     const phone = this.phone();
@@ -213,7 +332,7 @@ export class ChatSimulationComponent {
       .pipe(
         startWith(0),
         switchMap(() =>
-          this.chatService.getMessages(phone, this.cursor()).pipe(
+          this.chatService.getMessages(phone, this.cursor(), this.includeBeforeReset()).pipe(
             catchError((err: unknown) => {
               this.pollError.set(this.chatService.toError(err));
               return EMPTY;
@@ -235,7 +354,7 @@ export class ChatSimulationComponent {
   private pullOnce(): void {
     const phone = this.phone();
     if (!phone) return;
-    this.chatService.getMessages(phone, this.cursor()).subscribe({
+    this.chatService.getMessages(phone, this.cursor(), this.includeBeforeReset()).subscribe({
       next: (resp) => this.mergeTranscript(resp),
       error: (err: unknown) => this.pollError.set(this.chatService.toError(err)),
     });
@@ -247,7 +366,7 @@ export class ChatSimulationComponent {
    * under the SAME turnNumber, so deduping by turnNumber alone would drop the
    * reply — the pair keys them apart. User turns replace the oldest optimistic
    * outgoing bubble (no turnNumber); other roles are appended as incoming.
-   * Cursor advances monotonically.
+   * Cursor advances monotonically; `resetAfterTurn` is authoritative on every page.
    */
   private mergeTranscript(resp: ChatTranscriptResponse): void {
     const keyOf = (turnNumber: number, role: ChatMessageRole) => `${turnNumber}:${role}`;
@@ -299,6 +418,7 @@ export class ChatSimulationComponent {
 
     this.cursor.set(Math.max(this.cursor(), resp.cursor));
     this.conversationId.set(resp.conversationId);
+    this.resetAfterTurn.set(resp.resetAfterTurn);
   }
 
   private mapRole(role: ChatMessageRole): ChatDirection {

@@ -19,10 +19,32 @@ export interface ChatMessageResponse {
   correlationId: string | null;
 }
 
+/**
+ * One page of Domi's persisted transcript. `resetAfterTurn` is the highest turn that
+ * belongs to a conversation the operator has since reset (`0` = never reset): the
+ * default view starts AFTER that cut, so those turns are hidden even at `afterTurn=0`
+ * unless `includeBeforeReset` is passed. Nothing is ever deleted.
+ */
 export interface ChatTranscriptResponse {
   conversationId: string | null;
   cursor: number;
+  resetAfterTurn: number;
   messages: ChatMessageResponse[];
+}
+
+/** `title` of the ProblemDetails the API returns on the chat routes (it carries the error code). */
+export const CHAT_NO_CONVERSATION = 'Chat.NoConversation';
+export const CHAT_INVALID_PHONE = 'Chat.InvalidPhone';
+
+/**
+ * Why `DELETE /chat-simulation/{phone}` failed. `no-conversation` (404) is the benign
+ * one: the number never wrote, so there was simply nothing to reset — not an incident.
+ */
+export type ChatResetFailureKind = 'no-conversation' | 'invalid-phone' | 'upstream' | 'unknown';
+
+export interface ChatResetFailure {
+  kind: ChatResetFailureKind;
+  message: string;
 }
 
 /** Direction of a chat bubble relative to the operator simulating the user. */
@@ -44,3 +66,11 @@ export interface ChatBubble {
   turnNumber?: number;
   role?: ChatMessageRole;
 }
+
+/**
+ * What the thread renders: bubbles plus the marker for the reset cut. The marker only
+ * appears when archived turns are on screen, i.e. when the full history is being shown.
+ */
+export type ChatThreadItem =
+  | { kind: 'message'; id: string; message: ChatBubble }
+  | { kind: 'reset'; id: string; turnNumber: number };

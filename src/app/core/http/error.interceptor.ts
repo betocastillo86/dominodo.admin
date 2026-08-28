@@ -6,6 +6,7 @@ import { AuthService } from '../auth/auth.service';
 import { AuthStore } from '../auth/auth.store';
 import { NotificationService } from '../notifications/notification.service';
 import { ProblemDetails } from './problem-details';
+import { SILENT_ERRORS } from './silent-errors';
 
 /** Auth endpoints are excluded from the 401 refresh-and-retry logic. */
 const AUTH_ENDPOINTS = ['/auth/login', '/auth/refresh', '/auth/logout'];
@@ -13,7 +14,8 @@ const AUTH_ENDPOINTS = ['/auth/login', '/auth/refresh', '/auth/logout'];
 /**
  * On 401 (for non-auth requests) attempts a SINGLE refresh and retries the
  * original request; if that fails, clears the session and redirects to `/auth`.
- * All other errors are mapped from RFC 9457 ProblemDetails to a user message.
+ * All other errors are mapped from RFC 9457 ProblemDetails to a user message,
+ * unless the request opted out via the `SILENT_ERRORS` context token.
  */
 export const errorInterceptor: HttpInterceptorFn = (req, next) => {
   const auth = inject(AuthService);
@@ -41,7 +43,9 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
         );
       }
 
-      notifications.error(toMessage(error));
+      if (!req.context.get(SILENT_ERRORS)) {
+        notifications.error(toMessage(error));
+      }
       return throwError(() => error);
     }),
   );

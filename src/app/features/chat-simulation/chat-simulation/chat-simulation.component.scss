@@ -23,10 +23,6 @@
   justify-content: flex-end;
 }
 
-.chat-row-incoming {
-  justify-content: flex-start;
-}
-
 .chat-bubble {
   position: relative;
   max-width: 75%;
@@ -55,7 +51,8 @@
   transition: opacity 0.15s ease-in-out;
 }
 
-.chat-copy tabler-icon {
+.chat-copy tabler-icon,
+.chat-status {
   width: 0.875rem;
   height: 0.875rem;
 }
@@ -71,14 +68,28 @@
   border-bottom-right-radius: 0.25rem;
 }
 
+.chat-bubble-incoming,
+.chat-bubble-system {
+  border-bottom-left-radius: 0.25rem;
+}
+
 .chat-bubble-incoming {
   background-color: var(--tblr-bg-surface-secondary, #f1f5f9);
   color: var(--tblr-body-color);
-  border-bottom-left-radius: 0.25rem;
+}
+
+.chat-bubble-system {
+  background-color: var(--tblr-azure-lt, #ecf4fb);
+  color: var(--tblr-azure, #206bc4);
 }
 
 .chat-bubble-error {
   outline: 1px solid var(--tblr-danger);
+}
+
+/* Archived turns (before the reset cut) read as history, not as the live thread. */
+.chat-row-archived .chat-bubble {
+  opacity: 0.55;
 }
 
 .chat-text {
@@ -95,29 +106,41 @@
   opacity: 0.75;
 }
 
-.chat-status {
-  width: 0.875rem;
-  height: 0.875rem;
-}
-
 .chat-typing {
   font-style: italic;
-  opacity: 0.8;
 }
 
-.chat-bubble-system {
-  background-color: var(--tblr-azure-lt, #ecf4fb);
-  color: var(--tblr-azure, #206bc4);
-  border-bottom-left-radius: 0.25rem;
-}
-
-.chat-system-badge {
+.chat-system-badge,
+.chat-cut {
   font-size: 0.625rem;
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  opacity: 0.8;
+}
+
+.chat-system-badge {
   margin-bottom: 0.125rem;
+}
+
+.chat-system-badge,
+.chat-typing {
+  opacity: 0.8;
+}
+
+/* The reset cut: turns above it belong to a conversation Domi no longer remembers. */
+.chat-cut {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--tblr-secondary, #667382);
+  white-space: nowrap;
+}
+
+.chat-cut::before,
+.chat-cut::after {
+  content: '';
+  flex: 1;
+  border-top: 1px dashed var(--tblr-border-color, #e6e7e9);
 }
 
 .chat-live-dot {

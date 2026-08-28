@@ -54,14 +54,28 @@ modules follow the same conventions described here.
 > and **system roles** (`isSystem`) are treated as read-only in the panel.
 
 - **Chat simulation:** `POST /chat-simulation` (`{phone,text}` → `{reply}`) forwards a simulated message
-  to Domi; `DELETE /chat-simulation/{phone}` resets the session (`204`);
-  `GET /chat-simulation/{phone}/messages?afterTurn=N` returns `{ conversationId, cursor, messages[] }` —
-  cursor pattern (ADR-0027): `afterTurn=0` rehydrates the full thread, subsequent calls pass the returned
-  `cursor` for deltas. The panel polls this endpoint every 4 s and merges new turns by `turnNumber`; the
-  `POST` reply is no longer painted directly — all turns (including the agent's response and system nudges)
-  arrive through the transcript. Both write endpoints accept an **optional** `X-Tenant` header, but the
-  panel sends **phone only** — Domi resolves the tenant from the number. A `502` means Domi is unreachable.
-  Conversations are **not persisted** server-side.
+  to Domi. `GET /chat-simulation/{phone}/messages?afterTurn=N&includeBeforeReset=false` returns
+  `{ conversationId, cursor, resetAfterTurn, messages[] }` — cursor pattern (Domi ADR-0027): `afterTurn=0`
+  rehydrates the thread, subsequent calls pass the returned `cursor` for deltas. The panel polls this
+  endpoint every 4 s and merges new turns by the `turnNumber:role` pair; the `POST` reply is no longer
+  painted directly — all turns (including the agent's response and system nudges) arrive through the
+  transcript. The panel sends **phone only** — Domi resolves the tenant from the number, and any spelling
+  of a number canonicalizes to the same bare E.164 conversation (Domi ADR-0012), so the panel canonicalizes
+  before it calls.
+
+  `DELETE /chat-simulation/{phone}` **resets** the conversation — it does not delete it (Domi ADR-0013).
+  Domi's transcript is append-only: the reset clears the agent's conversational state and stamps a **cut**
+  on the transcript, reported back as `resetAfterTurn` (`0` = never reset). The pull hides everything up to
+  that cut by default, so the panel empties after a reset while the audit trail survives and is readable
+  with `includeBeforeReset=true` — which is what the "Ver historial completo" toggle sends, rendering a
+  separator at the cut. The resident's identity link survives a reset, so notifications keep reaching them.
+
+  Its statuses carry meaning: `204` there was something to reset · `404 Chat.NoConversation` the number
+  never wrote, a **benign** outcome the panel reports as information, not an error · `400 Chat.InvalidPhone`
+  Domi rejected the number · `502 Chat.UpstreamUnavailable` Domi is unreachable. The error code travels in
+  the ProblemDetails `title`. All three routes opt out of the global error toast via the `SILENT_ERRORS`
+  HTTP context token (`core/http/silent-errors.ts`) — a polled endpoint would otherwise raise one toast per
+  tick, and the reset's 404 is not an incident.
 
 ---
 
@@ -92,7 +106,7 @@ src/app/
     ├── request-categories/     # cross-tenant catalog: list, create, edit of PQRS categories
     ├── announcements/          # cross-tenant list (status/category/tenant filters) + create/edit form
     ├── knowledge-resources/    # cross-tenant list (status/category/tenant filters) + create/edit form
-    └── chat-simulation/        # ephemeral Domi chat tester (phone gate → bubble chat); polls GET …/messages?afterTurn= for async turns
+    └── chat-simulation/        # Domi chat tester (phone gate → bubble chat); polls GET …/messages?afterTurn= for async turns, renders the reset cut
 ```
 
 - **`core/`**: single instances and cross-cutting concerns; no business UI.

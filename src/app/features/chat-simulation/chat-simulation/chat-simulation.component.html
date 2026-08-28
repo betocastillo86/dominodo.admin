@@ -4,6 +4,7 @@
       <button
         type="button"
         class="btn btn-outline-secondary"
+        title="Domi olvida la conversación. El historial no se borra: queda archivado."
         [disabled]="sending() || resetting()"
         (click)="resetConversation()"
       >
@@ -46,11 +47,12 @@
               />
               @if (phoneControl.invalid && phoneControl.touched) {
                 <div class="invalid-feedback">
-                  Ingresa un número telefónico válido (6 a 15 dígitos, con prefijo opcional +).
+                  Ingresa un número en formato internacional (indicativo de país + 6 a 14 dígitos).
                 </div>
               }
               <small class="form-hint">
-                Domi resuelve el conjunto a partir del número. La conversación no se guarda.
+                Domi resuelve el conjunto a partir del número. Cualquier forma de escribirlo
+                (espacios, guiones, con o sin «+») corresponde a la misma conversación.
               </small>
             </div>
             <button type="submit" class="btn btn-primary">
@@ -80,6 +82,24 @@
                 En vivo
               </span>
             }
+            @if (hasArchivedHistory()) {
+              <button
+                type="button"
+                class="btn btn-sm me-1"
+                [class.btn-ghost-secondary]="!includeBeforeReset()"
+                [class.btn-outline-secondary]="includeBeforeReset()"
+                [title]="
+                  includeBeforeReset()
+                    ? 'Ver solo la conversación posterior al último reinicio'
+                    : 'Ver el historial completo, incluidos los turnos anteriores al reinicio'
+                "
+                [disabled]="sending() || resetting()"
+                (click)="toggleHistory()"
+              >
+                <tabler-icon name="history" class="me-1" />
+                {{ includeBeforeReset() ? 'Ver solo lo actual' : 'Ver historial completo' }}
+              </button>
+            }
             <button
               type="button"
               class="btn btn-sm btn-ghost-secondary"
@@ -102,62 +122,78 @@
         }
 
         <div class="card-body chat-body">
-          @if (messages().length === 0) {
+          @if (thread().length === 0) {
             <div class="empty">
               <div class="empty-icon">
                 <tabler-icon name="messages" />
               </div>
               <p class="empty-title">Sin mensajes</p>
               <p class="empty-subtitle text-secondary">
-                Escribe un mensaje para iniciar la conversación con Domi.
+                @if (hasArchivedHistory()) {
+                  La conversación se reinició en el turno {{ resetAfterTurn() }}. Escribe un mensaje
+                  para empezar de nuevo, o consulta el historial archivado.
+                } @else {
+                  Escribe un mensaje para iniciar la conversación con Domi.
+                }
               </p>
             </div>
           } @else {
             <div class="chat-thread">
-              @for (message of messages(); track message.id) {
-                <div
-                  class="chat-row"
-                  [class.chat-row-outgoing]="message.direction === 'outgoing'"
-                  [class.chat-row-incoming]="message.direction === 'incoming'"
-                >
+              @for (item of thread(); track item.id) {
+                @if (item.kind === 'reset') {
+                  <div class="chat-cut" role="separator">
+                    <span>Conversación reiniciada · turno {{ item.turnNumber }}</span>
+                  </div>
+                } @else {
                   <div
-                    class="chat-bubble"
-                    [class.chat-bubble-outgoing]="message.direction === 'outgoing'"
-                    [class.chat-bubble-incoming]="message.direction === 'incoming' && message.role !== 'System'"
-                    [class.chat-bubble-system]="message.role === 'System'"
-                    [class.chat-bubble-error]="message.status === 'error'"
+                    class="chat-row"
+                    [class.chat-row-outgoing]="item.message.direction === 'outgoing'"
+                    [class.chat-row-incoming]="item.message.direction === 'incoming'"
+                    [class.chat-row-archived]="
+                      item.message.turnNumber != null && item.message.turnNumber <= resetAfterTurn()
+                    "
                   >
-                    @if (message.role === 'System') {
-                      <div class="chat-system-badge">Sistema</div>
-                    }
-                    <div class="chat-text">{{ message.text }}</div>
-                    <button
-                      type="button"
-                      class="chat-copy"
-                      title="Copiar mensaje"
-                      aria-label="Copiar mensaje"
-                      (click)="copyMessage(message)"
+                    <div
+                      class="chat-bubble"
+                      [class.chat-bubble-outgoing]="item.message.direction === 'outgoing'"
+                      [class.chat-bubble-incoming]="
+                        item.message.direction === 'incoming' && item.message.role !== 'System'
+                      "
+                      [class.chat-bubble-system]="item.message.role === 'System'"
+                      [class.chat-bubble-error]="item.message.status === 'error'"
                     >
-                      <tabler-icon [name]="copiedId() === message.id ? 'check' : 'copy'" />
-                    </button>
-                    <div class="chat-meta">
-                      <span>{{ message.sentAt | date: 'HH:mm' }}</span>
-                      @if (message.direction === 'outgoing') {
-                        @switch (message.status) {
-                          @case ('sending') {
-                            <tabler-icon name="clock" class="chat-status" />
-                          }
-                          @case ('sent') {
-                            <tabler-icon name="check" class="chat-status" />
-                          }
-                          @case ('error') {
-                            <tabler-icon name="alert-circle" class="chat-status text-danger" />
+                      @if (item.message.role === 'System') {
+                        <div class="chat-system-badge">Sistema</div>
+                      }
+                      <div class="chat-text">{{ item.message.text }}</div>
+                      <button
+                        type="button"
+                        class="chat-copy"
+                        title="Copiar mensaje"
+                        aria-label="Copiar mensaje"
+                        (click)="copyMessage(item.message)"
+                      >
+                        <tabler-icon [name]="copiedId() === item.message.id ? 'check' : 'copy'" />
+                      </button>
+                      <div class="chat-meta">
+                        <span>{{ item.message.sentAt | date: 'HH:mm' }}</span>
+                        @if (item.message.direction === 'outgoing') {
+                          @switch (item.message.status) {
+                            @case ('sending') {
+                              <tabler-icon name="clock" class="chat-status" />
+                            }
+                            @case ('sent') {
+                              <tabler-icon name="check" class="chat-status" />
+                            }
+                            @case ('error') {
+                              <tabler-icon name="alert-circle" class="chat-status text-danger" />
+                            }
                           }
                         }
-                      }
+                      </div>
                     </div>
                   </div>
-                </div>
+                }
               }
 
               @if (sending()) {
