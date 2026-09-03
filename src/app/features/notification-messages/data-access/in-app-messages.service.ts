@@ -1,9 +1,14 @@
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
+import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { PagedResult } from '../../../core/models/paged-result';
 import { ProblemDetails } from '../../../core/http/problem-details';
-import { AdminInAppMessageDto, InAppMessageFilters } from './notification-message.models';
+import {
+  AdminInAppMessageDto,
+  InAppMessageFilters,
+  RequeueMessageResponse,
+} from './notification-message.models';
 
 /** Data-access for materialized in-app notifications. Exposes list state as signals. */
 @Injectable({ providedIn: 'root' })
@@ -43,6 +48,11 @@ export class InAppMessagesService {
         this._loading.set(false);
       },
     });
+  }
+
+  /** Materialize an unread copy of an in-app notification for the same recipient. Returns the new id. */
+  requeue(id: string): Observable<RequeueMessageResponse> {
+    return this.http.post<RequeueMessageResponse>(`${this.base}/${id}/requeue`, {});
   }
 
   private toError(error: unknown): string {

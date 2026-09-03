@@ -126,3 +126,11 @@ export const PLATFORM_BADGE: Record<AdminDevicePlatform, string> = {
   Android: 'badge bg-green-lt',
   iOS: 'badge bg-azure-lt',
 };
+
+/**
+ * Response of `POST /messages/{channel}/{id}/requeue`. The requeue materializes a
+ * *new* message queued for a fresh delivery attempt; `id` is that new message's id.
+ */
+export interface RequeueMessageResponse {
+  id: string; // uuid
+}
