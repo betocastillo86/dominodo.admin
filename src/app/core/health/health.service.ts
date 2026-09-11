@@ -1,5 +1,5 @@
-import { Injectable, Signal, signal, WritableSignal } from '@angular/core';
-import { environment } from '../../../../environments/environment';
+import { computed, Injectable, Signal, signal, WritableSignal } from '@angular/core';
+import { environment } from '../../../environments/environment';
 import { HealthState, HealthStatus, HealthTarget, HealthTargetKey } from './health.models';
 
 /** Readiness probe, served at the host root by both services — never under `/api/v1`. */
@@ -54,6 +54,10 @@ const TARGETS: readonly HealthTarget[] = [
  *
  * The loop is sequential, not a fixed interval: the next probe is scheduled once the previous
  * one settles, so a slow wake-up never stacks requests on a service that is already struggling.
+ *
+ * `start()`/`stop()` are reference-counted because two screens watch these services — the login
+ * and the dashboard. The handover between them must not depend on whether the router destroys one
+ * before it creates the other: whoever arrives first opens the loop, whoever leaves last closes it.
  */
 @Injectable({ providedIn: 'root' })
 export class HealthService {
@@ -62,29 +66,38 @@ export class HealthService {
   );
   private readonly timers = new Map<HealthTargetKey, ReturnType<typeof setTimeout>>();
   private readonly inFlight = new Map<HealthTargetKey, AbortController>();
-  private monitoring = false;
+  /** How many screens are watching; the loop runs while this is above zero. */
+  private monitors = 0;
 
   readonly targets = TARGETS;
+
+  /** Every target with its current status — what both screens render. */
+  readonly snapshot = computed(() =>
+    this.targets.map((target) => ({ ...target, status: this.statusOf(target.key)() })),
+  );
 
   /** Live status of one target. */
   statusOf(key: HealthTargetKey): Signal<HealthStatus> {
     return this.statuses.get(key)!;
   }
 
-  /** Starts the loop for every target. Idempotent. */
+  /** Registers a watcher; the first one starts the loop. */
   start(): void {
-    if (this.monitoring) {
+    this.monitors += 1;
+    if (this.monitors > 1) {
       return;
     }
-    this.monitoring = true;
     for (const target of this.targets) {
       void this.probe(target);
     }
   }
 
-  /** Stops every loop and drops whatever is in flight (the dashboard was left). */
+  /** Unregisters a watcher; the last one out stops the loop and drops what is in flight. */
   stop(): void {
-    this.monitoring = false;
+    this.monitors = Math.max(0, this.monitors - 1);
+    if (this.monitors > 0) {
+      return;
+    }
     for (const timer of this.timers.values()) {
       clearTimeout(timer);
     }
@@ -159,7 +172,7 @@ export class HealthService {
   }
 
   private scheduleNext(target: HealthTarget, state: HealthState): void {
-    if (!this.monitoring) {
+    if (this.monitors === 0) {
       return;
     }
     const delay = state === 'healthy' ? RETRY_WHEN_HEALTHY_MS : RETRY_WHEN_DOWN_MS;

@@ -93,12 +93,13 @@ src/app/
 │   ├── auth/       # service, store (signals), token storage, jwt util
 │   ├── http/       # auth + error interceptors
 │   ├── guards/     # authGuard, superAdminGuard
+│   ├── health/     # /health/ready probes of the API + Domi (login strip and dashboard)
 │   └── models/     # shared contracts (e.g. PagedResult, ProblemDetails)
 ├── layout/      # panel chrome: shell (sidebar + navbar + outlet)
-├── shared/ui/   # reusable presentational pieces (data-table, page-header, spinner)
+├── shared/ui/   # reusable presentational pieces (data-table, page-header, spinner, service-status)
 └── features/    # lazy domains, each with data-access/ + components
     ├── auth/             # blank layout → login
-    ├── dashboard/        # default screen: live /health/ready status of the API + Domi (polled)
+    ├── dashboard/        # default screen: the service-status widget in full detail
     ├── roles/            # list + form (create/edit share one component)
     ├── users/                  # list + form (create/edit share one component)
     ├── tenants/                # list + form (create/edit share one component)
@@ -138,14 +139,21 @@ JWT, checks the `role` claim includes `SuperAdmin`, and only then stores the ses
 and enters the panel. `authInterceptor` attaches the Bearer token; `errorInterceptor` attempts a single
 refresh-and-retry on 401 and maps `ProblemDetails` to user-facing messages. Guards gate access.
 
-**Dashboard (service status).** The panel's landing screen. `HealthService` probes `/health/ready` on the
-API and on Domi and exposes one signal per target: `checking` (yellow) while a probe is in flight,
-`healthy` (green) on a 2xx, `down` (red) otherwise. It polls with `fetch`, never `HttpClient`, to stay
-out of `authInterceptor` (an `Authorization` header would force a needless CORS preflight) and out of
-`errorInterceptor` (a five-second poll would raise a toast per failed tick). The loop is **sequential**:
-the next probe is scheduled after the previous one settles — 5 s while a service is down, 30 s while it
-is healthy — with a 25 s timeout, because both back ends run on **Free (F1)** App Service plans that
-unload when idle and need a slow wake-up request. The poll belongs to the screen: leaving it stops it.
+**Service status.** `core/health/HealthService` probes `/health/ready` on the API and on Domi and exposes
+one signal per target: `checking` (yellow) while a probe is in flight, `healthy` (green) on a 2xx,
+`down` (red) otherwise. It polls with `fetch`, never `HttpClient`, to stay out of `authInterceptor` (an
+`Authorization` header would force a needless CORS preflight) and out of `errorInterceptor` (a
+five-second poll would raise a toast per failed tick). The loop is **sequential**: the next probe is
+scheduled after the previous one settles — 5 s while a service is down, 30 s while it is healthy — with
+a 25 s timeout, because both back ends run on **Free (F1)** App Service plans that unload when idle and
+need a slow wake-up request.
+
+Two screens render it, so `start()`/`stop()` are **reference-counted**: the handover must not depend on
+whether the router destroys one screen before creating the other. The **dashboard** (the landing page)
+shows the full card — endpoint, latency, last check, failure detail — and a "Revisar ahora" button. The
+**login** shows name + state only: an API that is asleep is precisely what keeps a user from getting any
+further, so the strip explains the wait while the probes wake it up. Both share the status pill
+(`shared/ui/service-status`), which owns the state → label/color mapping so the two cannot drift.
 
 > Both probes are cross-origin, so both back ends must allow the panel's origin or the browser blocks the
 > response and the card reads red while the service is actually up. The API allows it through

@@ -19,7 +19,7 @@ Angular SPA: the Dominodo **super administrator** panel. Consumes the `dominodo.
 - `npm run build:stage` — build for **stage** (`--configuration stage`, stage API URL).
 - `npm run build:prod` — build for **prod** (`--configuration production`, prod API URL).
 - API base URL lives in `src/environments/` (`apiBaseUrl = http://localhost:5083/api/v1`), alongside
-  Domi's (`domiBaseUrl = http://localhost:5090`) — the dashboard probes `/health/ready` on both hosts.
+  Domi's (`domiBaseUrl = http://localhost:5090`) — login and dashboard probe `/health/ready` on both hosts.
 - API Swagger: `http://localhost:5083/swagger/index.html`.
 
 ## Testing
@@ -28,7 +28,7 @@ Angular SPA: the Dominodo **super administrator** panel. Consumes the `dominodo.
 
 ## Structure (`src/app/`)
 - `core/` — singletons & cross-cutting, no feature UI: `auth/` (store, service, jwt util, token storage),
-  `http/` (auth + error interceptors), `guards/`, `models/`.
+  `http/` (auth + error interceptors), `guards/`, `health/` (`/health/ready` probes), `models/`.
 - `layout/` — panel chrome ported from Tabler: `shell/`, `sidebar/`, `navbar/`.
 - `shared/ui/` — reusable presentational pieces: `data-table/` (generic paged table), `page-header/`, `spinner/`.
 - `features/<name>/` — lazy-loaded domains; each splits `data-access/` (services + models) from components.
