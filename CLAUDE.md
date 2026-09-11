@@ -18,7 +18,8 @@ Angular SPA: the Dominodo **super administrator** panel. Consumes the `dominodo.
 - `npm run build` — production build.
 - `npm run build:stage` — build for **stage** (`--configuration stage`, stage API URL).
 - `npm run build:prod` — build for **prod** (`--configuration production`, prod API URL).
-- API base URL lives in `src/environments/` (`apiBaseUrl = http://localhost:5083/api/v1`).
+- API base URL lives in `src/environments/` (`apiBaseUrl = http://localhost:5083/api/v1`), alongside
+  Domi's (`domiBaseUrl = http://localhost:5090`) — the dashboard probes `/health/ready` on both hosts.
 - API Swagger: `http://localhost:5083/swagger/index.html`.
 
 ## Testing

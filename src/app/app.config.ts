@@ -20,6 +20,7 @@ import {
   IconEye,
   IconHistory,
   IconInfoCircle,
+  IconLayoutDashboard,
   IconListDetails,
   IconLogout,
   IconMail,
@@ -32,6 +33,7 @@ import {
   IconPlus,
   IconRefresh,
   IconSend,
+  IconServer,
   IconSettings,
   IconShieldLock,
   IconSpeakerphone,
@@ -57,6 +59,8 @@ export const appConfig: ApplicationConfig = {
     // Icons used across the app are registered here; add more as features need them.
     provideTablerIcons({
       IconShieldLock,
+      IconLayoutDashboard,
+      IconServer,
       IconSpeakerphone,
       IconBook,
       IconBuildingStore,

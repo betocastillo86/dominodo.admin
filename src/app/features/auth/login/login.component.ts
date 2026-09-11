@@ -39,7 +39,7 @@ export class LoginComponent {
     this.auth.login(this.form.getRawValue()).subscribe({
       next: () => {
         this.pending.set(false);
-        void this.router.navigate(['/roles']);
+        void this.router.navigate(['/dashboard']);
       },
       error: (error: unknown) => {
         this.pending.set(false);

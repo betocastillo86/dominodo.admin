@@ -41,6 +41,9 @@ modules follow the same conventions described here.
 ## 3. API contract
 
 - **Base URL:** `http://localhost:5083/api/v1/` (configurable via `environment`). **Swagger:** `/swagger/index.html`.
+- **Health probes:** `GET /health/ready` on **both** back ends (`text/plain` `Healthy` + 200), served at the
+  **host root** — not under `/api/v1`. The API's host comes from `environment.apiBaseUrl`, Domi's from
+  `environment.domiBaseUrl`; both are unauthenticated.
 - **Paged responses:** `PagedResult<T> = { items, page, pageSize, totalCount, totalPages }`.
 - **Errors:** RFC 9457 `ProblemDetails` → `{ type, title, status, detail, errors?: [{ property, message }] }`.
 - **Multi-tenancy:** most endpoints this panel uses (`auth`, `roles`, `permissions`, `tenants`) are
@@ -95,6 +98,7 @@ src/app/
 ├── shared/ui/   # reusable presentational pieces (data-table, page-header, spinner)
 └── features/    # lazy domains, each with data-access/ + components
     ├── auth/             # blank layout → login
+    ├── dashboard/        # default screen: live /health/ready status of the API + Domi (polled)
     ├── roles/            # list + form (create/edit share one component)
     ├── users/                  # list + form (create/edit share one component)
     ├── tenants/                # list + form (create/edit share one component)
@@ -119,7 +123,8 @@ src/app/
 ## 5. Routing
 
 Everything is lazy. Login lives in a **blank** layout (no shell). All other routes hang off the
-`ShellComponent` and are protected by `authGuard` + `superAdminGuard`. The shell defaults to `roles`.
+`ShellComponent` and are protected by `authGuard` + `superAdminGuard`. The shell defaults to `dashboard`,
+which is also where a successful login lands.
 New modules are added as lazy children under the shell.
 
 ---
@@ -132,6 +137,20 @@ Reference implementations that new features should mirror.
 JWT, checks the `role` claim includes `SuperAdmin`, and only then stores the session in `AuthStore` (signals)
 and enters the panel. `authInterceptor` attaches the Bearer token; `errorInterceptor` attempts a single
 refresh-and-retry on 401 and maps `ProblemDetails` to user-facing messages. Guards gate access.
+
+**Dashboard (service status).** The panel's landing screen. `HealthService` probes `/health/ready` on the
+API and on Domi and exposes one signal per target: `checking` (yellow) while a probe is in flight,
+`healthy` (green) on a 2xx, `down` (red) otherwise. It polls with `fetch`, never `HttpClient`, to stay
+out of `authInterceptor` (an `Authorization` header would force a needless CORS preflight) and out of
+`errorInterceptor` (a five-second poll would raise a toast per failed tick). The loop is **sequential**:
+the next probe is scheduled after the previous one settles — 5 s while a service is down, 30 s while it
+is healthy — with a 25 s timeout, because both back ends run on **Free (F1)** App Service plans that
+unload when idle and need a slow wake-up request. The poll belongs to the screen: leaving it stops it.
+
+> Both probes are cross-origin, so both back ends must allow the panel's origin or the browser blocks the
+> response and the card reads red while the service is actually up. The API allows it through
+> `Cors:AllowedOrigins` (`https://*.dominodo.com` + localhost), Domi through its own `Cors:AllowedOrigins`
+> list. **A new panel origin has to be added on both sides.**
 
 **Roles** (the template for CRUD modules):
 - A **`data-access` service** owns the API calls. List state is exposed as **signals**
