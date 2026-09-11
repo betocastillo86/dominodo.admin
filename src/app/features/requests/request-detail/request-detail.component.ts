@@ -143,13 +143,6 @@ export class RequestDetailComponent implements OnInit {
     { value: 'High', label: 'Alta' },
   ];
 
-  readonly updateTypeOptions: { value: RequestUpdateType; label: string }[] = [
-    { value: 'Comment', label: 'Comentario' },
-    { value: 'Progress', label: 'Avance' },
-    { value: 'Evidence', label: 'Evidencia' },
-    { value: 'Resolution', label: 'Resolución' },
-  ];
-
   readonly visibilityOptions: { value: RequestVisibility; label: string }[] = [
     { value: 'Private', label: 'Privada' },
     { value: 'Public', label: 'Pública' },
@@ -194,12 +187,8 @@ export class RequestDetailComponent implements OnInit {
     note: new FormControl('', { nonNullable: true }),
   });
 
-  /** Add a timeline update (comment by default) to the request. */
+  /** Add a timeline update to the request — always posted as a `Comment`. */
   readonly updateForm = new FormGroup({
-    type: new FormControl<RequestUpdateType>('Comment', {
-      nonNullable: true,
-      validators: [Validators.required],
-    }),
     body: new FormControl('', {
       nonNullable: true,
       validators: [Validators.required, Validators.maxLength(2000)],
@@ -321,7 +310,7 @@ export class RequestDetailComponent implements OnInit {
 
     const raw = this.updateForm.getRawValue();
     const body: AddRequestUpdateRequest = {
-      type: raw.type,
+      type: 'Comment',
       body: raw.body.trim(),
       isInternal: raw.isInternal,
     };
@@ -332,7 +321,7 @@ export class RequestDetailComponent implements OnInit {
       .subscribe({
         next: () => {
           this.notifications.success('Actualización agregada');
-          this.updateForm.reset({ type: raw.type, body: '', isInternal: raw.isInternal });
+          this.updateForm.reset({ body: '', isInternal: raw.isInternal });
           this.reloadDetail();
         },
         error: (err: unknown) =>

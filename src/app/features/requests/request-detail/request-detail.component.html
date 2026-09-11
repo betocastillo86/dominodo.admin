@@ -349,14 +349,6 @@
         <div class="card-body border-bottom">
           <form [formGroup]="updateForm" (ngSubmit)="onSubmitUpdate()">
             <div class="row g-2">
-              <div class="col-12 col-md-4">
-                <label class="form-label required" for="req-update-type">Tipo</label>
-                <select id="req-update-type" class="form-select" formControlName="type">
-                  @for (opt of updateTypeOptions; track opt.value) {
-                    <option [value]="opt.value">{{ opt.label }}</option>
-                  }
-                </select>
-              </div>
               <div class="col-12">
                 <label class="form-label required" for="req-update-body">Comentario</label>
                 <textarea
