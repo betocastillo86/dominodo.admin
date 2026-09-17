@@ -12,3 +12,19 @@
   overflow-wrap: anywhere;
   max-width: 28rem;
 }
+
+// Fixed-width table cell: the value is clipped with an ellipsis instead of
+// stretching the column, so long values never change the table layout.
+// The cell carries the width; the inner span does the clipping (a `td` alone
+// ignores `max-width` under the automatic table layout).
+.cell-truncate {
+  width: 22rem;
+  max-width: 22rem;
+
+  .cell-truncate-text {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}

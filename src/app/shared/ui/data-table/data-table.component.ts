@@ -14,6 +14,11 @@ export interface TableColumn<T> {
   badgeClass?: (row: T) => string;
   /** Optional CSS class applied to the header and cells. */
   class?: string;
+  /**
+   * Renders the value inside a fixed-width cell, clipped with an ellipsis when
+   * it does not fit (the full text stays available as the cell's tooltip).
+   */
+  truncate?: boolean;
   /** When set, the header becomes a Tabler sort button emitting this key. */
   sortKey?: string;
 }

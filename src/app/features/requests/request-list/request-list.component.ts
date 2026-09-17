@@ -145,7 +145,7 @@ export class RequestListComponent {
       value: (r) => this.tenantMap().get(r.tenantId) ?? r.tenantId.slice(0, 8) + '…',
       class: 'text-nowrap',
     },
-    { header: 'Título', value: (r) => r.title },
+    { header: 'Título', value: (r) => r.title, truncate: true },
     {
       header: 'Visibilidad',
       value: (r) => REQUEST_VISIBILITY_LABELS[r.visibility as RequestVisibility] ?? r.visibility,

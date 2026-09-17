@@ -8,7 +8,7 @@
       <thead>
         <tr>
           @for (col of columns(); track col.header) {
-            <th [class]="col.class ?? ''">
+            <th [class]="col.class ?? ''" [class.cell-truncate]="col.truncate">
               @if (col.sortKey; as key) {
                 <button type="button" class="table-sort" [class]="sortClass(key)" (click)="toggleSort(key)">
                   {{ col.header }}
@@ -27,9 +27,11 @@
         @for (row of rows(); track rowKey()(row)) {
           <tr>
             @for (col of columns(); track col.header) {
-              <td [class]="col.class ?? ''">
+              <td [class]="col.class ?? ''" [class.cell-truncate]="col.truncate">
                 @if (col.badgeClass?.(row); as badge) {
                   <span [class]="badge">{{ col.value(row) }}</span>
+                } @else if (col.truncate) {
+                  <span class="cell-truncate-text" [title]="col.value(row)">{{ col.value(row) }}</span>
                 } @else {
                   {{ col.value(row) }}
                 }
