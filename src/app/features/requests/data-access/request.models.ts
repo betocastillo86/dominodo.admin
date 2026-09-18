@@ -87,8 +87,9 @@ export interface RequestDetailDto {
   createdByUserId: string;
   apartmentId: string | null;
   assignedToUserId: string | null;
-  resolvedAtUtc: string | null;
-  closedAtUtc: string | null;
+  createdAtUtc: string; // date-time
+  resolvedAtUtc: string | null; // date-time
+  closedAtUtc: string | null; // date-time
   metadata: string | null;
   participants: RequestParticipantDto[];
   updates: RequestUpdateDto[];

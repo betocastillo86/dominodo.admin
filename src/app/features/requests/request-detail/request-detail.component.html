@@ -31,6 +31,22 @@
             }
           </div>
         </div>
+        <div class="card-body border-bottom">
+          <div class="datagrid">
+            <div class="datagrid-item">
+              <div class="datagrid-title">Fecha de creación</div>
+              <div class="datagrid-content">{{ d.createdAtUtc | date:'short' }}</div>
+            </div>
+            <div class="datagrid-item">
+              <div class="datagrid-title">Fecha de resolución</div>
+              <div class="datagrid-content">{{ (d.resolvedAtUtc | date:'short') || '—' }}</div>
+            </div>
+            <div class="datagrid-item">
+              <div class="datagrid-title">Fecha de cierre</div>
+              <div class="datagrid-content">{{ (d.closedAtUtc | date:'short') || '—' }}</div>
+            </div>
+          </div>
+        </div>
         <div class="card-body">
           <form [formGroup]="editForm" (ngSubmit)="onSubmitEdit()">
             <div class="row g-3">
