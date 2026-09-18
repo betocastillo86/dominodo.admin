@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TablerIconComponent } from 'angular-tabler-icons';
 import { PagedResult } from '../../../core/models/paged-result';
@@ -14,6 +14,19 @@ export interface TableColumn<T> {
   badgeClass?: (row: T) => string;
   /** Optional CSS class applied to the header and cells. */
   class?: string;
+  /**
+   * Renders the value inside a fixed-width cell, clipped with an ellipsis when
+   * it does not fit (the full text stays available as the cell's tooltip).
+   */
+  truncate?: boolean;
+  /** When set, the header becomes a Tabler sort button emitting this key. */
+  sortKey?: string;
+}
+
+/** Current sort state: which column key and in which direction. */
+export interface TableSort {
+  key: string;
+  direction: 'asc' | 'desc';
 }
 
 /**
@@ -44,7 +57,71 @@ export class DataTableComponent<T> {
   /** Alternative to actionLink: invokes a callback with the row instead of navigating. */
   readonly actionFn = input<((row: T) => void) | null>(null);
 
+  /** Pages rendered to each side of the current one in the numbered window. */
+  readonly windowSize = input(1);
+
+  /** Current sort state (controlled); drives the asc/desc arrow on headers. */
+  readonly sort = input<TableSort | null>(null);
+
   readonly pageChange = output<number>();
+  readonly sortChange = output<TableSort>();
+
+  /** True when the page count is large enough to warrant the "jump to page" input. */
+  readonly showJump = computed(() => (this.paging()?.totalPages ?? 0) > 5);
+
+  /**
+   * Sequence of numbered pages to render, with `'ellipsis'` markers where a gap
+   * is collapsed. Always includes the first and last page plus a window around
+   * the current one. Returns `[]` when there is no paging.
+   */
+  readonly pages = computed<(number | 'ellipsis')[]>(() => {
+    const paging = this.paging();
+    if (!paging) {
+      return [];
+    }
+    const total = paging.totalPages;
+    const current = paging.page;
+    const window = this.windowSize();
+
+    const visible = new Set<number>([1, total]);
+    for (let p = current - window; p <= current + window; p++) {
+      if (p >= 1 && p <= total) {
+        visible.add(p);
+      }
+    }
+
+    const sorted = [...visible].sort((a, b) => a - b);
+    const result: (number | 'ellipsis')[] = [];
+    let prev = 0;
+    for (const page of sorted) {
+      if (prev && page - prev > 1) {
+        result.push('ellipsis');
+      }
+      result.push(page);
+      prev = page;
+    }
+    return result;
+  });
+
+  /**
+   * CSS class for a sortable header button: `asc`/`desc` when this column is the
+   * active sort, empty otherwise (Tabler renders the direction arrow from it).
+   */
+  sortClass(key: string): string {
+    const sort = this.sort();
+    return sort?.key === key ? sort.direction : '';
+  }
+
+  /**
+   * Toggle sorting for a column: flip direction if it is already the active
+   * sort, otherwise start it descending. Emits the new state for the parent.
+   */
+  toggleSort(key: string): void {
+    const sort = this.sort();
+    const direction: 'asc' | 'desc' =
+      sort?.key === key && sort.direction === 'desc' ? 'asc' : 'desc';
+    this.sortChange.emit({ key, direction });
+  }
 
   goTo(page: number): void {
     const paging = this.paging();
@@ -52,5 +129,14 @@ export class DataTableComponent<T> {
       return;
     }
     this.pageChange.emit(page);
+  }
+
+  /** Jump to a page number typed into the "Ir a la página" input. */
+  goToInput(value: string | number): void {
+    const page = typeof value === 'number' ? value : parseInt(value, 10);
+    if (Number.isNaN(page)) {
+      return;
+    }
+    this.goTo(page);
   }
 }

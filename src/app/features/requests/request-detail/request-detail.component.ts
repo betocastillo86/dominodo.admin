@@ -23,13 +23,19 @@ import { SpinnerComponent } from '../../../shared/ui/spinner/spinner.component';
 import { NotificationService } from '../../../core/notifications/notification.service';
 import { ProblemDetails } from '../../../core/http/problem-details';
 import { TenantsService } from '../../tenants/data-access/tenants.service';
+import { ApartmentsService } from '../../apartments/data-access/apartments.service';
+import { ApartmentDetailDto } from '../../apartments/data-access/apartment.models';
 import { MembershipsService } from '../../memberships/data-access/memberships.service';
 import { MembershipDto } from '../../memberships/data-access/membership.models';
+import { UsersService } from '../../users/data-access/users.service';
+import { UserDetailDto } from '../../users/data-access/user.models';
 import { RequestsService } from '../data-access/requests.service';
 import {
+  AddRequestUpdateRequest,
   REQUEST_PRIORITY_LABELS,
   REQUEST_STATUS_LABELS,
   REQUEST_TYPE_LABELS,
+  REQUEST_UPDATE_TYPE_LABELS,
   REQUEST_VISIBILITY_LABELS,
   RequestAttachmentDto,
   RequestCategoryDto,
@@ -40,6 +46,7 @@ import {
   RequestStatusHistoryDto,
   RequestType,
   RequestUpdateDto,
+  RequestUpdateType,
   RequestVisibility,
 } from '../data-access/request.models';
 
@@ -63,7 +70,9 @@ export class RequestDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly requestsService = inject(RequestsService);
   private readonly tenantsService = inject(TenantsService);
+  private readonly apartmentsService = inject(ApartmentsService);
   private readonly membershipsService = inject(MembershipsService);
+  private readonly usersService = inject(UsersService);
   private readonly notifications = inject(NotificationService);
 
   private readonly id = this.route.snapshot.paramMap.get('id')!;
@@ -74,6 +83,21 @@ export class RequestDetailComponent implements OnInit {
   readonly detail = signal<RequestDetailDto | null>(null);
   readonly categories = signal<RequestCategoryDto[]>([]);
   readonly attachments = signal<RequestAttachmentDto[]>([]);
+
+  /** Apartment linked to the request (fetched when the detail has an apartmentId). */
+  readonly apartment = signal<ApartmentDetailDto | null>(null);
+
+  /** Resolved participant users keyed by userId, so the table can show name + phone. */
+  readonly participantUsers = signal<Record<string, UserDetailDto>>({});
+
+  /** Router link to the request's conjunto (tenant) edit page. */
+  readonly conjuntoLink = this.tenantId ? ['/tenants', this.tenantId, 'edit'] : null;
+
+  /** Query params for the apartment edit page (tenant context is required there). */
+  readonly apartmentLinkQueryParams = computed(() => ({
+    tenant: this.tenantSlug(),
+    tenantId: this.tenantId,
+  }));
 
   readonly loadingInit = signal(false);
   readonly loadError = signal<string | null>(null);
@@ -87,6 +111,9 @@ export class RequestDetailComponent implements OnInit {
   readonly savingParticipant = signal(false);
   readonly participantError = signal<string | null>(null);
 
+  readonly savingUpdate = signal(false);
+  readonly updateError = signal<string | null>(null);
+
   readonly uploadingFile = signal(false);
   readonly uploadError = signal<string | null>(null);
 
@@ -97,13 +124,9 @@ export class RequestDetailComponent implements OnInit {
 
   readonly statusOptions: { value: RequestStatus; label: string }[] = [
     { value: 'New', label: 'Nuevo' },
-    { value: 'InReview', label: 'En revisión' },
     { value: 'InProgress', label: 'En progreso' },
     { value: 'Resolved', label: 'Resuelto' },
     { value: 'Closed', label: 'Cerrado' },
-    { value: 'Rejected', label: 'Rechazado' },
-    { value: 'Cancelled', label: 'Cancelado' },
-    { value: 'Reopened', label: 'Reabierto' },
   ];
 
   readonly typeOptions: { value: RequestType; label: string }[] = [
@@ -164,6 +187,15 @@ export class RequestDetailComponent implements OnInit {
     note: new FormControl('', { nonNullable: true }),
   });
 
+  /** Add a timeline update to the request — always posted as a `Comment`. */
+  readonly updateForm = new FormGroup({
+    body: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required, Validators.maxLength(2000)],
+    }),
+    isInternal: new FormControl(false, { nonNullable: true }),
+  });
+
   /** Add participant: the typeahead's raw input model (a typed string or the selected membership). */
   readonly participantSearch = new FormControl<string | MembershipDto>('', { nonNullable: true });
   /** The membership picked from the typeahead results; null until one is chosen. */
@@ -187,8 +219,13 @@ export class RequestDetailComponent implements OnInit {
       }),
     );
 
-  /** Renders a result row / the selected value as "Usuario · teléfono". */
-  readonly userFormatter = (m: MembershipDto): string => `${m.userName} · ${m.phone}`;
+  /**
+   * Renders a result row / the selected value as "Usuario · teléfono".
+   * Guards against the initial empty-string model so the input shows the
+   * placeholder instead of "undefined · undefined".
+   */
+  readonly userFormatter = (m: string | MembershipDto): string =>
+    typeof m === 'string' ? m : `${m.userName} · ${m.phone}`;
 
   ngOnInit(): void {
     if (!this.tenantId) {
@@ -257,6 +294,38 @@ export class RequestDetailComponent implements OnInit {
           this.reloadDetail();
         },
         error: (err: unknown) => this.statusError.set(this.toMessage(err, 'No se pudo cambiar el estado.')),
+      });
+  }
+
+  onSubmitUpdate(): void {
+    if (this.updateForm.invalid) {
+      this.updateForm.markAllAsTouched();
+      return;
+    }
+    const slug = this.tenantSlug();
+    if (!slug) return;
+
+    this.savingUpdate.set(true);
+    this.updateError.set(null);
+
+    const raw = this.updateForm.getRawValue();
+    const body: AddRequestUpdateRequest = {
+      type: 'Comment',
+      body: raw.body.trim(),
+      isInternal: raw.isInternal,
+    };
+
+    this.requestsService
+      .addUpdate(this.id, body, slug)
+      .pipe(finalize(() => this.savingUpdate.set(false)))
+      .subscribe({
+        next: () => {
+          this.notifications.success('Actualización agregada');
+          this.updateForm.reset({ body: '', isInternal: raw.isInternal });
+          this.reloadDetail();
+        },
+        error: (err: unknown) =>
+          this.updateError.set(this.toMessage(err, 'No se pudo agregar la actualización.')),
       });
   }
 
@@ -400,16 +469,21 @@ export class RequestDetailComponent implements OnInit {
     return REQUEST_VISIBILITY_LABELS[visibility as RequestVisibility] ?? visibility;
   }
 
+  updateTypeLabel(type: string): string {
+    return REQUEST_UPDATE_TYPE_LABELS[type as RequestUpdateType] ?? type;
+  }
+
+  /** Router link to the apartment's edit page. */
+  apartmentLink(apartmentId: string): unknown[] {
+    return ['/apartments', apartmentId, 'edit'];
+  }
+
   statusBadge(status: string): string {
     const map: Record<string, string> = {
       New: 'badge bg-blue-lt',
-      InReview: 'badge bg-yellow-lt',
       InProgress: 'badge bg-orange-lt',
       Resolved: 'badge bg-green-lt',
       Closed: 'badge bg-secondary-lt',
-      Rejected: 'badge bg-red-lt',
-      Cancelled: 'badge bg-secondary-lt',
-      Reopened: 'badge bg-purple-lt',
     };
     return map[status] ?? 'badge';
   }
@@ -455,9 +529,20 @@ export class RequestDetailComponent implements OnInit {
           this.categories.set(categories);
           this.attachments.set(attachments);
           this.applyDetail(detail);
+          if (detail.apartmentId) this.loadApartment(detail.apartmentId);
         },
         error: (err: unknown) => this.loadError.set(this.toMessage(err, 'No se pudo cargar la solicitud.')),
       });
+  }
+
+  /** Loads the linked apartment; supplementary info, so failures are ignored silently. */
+  private loadApartment(apartmentId: string): void {
+    const slug = this.tenantSlug();
+    if (!slug) return;
+    this.apartmentsService.getById(apartmentId, slug).subscribe({
+      next: (a) => this.apartment.set(a),
+      error: () => { /* silently ignore — apartment info is supplementary */ },
+    });
   }
 
   private reloadDetail(): void {
@@ -491,6 +576,37 @@ export class RequestDetailComponent implements OnInit {
       visibility: d.visibility as RequestVisibility,
     });
     this.statusForm.patchValue({ status: d.status as RequestStatus });
+    this.loadUsers([
+      ...d.participants.map((p) => p.userId),
+      ...d.updates.map((u) => u.authorUserId),
+    ]);
+  }
+
+  /**
+   * Resolves participants and update authors via GET /users/{id} so the UI can show
+   * name + phone instead of the raw id. One request per not-yet-resolved user;
+   * failures are ignored so the row falls back to the id.
+   */
+  private loadUsers(userIds: string[]): void {
+    const known = this.participantUsers();
+    const missing = [...new Set(userIds)].filter((id) => !known[id]);
+    for (const userId of missing) {
+      this.usersService.getById(userId).subscribe({
+        next: (user) => this.participantUsers.update((map) => ({ ...map, [userId]: user })),
+        error: () => { /* silently ignore — the row falls back to the userId */ },
+      });
+    }
+  }
+
+  /** Full name of a resolved participant, or null if not resolved yet. */
+  participantName(userId: string): string | null {
+    const user = this.participantUsers()[userId];
+    return user ? `${user.firstName} ${user.lastName}`.trim() : null;
+  }
+
+  /** Phone of a resolved participant, or null if not resolved yet. */
+  participantPhone(userId: string): string | null {
+    return this.participantUsers()[userId]?.phone ?? null;
   }
 
   private toMessage(err: unknown, fallback: string): string {

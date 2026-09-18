@@ -120,6 +120,23 @@ export class MembershipsService {
       .pipe(map((r) => r.items));
   }
 
+  /**
+   * Cross-tenant membership search for the requests filter. Uses the `tenantId`
+   * query param (no X-Tenant header) so it works without a tenant selected;
+   * pass a tenantId to scope the results to one conjunto. Deduplicates by
+   * userId, since a person can be a member of several tenants.
+   */
+  searchAcrossTenants(search: string, tenantId?: string, take = 10): Observable<MembershipDto[]> {
+    let params = new HttpParams().set('page', 1).set('pageSize', take).set('search', search);
+    if (tenantId) params = params.set('tenantId', tenantId);
+    return this.http.get<PagedResult<MembershipDto>>(this.base, { params }).pipe(
+      map((r) => {
+        const seen = new Set<string>();
+        return r.items.filter((m) => (seen.has(m.userId) ? false : seen.add(m.userId)));
+      }),
+    );
+  }
+
   invite(body: InviteMemberRequest, tenantSlug: string): Observable<void> {
     return this.http.post<void>(`${this.base}/invite`, body, {
       headers: { 'X-Tenant': tenantSlug },

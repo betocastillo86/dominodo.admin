@@ -18,7 +18,8 @@ Angular SPA: the Dominodo **super administrator** panel. Consumes the `dominodo.
 - `npm run build` — production build.
 - `npm run build:stage` — build for **stage** (`--configuration stage`, stage API URL).
 - `npm run build:prod` — build for **prod** (`--configuration production`, prod API URL).
-- API base URL lives in `src/environments/` (`apiBaseUrl = http://localhost:5083/api/v1`).
+- API base URL lives in `src/environments/` (`apiBaseUrl = http://localhost:5083/api/v1`), alongside
+  Domi's (`domiBaseUrl = http://localhost:5090`) — login and dashboard probe `/health/ready` on both hosts.
 - API Swagger: `http://localhost:5083/swagger/index.html`.
 
 ## Testing
@@ -27,13 +28,21 @@ Angular SPA: the Dominodo **super administrator** panel. Consumes the `dominodo.
 
 ## Structure (`src/app/`)
 - `core/` — singletons & cross-cutting, no feature UI: `auth/` (store, service, jwt util, token storage),
-  `http/` (auth + error interceptors), `guards/`, `models/`.
+  `http/` (auth + error interceptors), `guards/`, `health/` (`/health/ready` probes), `models/`.
 - `layout/` — panel chrome ported from Tabler: `shell/`, `sidebar/`, `navbar/`.
 - `shared/ui/` — reusable presentational pieces: `data-table/` (generic paged table), `page-header/`, `spinner/`.
 - `features/<name>/` — lazy-loaded domains; each splits `data-access/` (services + models) from components.
 
 **Env & hosting artifacts:** `src/environments/environment.stage.ts` holds stage config (prod is
 `environment.ts`); `public/web.config` is the IIS SPA-fallback, copied to the deploy root at build time.
+
+**Caching (do not regress):** the hosting caches every static file for a year, so `public/web.config`
+carves out `index.html` as `no-cache` — otherwise deploys stay invisible to users for days. Never add an
+unhashed file to `public/` without its own `<location>` block.
+
+**Version banner:** the pipeline stamps `$(Build.BuildId)` into `core/version/app-version.ts` and
+`public/version.json`; `VersionCheckService` polls the latter and prompts open tabs to reload. The
+navbar shows the running version. Keep the `___buildid___` placeholder intact in both files.
 
 ## Conventions
 - `changeDetection: OnPush`; use `inject()`, not constructor DI.
@@ -58,5 +67,5 @@ Angular SPA: the Dominodo **super administrator** panel. Consumes the `dominodo.
 
 ## Docs
 - `docs/architecture.md` — authoritative architecture, structure, and API contract.
-- `docs/deployment.md` — stage/prod FTP deployment: branch→env mapping, build configs, `web.config`, Azure DevOps pipeline + variable groups.
+- `docs/deployment.md` — stage/prod FTP deployment: branch→env mapping, build configs, `web.config`, the **cache strategy**, Azure DevOps pipeline + variable groups.
 - `plan_init.md` — phased implementation plan for the first slice (auth + roles).

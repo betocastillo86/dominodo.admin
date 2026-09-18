@@ -13,6 +13,11 @@ export const routes: Routes = [
     loadComponent: () => import('./layout/shell/shell.component').then((m) => m.ShellComponent),
     children: [
       {
+        path: 'dashboard',
+        loadChildren: () =>
+          import('./features/dashboard/dashboard.routes').then((m) => m.dashboardRoutes),
+      },
+      {
         path: 'roles',
         loadChildren: () => import('./features/roles/roles.routes').then((m) => m.rolesRoutes),
       },
@@ -87,7 +92,14 @@ export const routes: Routes = [
         loadChildren: () =>
           import('./features/listings/listings.routes').then((m) => m.listingsRoutes),
       },
-      { path: '', pathMatch: 'full', redirectTo: 'roles' },
+      {
+        path: 'chat-simulation',
+        loadChildren: () =>
+          import('./features/chat-simulation/chat-simulation.routes').then(
+            (m) => m.chatSimulationRoutes,
+          ),
+      },
+      { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
     ],
   },
   { path: '**', redirectTo: '' },

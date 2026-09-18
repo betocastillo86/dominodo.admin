@@ -28,6 +28,18 @@ steps:
   - script: npm ci
     displayName: 'npm ci (respects .npmrc legacy-peer-deps)'
 
+  # Stamp the release id into the bundle AND into the published version.json, so
+  # VersionCheckService can compare them and prompt long-lived tabs to reload.
+  # Must run before the build: `public/` is copied and the .ts is compiled by it.
+  - script: |
+      set -e
+      sed -i "s/___buildid___/$BUILD_BUILDID/g" \
+        src/app/core/version/app-version.ts \
+        public/version.json
+      echo "Stamped build $BUILD_BUILDID"
+      cat public/version.json
+    displayName: 'Stamp build version'
+
   - script: npx ng build --configuration $(BUILD_CONFIG)
     displayName: 'Build Angular ($(BUILD_CONFIG))'
 

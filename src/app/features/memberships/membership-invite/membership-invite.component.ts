@@ -54,6 +54,14 @@ export class MembershipInviteComponent implements OnInit {
       nonNullable: true,
       validators: [Validators.required, Validators.maxLength(30)],
     }),
+    firstName: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required, Validators.maxLength(100)],
+    }),
+    lastName: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required, Validators.maxLength(100)],
+    }),
     roleId: new FormControl('', {
       nonNullable: true,
       validators: [Validators.required],
@@ -125,7 +133,13 @@ export class MembershipInviteComponent implements OnInit {
       !this.showApartment() ||
       (!!this.form.controls.apartmentId.value && !!this.form.controls.relationType.value);
 
-    if (this.form.controls.phone.invalid || this.form.controls.roleId.invalid || !apartmentValid) {
+    if (
+      this.form.controls.phone.invalid ||
+      this.form.controls.firstName.invalid ||
+      this.form.controls.lastName.invalid ||
+      this.form.controls.roleId.invalid ||
+      !apartmentValid
+    ) {
       return;
     }
 
@@ -138,6 +152,8 @@ export class MembershipInviteComponent implements OnInit {
       phone: raw.phone.trim(),
       roleId: Number(raw.roleId),
       email: raw.email.trim() || null,
+      firstName: raw.firstName.trim(),
+      lastName: raw.lastName.trim(),
     };
 
     if (this.showApartment() && raw.apartmentId && raw.relationType) {

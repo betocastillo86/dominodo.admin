@@ -42,7 +42,7 @@ export class WhatsAppMessageListComponent {
 
   readonly columns: readonly TableColumn<AdminWhatsAppMessageDto>[] = [
     { header: 'Destinatario', value: (m) => m.to },
-    { header: 'Mensaje', value: (m) => m.body },
+    { header: 'Mensaje', value: (m) => this.truncate(m.body), class: 'cell-wrap' },
     {
       header: 'Estado',
       value: (m) => DELIVERY_STATUS_LABELS[m.status] ?? m.status,
@@ -93,6 +93,11 @@ export class WhatsAppMessageListComponent {
       from: this.fromControl.value || undefined,
       to: this.toControl.value || undefined,
     });
+  }
+
+  /** Caps the message shown in the list; the full body lives in the detail view. */
+  private truncate(value: string): string {
+    return value.length > 80 ? `${value.slice(0, 80)}…` : value;
   }
 
   private formatDate(iso?: string | null): string {

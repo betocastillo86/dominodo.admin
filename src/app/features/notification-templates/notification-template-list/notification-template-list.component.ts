@@ -85,6 +85,7 @@ export class NotificationTemplateListComponent {
     if (template.emailEnabled) channels.push('Email');
     if (template.pushEnabled) channels.push('Push');
     if (template.inAppEnabled) channels.push('In-App');
+    if (template.whatsAppEnabled) channels.push('WhatsApp');
     return channels.length ? channels.join(', ') : '—';
   }
 

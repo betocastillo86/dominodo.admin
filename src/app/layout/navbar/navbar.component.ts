@@ -3,6 +3,7 @@ import { NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
 import { TablerIconComponent } from 'angular-tabler-icons';
 import { AuthService } from '../../core/auth/auth.service';
 import { AuthStore } from '../../core/auth/auth.store';
+import { VersionCheckService } from '../../core/version/version-check.service';
 
 /** Top navbar: shows the signed-in user and a logout action. */
 @Component({
@@ -18,6 +19,7 @@ import { AuthStore } from '../../core/auth/auth.store';
 export class NavbarComponent {
   private readonly auth = inject(AuthService);
   readonly store = inject(AuthStore);
+  readonly versions = inject(VersionCheckService);
 
   logout(): void {
     this.auth.logout().subscribe();

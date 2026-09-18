@@ -55,6 +55,57 @@
               <div class="datagrid-content"><span class="text-secondary font-monospace">{{ m.tenantId }}</span></div>
             </div>
           </div>
+
+          <div class="hr-text">Acciones</div>
+          <div class="btn-list mb-3">
+            <button
+              type="button"
+              class="btn btn-outline-primary"
+              [disabled]="
+                m.status === 'Pending' || confirmingRequeue() || requeueing() || !!requeuedId()
+              "
+              [title]="
+                m.status === 'Pending'
+                  ? 'No se puede reintentar mientras el correo sigue pendiente de envío'
+                  : 'Reencola una copia del correo para un nuevo intento de envío'
+              "
+              (click)="requestRequeue()"
+            >
+              @if (requeueing()) {
+                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+              }
+              Reintentar envío
+            </button>
+          </div>
+          @if (confirmingRequeue()) {
+            <div class="alert alert-warning">
+              <h4 class="alert-title">¿Reintentar el envío de este correo?</h4>
+              <div class="text-secondary">
+                Se encolará una copia del correo para un nuevo intento de envío. El correo
+                original no se modifica.
+              </div>
+              <div class="btn-list mt-3">
+                <button type="button" class="btn btn-warning" (click)="submitRequeue()">
+                  Confirmar reintento
+                </button>
+                <button type="button" class="btn btn-ghost-secondary" (click)="cancelRequeue()">
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          }
+          @if (requeueError()) {
+            <div class="alert alert-danger">{{ requeueError() }}</div>
+          }
+          @if (requeuedId(); as newId) {
+            <div class="alert alert-success">
+              <h4 class="alert-title">Reintento encolado</h4>
+              <div class="text-secondary">
+                Se creó una copia con ID <span class="font-monospace">{{ newId }}</span>. Vuelve al listado
+                para seguir su estado.
+              </div>
+            </div>
+          }
         </div>
       </div>
 

@@ -32,12 +32,12 @@ export class UsersService {
   readonly error = this._error.asReadonly();
 
   /** Fetch a page of users and push the result into the state signals. */
-  list(page: number, pageSize: number, name?: string, status?: UserStatus, tenantId?: string): void {
+  list(page: number, pageSize: number, search?: string, status?: UserStatus, tenantId?: string): void {
     this._loading.set(true);
     this._error.set(null);
 
     let params = new HttpParams().set('page', page).set('pageSize', pageSize);
-    if (name) params = params.set('name', name);
+    if (search) params = params.set('search', search);
     if (status) params = params.set('status', status);
     if (tenantId) params = params.set('tenantId', tenantId);
 

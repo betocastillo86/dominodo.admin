@@ -16,7 +16,7 @@ import { SpinnerComponent } from '../../../shared/ui/spinner/spinner.component';
 import { NotificationService } from '../../../core/notifications/notification.service';
 import { ProblemDetails } from '../../../core/http/problem-details';
 import { AnnouncementsService } from '../data-access/announcements.service';
-import { AudienceType } from '../data-access/announcement.models';
+import { AnnouncementPriority, AudienceType } from '../data-access/announcement.models';
 import { RequestCategoriesService } from '../../request-categories/data-access/request-categories.service';
 
 /** Create or edit an announcement. Mode is resolved from the presence of `:id` in the route. */
@@ -48,9 +48,9 @@ export class AnnouncementFormComponent implements OnInit {
       nonNullable: true,
       validators: [Validators.required],
     }),
-    priority: new FormControl<number>(0, {
+    priority: new FormControl<AnnouncementPriority>('Medium', {
       nonNullable: true,
-      validators: [Validators.required, Validators.min(0)],
+      validators: [Validators.required],
     }),
     audienceType: new FormControl<AudienceType>('AllTenant', {
       nonNullable: true,

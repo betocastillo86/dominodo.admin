@@ -9,7 +9,7 @@ Azure DevOps. This mirrors the `pollaya.admin.front` pattern, modernized for Ang
 | Environment | Branch    | Build configuration | Front-end URL                       | API base URL (`apiBaseUrl`)                                  | FTP variable group      |
 | ----------- | --------- | ------------------- | ----------------------------------- | ------------------------------------------------------------ | ----------------------- |
 | **prod**    | `main`    | `production`        | *(TBD)*                             | `https://api.dominodo.com/api/v1` *(PLACEHOLDER)*            | `dominodo-admin-prod`   |
-| **stage**   | `develop` | `stage`             | `https://admin.stage.dominodo.com`  | `https://app-dominodo-api-stage.azurewebsites.net/api/v1`     | `dominodo-admin-stage`  |
+| **stage**   | `develop` | `stage`             | `https://adminstage.dominodo.com`   | `https://app-dominodo-api-stage.azurewebsites.net/api/v1`     | `dominodo-admin-stage`  |
 
 The **stage** API URL is live (`app-dominodo-api-stage.azurewebsites.net`). The **prod** API URL is
 still a **placeholder** — the prod API is not deployed yet. Update it once the API is live (see
@@ -49,6 +49,127 @@ Hosting is Windows/IIS. `public/web.config` is copied to the deploy root automat
 It rewrites any request that is **not** a real file/directory and **not** under `/api/` to
 `/index.html`, so deep-route reloads (e.g. `/roles`, `/requests/123`) resolve to the SPA instead of a
 404. It also maps `.json` / `.webmanifest` MIME types.
+
+## Cache strategy — why a deploy is visible immediately
+
+**The problem this solves.** The hosting applies `Cache-Control: max-age=31536000` (one year) to
+every static file it serves, `index.html` included — verifiable with
+`curl -sSI https://<host>/ | grep -i cache-control`. A browser therefore never revalidates
+`index.html`, and a stale `index.html` keeps referencing the **previous** build's hashed bundles,
+which are still on disk (`clean: false`). Everything loads fine and the new release is simply never
+picked up, for days. This is exactly the symptom users reported: "I have to clear my cache to see
+the changes".
+
+`public/web.config` fixes it by carving out one exception:
+
+| Resource | `Cache-Control` | Why |
+| --- | --- | --- |
+| `index.html` (and every SPA-rewritten route) | `no-cache` + `Expires: -1` | It is the pointer to everything else — always revalidate it (a cheap `304` when unchanged) |
+| `*-<hash>.js`, `*-<hash>.css` | `max-age=31536000` | Content-addressed by `outputHashing: "all"`; a new build emits new filenames |
+| `favicon.*` | `max-age=86400` | Copied verbatim from `public/`, so **not** hashed |
+
+Implemented with `<staticContent><clientCache>` for the 1-year default and
+`<location path="index.html">` with `cacheControlMode="DisableCache"` for the exception. `<location>`
+config is resolved *after* the URL Rewrite module runs, so it covers SPA deep links too, not just a
+literal request for `/index.html`.
+
+> ⚠️ The 1-year default is only safe because **every** JS/CSS filename is content-hashed. If
+> `outputHashing` is ever turned off, or an unhashed file is added to `public/`, it gets cached for a
+> year — give it its own `<location>` block. Today the only unhashed files in the deploy root are
+> `index.html`, `favicon.*` and `web.config` (IIS never serves the last one).
+
+**Nothing else is needed.** Cloudflare fronts the site but returns `cf-cache-status: DYNAMIC` for
+HTML — it does not cache it — and the hashed bundles change filename every release, so there is
+nothing to purge. No pipeline change, no cache-busting query strings, no edge rules.
+
+### `/reset-cache.html` — evicting the caches poisoned before the fix
+
+The `no-cache` above only protects browsers that ask. It does nothing for the ones that already
+stored `index.html` during the bad window (**2026-08-10 → 2026-08-28**, first stage deploy to
+`1dbd451`): those entries carry `max-age=31536000`, stay *fresh* until August 2027, and a fresh
+entry is never revalidated. Measured on a cold load of `/` by an affected user, via Cloudflare's RUM
+beacon:
+
+```json
+{ "nt": "navigate", "dt": "cache", "timingsV2": { "transferSize": 0, "decodedBodySize": 28782 } }
+```
+
+`transferSize: 0` — not a 304, not a slow request. **No request.** The browser boots the August
+bundle (`main-WXYFEID2.js`) without contacting the server, so no header, rewrite rule or redirect can
+reach it. Clearing the browser cache is also unreliable: Chrome's dialog defaults to a *Last hour*
+time range, which leaves an August entry untouched.
+
+The only lever is a URL that cannot be in the cache, because it did not exist when the cache was
+poisoned. `public/reset-cache.html` is that URL:
+
+| Step | What happens |
+| --- | --- |
+| Something requests `/reset-cache.html` | Never cached → always a real network request |
+| IIS answers with `Clear-Site-Data: "cache"` | Browser **drops the entire origin cache**, poisoned `index.html` included |
+| The page redirects to `/` | Nothing left to reuse → clean fetch of the current build |
+
+Two ways in, and both are wanted:
+
+- **By hand** — send an affected user `https://<host>/reset-cache.html`. One click, permanent.
+- **Automatically** — `core/version/cache-heal.ts` fetches it once, ever, from `main.ts`, so anyone
+  who reaches a current build by any route is repaired silently.
+
+Notes:
+
+- Only `"cache"`. `"storage"` or `"*"` would also wipe `localStorage` and sign every user out.
+- The flag in `localStorage` is **not** keyed to the release. This repairs one historical mistake;
+  re-running it per deploy would discard every hashed bundle the user has cached, for nothing.
+- `reset-cache.html` needs its own `DisableCache` block — it is unhashed (the rule above), and a
+  cached copy would be served without ever delivering the header.
+- Safari does not support `Clear-Site-Data`; those users still need a hard reload.
+- Related hardening in the same commit: the SPA rewrite now excludes asset extensions, so a missing
+  bundle returns a real **404** instead of `index.html`. Previously a stale `index.html` pointing at a
+  deleted bundle pulled HTML into a `<script>` tag, and any legacy service worker on the origin could
+  never be unregistered (browsers drop a worker whose script 404s, but keep one answering 200 HTML).
+
+### Version stamping and the "new version available" banner
+
+The `no-cache` on `index.html` only kicks in when the browser asks for it again — a reload, or
+reopening the tab. A tab left open all afternoon never does, because Angular swaps components on
+route changes without reloading the document. These pieces close that gap:
+
+| Piece | What it does |
+| --- | --- |
+| `src/app/core/version/app-version.ts` | `APP_VERSION` placeholder compiled **into the bundle** |
+| `public/version.json` | the same placeholder, published as a **separate file** at `/version.json` |
+| `Stamp build version` pipeline step | one `sed` replaces `___buildid___` with `$(Build.BuildId)` in **both**, before `ng build` |
+| `core/version/version-check.service.ts` | polls `/version.json` every 5 min (and on tab focus) and compares it to `APP_VERSION` |
+| `shared/ui/version-banner/` | renders the "Actualizar ahora" prompt when they differ |
+
+Because a single pipeline run stamps both files with the same id, the bundle knows which release it
+is and the server publishes which release is current — a mismatch means a deploy happened since the
+tab was opened.
+
+Notes:
+
+- `version.json` gets its own `<location>` block with `DisableCache` in `web.config`. Without it the
+  poll would read a cached copy and report the old release forever.
+- The check uses `fetch`, not `HttpClient`, on purpose: `errorInterceptor` turns failed requests into
+  user-facing error toasts, and a background poll must stay silent when the user is offline.
+- The banner **prompts**, it does not auto-reload — a forced refresh would discard a half-written form.
+- Local dev builds never run the stamp step, so the placeholder survives; `IS_VERSION_STAMPED` detects
+  that, skips the polling entirely, and the header shows `vdev`.
+- The running version is shown in the header next to the user menu, so a user reporting a bug can say
+  which build they are on.
+
+### Verifying after a deploy
+
+```bash
+HOST=https://adminstage.dominodo.com
+curl -sSI "$HOST/" | grep -i cache-control          # expect: no-cache
+curl -sSI "$HOST/roles"    | grep -i cache-control   # expect: no-cache (SPA rewrite path)
+
+ASSET=$(curl -sS "$HOST/" | grep -o 'main-[A-Za-z0-9]*\.js' | head -1)
+curl -sSI "$HOST/$ASSET" | grep -i cache-control    # expect: max-age=31536000
+```
+
+If `/` still shows `max-age=31536000`, the `web.config` did not take effect — check that it reached
+the deploy root and that the site returns 200 and not a `500.19` configuration error.
 
 ## Pipeline — `pipelines/build-ftp-pipeline.yaml`
 
@@ -96,5 +217,5 @@ The API's `cors_allowed_origins` (`dominodo.api/infra/envs/*/*.tfvars`) is curre
 before cross-origin login works. This is an API-repo action, but it is a hard prerequisite for a green
 login on either hosted environment.
 
-- **stage** — add `https://admin.stage.dominodo.com` to the stage API's `cors_allowed_origins`.
+- **stage** — add `https://adminstage.dominodo.com` to the stage API's `cors_allowed_origins`.
 - **prod** — add the prod front-end URL (TBD) once it is defined.

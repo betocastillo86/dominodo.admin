@@ -1,9 +1,14 @@
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
+import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { PagedResult } from '../../../core/models/paged-result';
 import { ProblemDetails } from '../../../core/http/problem-details';
-import { AdminWhatsAppMessageDto, WhatsAppMessageFilters } from './notification-message.models';
+import {
+  AdminWhatsAppMessageDto,
+  WhatsAppMessageFilters,
+  RequeueMessageResponse,
+} from './notification-message.models';
 
 /** Data-access for materialized WhatsApp messages. Exposes list state as signals. */
 @Injectable({ providedIn: 'root' })
@@ -44,6 +49,11 @@ export class WhatsAppMessagesService {
         this._loading.set(false);
       },
     });
+  }
+
+  /** Queue a copy of a WhatsApp message for a fresh delivery attempt. Returns the new message id. */
+  requeue(id: string): Observable<RequeueMessageResponse> {
+    return this.http.post<RequeueMessageResponse>(`${this.base}/${id}/requeue`, {});
   }
 
   private toError(error: unknown): string {

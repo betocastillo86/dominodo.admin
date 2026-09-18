@@ -71,6 +71,51 @@
               <div class="datagrid-content"><span class="text-secondary font-monospace">{{ m.tenantId }}</span></div>
             </div>
           </div>
+
+          <div class="hr-text">Acciones</div>
+          <div class="btn-list mb-3">
+            <button
+              type="button"
+              class="btn btn-outline-primary"
+              [disabled]="confirmingRequeue() || requeueing() || !!requeuedId()"
+              title="Crea una copia sin leer de la notificación para el mismo destinatario"
+              (click)="requestRequeue()"
+            >
+              @if (requeueing()) {
+                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+              }
+              Reenviar notificación
+            </button>
+          </div>
+          @if (confirmingRequeue()) {
+            <div class="alert alert-warning">
+              <h4 class="alert-title">¿Reenviar esta notificación?</h4>
+              <div class="text-secondary">
+                Se creará una copia sin leer de la notificación para el mismo destinatario. La
+                notificación original no se modifica.
+              </div>
+              <div class="btn-list mt-3">
+                <button type="button" class="btn btn-warning" (click)="submitRequeue()">
+                  Confirmar reenvío
+                </button>
+                <button type="button" class="btn btn-ghost-secondary" (click)="cancelRequeue()">
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          }
+          @if (requeueError()) {
+            <div class="alert alert-danger">{{ requeueError() }}</div>
+          }
+          @if (requeuedId(); as newId) {
+            <div class="alert alert-success">
+              <h4 class="alert-title">Notificación reenviada</h4>
+              <div class="text-secondary">
+                Se creó una copia con ID <span class="font-monospace">{{ newId }}</span>. Vuelve al
+                listado para verla.
+              </div>
+            </div>
+          }
         </div>
       </div>
     } @else {

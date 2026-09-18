@@ -36,6 +36,52 @@
               </small>
             </div>
 
+            <!-- Nombre y apellido -->
+            <div class="row g-3 mb-3">
+              <div class="col-12 col-md-6">
+                <label class="form-label required" for="invite-first-name">Nombre</label>
+                <input
+                  id="invite-first-name"
+                  type="text"
+                  class="form-control"
+                  formControlName="firstName"
+                  [class.is-invalid]="form.controls.firstName.invalid && form.controls.firstName.touched"
+                />
+                @if (form.controls.firstName.invalid && form.controls.firstName.touched) {
+                  <div class="invalid-feedback">
+                    @if (form.controls.firstName.errors?.['server']) {
+                      {{ form.controls.firstName.errors?.['server'] }}
+                    } @else if (form.controls.firstName.errors?.['required']) {
+                      El nombre es obligatorio.
+                    } @else if (form.controls.firstName.errors?.['maxlength']) {
+                      El nombre no puede superar los 100 caracteres.
+                    }
+                  </div>
+                }
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label required" for="invite-last-name">Apellido</label>
+                <input
+                  id="invite-last-name"
+                  type="text"
+                  class="form-control"
+                  formControlName="lastName"
+                  [class.is-invalid]="form.controls.lastName.invalid && form.controls.lastName.touched"
+                />
+                @if (form.controls.lastName.invalid && form.controls.lastName.touched) {
+                  <div class="invalid-feedback">
+                    @if (form.controls.lastName.errors?.['server']) {
+                      {{ form.controls.lastName.errors?.['server'] }}
+                    } @else if (form.controls.lastName.errors?.['required']) {
+                      El apellido es obligatorio.
+                    } @else if (form.controls.lastName.errors?.['maxlength']) {
+                      El apellido no puede superar los 100 caracteres.
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+
             <!-- Correo electrónico (opcional) -->
             <div class="mb-3">
               <label class="form-label" for="invite-email">Correo electrónico</label>

@@ -14,6 +14,14 @@ export interface TenantDto {
   city: string;
 }
 
+/** Public contact details of a tenant, shown to residents. All fields optional. */
+export interface ContactInfoDto {
+  phone?: string | null;
+  address?: string | null;
+  additionalInfo?: string | null;
+  schedules?: string | null;
+}
+
 /** Tenant detail as returned by `GET /tenants/{id}`. */
 export interface TenantDetailDto {
   id: string;
@@ -27,6 +35,7 @@ export interface TenantDetailDto {
   country: string;
   branding?: string | null;
   settings?: string | null;
+  contactInfo?: ContactInfoDto | null;
   confirmInvitationRequired: boolean;
 }
 
@@ -40,6 +49,7 @@ export interface CreateTenantRequest {
   legalId?: string | null;
   branding?: string | null;
   settings?: string | null;
+  contactInfo?: ContactInfoDto | null;
   confirmInvitationRequired: boolean;
 }
 
@@ -50,6 +60,7 @@ export interface UpdateTenantRequest {
   address: string;
   city: string;
   country: string;
+  contactInfo?: ContactInfoDto | null;
   confirmInvitationRequired: boolean;
 }
 

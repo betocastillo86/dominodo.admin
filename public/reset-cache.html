@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Actualizando…</title>
+    <style>
+      body {
+        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        margin: 0;
+        color: #1e293b;
+        background: #f6f8fb;
+      }
+    </style>
+  </head>
+  <body>
+    <p>Actualizando a la última versión…</p>
+    <script>
+      // Nothing to do here: the work already happened in the response headers.
+      // `Clear-Site-Data: "cache"` on THIS response wiped the origin's HTTP cache,
+      // including the year-cached index.html that keeps booting the August build.
+      // Going to / now can only hit the network. The delay is margin so the wipe
+      // is definitely applied before the navigation starts.
+      setTimeout(function () {
+        location.replace('/');
+      }, 500);
+    </script>
+    <noscript><a href="/">Continuar</a></noscript>
+  </body>
+</html>

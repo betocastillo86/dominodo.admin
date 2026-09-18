@@ -1,13 +1,24 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { AbstractControl, FormControl, ReactiveFormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { debounceTime, distinctUntilChanged } from 'rxjs';
+import {
+  catchError,
+  debounceTime,
+  distinctUntilChanged,
+  Observable,
+  of,
+  OperatorFunction,
+  switchMap,
+} from 'rxjs';
+import { NgbTypeahead, NgbTypeaheadSelectItemEvent } from '@ng-bootstrap/ng-bootstrap';
 import { PageHeaderComponent } from '../../../shared/ui/page-header/page-header.component';
-import { DataTableComponent, TableColumn } from '../../../shared/ui/data-table/data-table.component';
+import { DataTableComponent, TableColumn, TableSort } from '../../../shared/ui/data-table/data-table.component';
 import {
   MultiSelectComponent,
   MultiSelectOption,
 } from '../../../shared/ui/multi-select/multi-select.component';
+import { MembershipsService } from '../../memberships/data-access/memberships.service';
+import { MembershipDto } from '../../memberships/data-access/membership.models';
 import { RequestsService, RequestFilters } from '../data-access/requests.service';
 import {
   REQUEST_PRIORITY_LABELS,
@@ -16,6 +27,7 @@ import {
   RequestCategoryDto,
   RequestDto,
   RequestPriority,
+  RequestSortBy,
   RequestStatus,
   RequestType,
   RequestVisibility,
@@ -25,12 +37,19 @@ import { TenantDto } from '../../tenants/data-access/tenant.models';
 @Component({
   selector: 'app-request-list',
   standalone: true,
-  imports: [PageHeaderComponent, DataTableComponent, MultiSelectComponent, ReactiveFormsModule],
+  imports: [
+    PageHeaderComponent,
+    DataTableComponent,
+    MultiSelectComponent,
+    ReactiveFormsModule,
+    NgbTypeahead,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './request-list.component.html',
 })
 export class RequestListComponent {
   private readonly requestsService = inject(RequestsService);
+  private readonly membershipsService = inject(MembershipsService);
 
   readonly requests = this.requestsService.requests;
   readonly paging = this.requestsService.paging;
@@ -45,8 +64,20 @@ export class RequestListComponent {
   readonly priorityControl = new FormControl<RequestPriority | ''>('', { nonNullable: true });
   readonly visibilityControl = new FormControl<RequestVisibility | ''>('', { nonNullable: true });
   readonly tenantControl = new FormControl<string>('', { nonNullable: true });
+
+  /** Column sort state; defaults to newest first (Date/Desc). */
+  readonly sort = signal<TableSort>({ key: 'Date', direction: 'desc' });
   /** Disabled until a tenant is selected — categories are tenant-scoped. */
   readonly categoryControl = new FormControl<string[]>({ value: [], disabled: true }, { nonNullable: true });
+
+  /**
+   * Participant filter — the typeahead's raw input model (a typed string or the
+   * picked membership). Cross-tenant: works without a conjunto selected; when
+   * one is selected the search is scoped to it.
+   */
+  readonly participantControl = new FormControl<string | MembershipDto>('', { nonNullable: true });
+  /** The membership picked from the typeahead; drives the participantUserId filter. */
+  readonly selectedParticipant = signal<MembershipDto | null>(null);
 
   readonly tenants = signal<TenantDto[]>([]);
   /** Categories of the currently selected tenant; empty when no tenant is chosen. */
@@ -59,15 +90,33 @@ export class RequestListComponent {
     return m;
   });
 
+  /**
+   * Typeahead search: debounced, cross-tenant free-text lookup against GET /memberships.
+   * When a conjunto is selected the search is scoped to it via tenantId.
+   */
+  readonly searchUsers: OperatorFunction<string, readonly MembershipDto[]> = (
+    text$: Observable<string>,
+  ) =>
+    text$.pipe(
+      debounceTime(300),
+      distinctUntilChanged(),
+      switchMap((term) => {
+        if (term.trim().length < 2) return of([] as MembershipDto[]);
+        return this.membershipsService
+          .searchAcrossTenants(term.trim(), this.tenantControl.value || undefined)
+          .pipe(catchError(() => of([] as MembershipDto[])));
+      }),
+    );
+
+  /** Renders a result row / the selected value as "Usuario · teléfono". */
+  readonly userFormatter = (m: string | MembershipDto): string =>
+    typeof m === 'string' ? m : `${m.userName} · ${m.phone}`;
+
   readonly statusOptions: MultiSelectOption[] = [
     { value: 'New', label: 'Nuevo' },
-    { value: 'InReview', label: 'En revisión' },
     { value: 'InProgress', label: 'En progreso' },
     { value: 'Resolved', label: 'Resuelto' },
     { value: 'Closed', label: 'Cerrado' },
-    { value: 'Rejected', label: 'Rechazado' },
-    { value: 'Cancelled', label: 'Cancelado' },
-    { value: 'Reopened', label: 'Reabierto' },
   ];
 
   /** Category options for the multi-select, derived from the selected tenant's catalog. */
@@ -96,7 +145,7 @@ export class RequestListComponent {
       value: (r) => this.tenantMap().get(r.tenantId) ?? r.tenantId.slice(0, 8) + '…',
       class: 'text-nowrap',
     },
-    { header: 'Título', value: (r) => r.title },
+    { header: 'Título', value: (r) => r.title, truncate: true },
     {
       header: 'Visibilidad',
       value: (r) => REQUEST_VISIBILITY_LABELS[r.visibility as RequestVisibility] ?? r.visibility,
@@ -106,13 +155,20 @@ export class RequestListComponent {
       header: 'Estado',
       value: (r) => REQUEST_STATUS_LABELS[r.status as RequestStatus] ?? r.status,
       badgeClass: (r) => this.statusBadge(r.status),
+      sortKey: 'Status',
     },
     {
       header: 'Prioridad',
       value: (r) => REQUEST_PRIORITY_LABELS[r.priority as RequestPriority] ?? r.priority,
       badgeClass: (r) => this.priorityBadge(r.priority),
+      sortKey: 'Priority',
     },
-    { header: 'Registro', value: (r) => this.formatDate(r.createdAtUtc), class: 'text-secondary text-nowrap' },
+    {
+      header: 'Registro',
+      value: (r) => this.formatDate(r.createdAtUtc),
+      class: 'text-secondary text-nowrap',
+      sortKey: 'Date',
+    },
   ]);
 
   readonly rowKey = (r: RequestDto): string => r.id;
@@ -156,6 +212,19 @@ export class RequestListComponent {
     this.reload(1);
   }
 
+  onSelectParticipant(event: NgbTypeaheadSelectItemEvent<MembershipDto>): void {
+    this.selectedParticipant.set(event.item);
+    this.reload(1);
+  }
+
+  /** Clears the participant filter (the "x" button or picking a new tenant). */
+  clearParticipant(): void {
+    if (!this.selectedParticipant() && !this.participantControl.value) return;
+    this.selectedParticipant.set(null);
+    this.participantControl.setValue('', { emitEvent: false });
+    this.reload(1);
+  }
+
   private onTenantChange(tenantId: string): void {
     this.categoryControl.setValue([], { emitEvent: false });
     this.categories.set([]);
@@ -181,16 +250,18 @@ export class RequestListComponent {
     this.reload(page);
   }
 
+  /** A header sort click: store the new state and reload from the first page. */
+  onSortChange(sort: TableSort): void {
+    this.sort.set(sort);
+    this.reload(1);
+  }
+
   private statusBadge(status: string): string {
     const map: Record<string, string> = {
       New: 'badge bg-blue-lt',
-      InReview: 'badge bg-yellow-lt',
       InProgress: 'badge bg-orange-lt',
       Resolved: 'badge bg-green-lt',
       Closed: 'badge bg-secondary-lt',
-      Rejected: 'badge bg-red-lt',
-      Cancelled: 'badge bg-secondary-lt',
-      Reopened: 'badge bg-purple-lt',
     };
     return map[status] ?? 'badge';
   }
@@ -213,6 +284,7 @@ export class RequestListComponent {
   private reload(page: number): void {
     const statuses = this.statusControl.value;
     const categoryIds = this.categoryControl.value;
+    const sort = this.sort();
     const filters: RequestFilters = {
       search: this.searchControl.value || undefined,
       statuses: statuses.length ? statuses : undefined,
@@ -221,6 +293,9 @@ export class RequestListComponent {
       visibility: (this.visibilityControl.value as RequestVisibility) || undefined,
       tenantId: this.tenantControl.value || undefined,
       categoryIds: categoryIds.length ? categoryIds : undefined,
+      participantUserId: this.selectedParticipant()?.userId,
+      sortBy: sort.key as RequestSortBy,
+      direction: sort.direction === 'asc' ? 'Asc' : 'Desc',
     };
     this.requestsService.list(page, this.pageSize, filters);
   }

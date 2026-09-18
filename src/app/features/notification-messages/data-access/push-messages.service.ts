@@ -1,9 +1,14 @@
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
+import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { PagedResult } from '../../../core/models/paged-result';
 import { ProblemDetails } from '../../../core/http/problem-details';
-import { AdminPushMessageDto, PushMessageFilters } from './notification-message.models';
+import {
+  AdminPushMessageDto,
+  PushMessageFilters,
+  RequeueMessageResponse,
+} from './notification-message.models';
 
 /** Data-access for materialized push messages. Exposes list state as signals. */
 @Injectable({ providedIn: 'root' })
@@ -44,6 +49,11 @@ export class PushMessagesService {
         this._loading.set(false);
       },
     });
+  }
+
+  /** Queue a copy of a push message for a fresh delivery attempt. Returns the new message id. */
+  requeue(id: string): Observable<RequeueMessageResponse> {
+    return this.http.post<RequeueMessageResponse>(`${this.base}/${id}/requeue`, {});
   }
 
   private toError(error: unknown): string {

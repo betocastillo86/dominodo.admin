@@ -7,6 +7,7 @@ import { ProblemDetails } from '../../../core/http/problem-details';
 import { TenantDto } from '../../tenants/data-access/tenant.models';
 import {
   AddRequestParticipantRequest,
+  AddRequestUpdateRequest,
   AttachmentDownloadUrlDto,
   ChangeRequestStatusRequest,
   ConfirmAttachmentRequest,
@@ -16,9 +17,11 @@ import {
   RequestDetailDto,
   RequestDto,
   RequestPriority,
+  RequestSortBy,
   RequestStatus,
   RequestType,
   RequestVisibility,
+  SortDirection,
   UpdateRequestRequest,
 } from './request.models';
 
@@ -30,6 +33,9 @@ export interface RequestFilters {
   visibility?: RequestVisibility;
   tenantId?: string;
   categoryIds?: string[];
+  participantUserId?: string;
+  sortBy?: RequestSortBy;
+  direction?: SortDirection;
 }
 
 /** Data-access for the Requests feature. List state is exposed as signals; writes return Observables. */
@@ -55,13 +61,16 @@ export class RequestsService {
     let params = new HttpParams().set('page', page).set('pageSize', pageSize);
     if (filters.search) params = params.set('search', filters.search);
     // `statuses` and `categoryIds` are array params — repeated query keys
-    // (e.g. `statuses=New&statuses=InReview`), the ASP.NET default binding.
+    // (e.g. `statuses=New&statuses=InProgress`), the ASP.NET default binding.
     for (const status of filters.statuses ?? []) params = params.append('statuses', status);
     for (const categoryId of filters.categoryIds ?? []) params = params.append('categoryIds', categoryId);
     if (filters.type) params = params.set('type', filters.type);
     if (filters.priority) params = params.set('priority', filters.priority);
     if (filters.visibility) params = params.set('visibility', filters.visibility);
     if (filters.tenantId) params = params.set('tenantId', filters.tenantId);
+    if (filters.participantUserId) params = params.set('participantUserId', filters.participantUserId);
+    if (filters.sortBy) params = params.set('sortBy', filters.sortBy);
+    if (filters.direction) params = params.set('direction', filters.direction);
 
     this.http.get<PagedResult<RequestDto>>(this.base, { params }).subscribe({
       next: (result) => {
@@ -119,6 +128,13 @@ export class RequestsService {
     tenantSlug: string,
   ): Observable<void> {
     return this.http.post<void>(`${this.base}/${id}/participants`, body, {
+      headers: { 'X-Tenant': tenantSlug },
+    });
+  }
+
+  /** Adds a timeline update (comment, progress note, evidence or resolution). */
+  addUpdate(id: string, body: AddRequestUpdateRequest, tenantSlug: string): Observable<void> {
+    return this.http.post<void>(`${this.base}/${id}/updates`, body, {
       headers: { 'X-Tenant': tenantSlug },
     });
   }

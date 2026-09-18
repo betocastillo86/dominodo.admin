@@ -1,5 +1,10 @@
 <div class="container-xl">
-  <div class="navbar-nav flex-row order-md-last">
+  <!-- `ms-auto`: this block is the container's only child, so Tabler's
+       `justify-content: space-between` would leave it on the left edge. -->
+  <div class="navbar-nav flex-row order-md-last align-items-center ms-auto">
+    <span class="nav-item small text-secondary d-none d-md-inline me-3" title="Versión instalada">
+      v{{ versions.currentVersion }}
+    </span>
     <div class="nav-item" ngbDropdown placement="bottom-end">
       <a
         class="nav-link d-flex lh-1 text-reset p-0"

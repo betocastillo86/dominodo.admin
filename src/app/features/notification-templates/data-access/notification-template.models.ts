@@ -8,7 +8,8 @@ export type AdminNotificationType =
   | 'VisitRegistered'
   | 'Announcement'
   | 'UserInvited'
-  | 'MembershipInvited';
+  | 'MembershipInvited'
+  | 'OtpRequested';
 
 /**
  * A placeholder available to a template's channel content, as returned by
@@ -35,10 +36,20 @@ export interface AdminNotificationTemplateDto {
   emailEnabled: boolean;
   pushEnabled: boolean;
   inAppEnabled: boolean;
+  whatsAppEnabled: boolean;
   emailSubject?: string | null;
   emailBodyHtml?: string | null; // rendered/edited via WYSIWYG
   inAppText?: string | null;
   pushText?: string | null;
+  /** Free-form body, used when the message is sent without an approved template. */
+  whatsAppText?: string | null;
+  /** Twilio Content SID (`HX…`) of the approved WhatsApp template, when there is one. */
+  whatsAppContentSid?: string | null;
+  /**
+   * Parameter keys mapped, in order, to the Content template variables
+   * (`{{1}}`, `{{2}}`, …). Position matters.
+   */
+  whatsAppVariableMap: string[];
   isActive: boolean;
   localization?: string | null;
   parameters?: AdminNotificationParameterDto[]; // detail only; informative
@@ -55,6 +66,7 @@ export const NOTIFICATION_TYPE_LABELS: Record<AdminNotificationType, string> = {
   Announcement: 'Anuncio',
   UserInvited: 'Usuario invitado',
   MembershipInvited: 'Membresía invitada',
+  OtpRequested: 'Código de verificación',
 };
 
 /** Ordered list of notification types, for populating selects. */
@@ -68,6 +80,7 @@ export const NOTIFICATION_TYPES: readonly AdminNotificationType[] = [
   'Announcement',
   'UserInvited',
   'MembershipInvited',
+  'OtpRequested',
 ];
 
 /**
@@ -80,10 +93,14 @@ export interface AdminUpdateNotificationTemplateRequest {
   emailEnabled: boolean;
   pushEnabled: boolean;
   inAppEnabled: boolean;
+  whatsAppEnabled: boolean;
   emailSubject?: string | null;
   emailBodyHtml?: string | null;
   inAppText?: string | null;
   pushText?: string | null;
+  whatsAppText?: string | null;
+  whatsAppContentSid?: string | null;
+  whatsAppVariableMap?: string[] | null;
   isActive: boolean;
   localization?: string | null;
 }

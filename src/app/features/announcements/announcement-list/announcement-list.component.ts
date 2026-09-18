@@ -10,7 +10,11 @@ import {
   MultiSelectOption,
 } from '../../../shared/ui/multi-select/multi-select.component';
 import { AnnouncementsService } from '../data-access/announcements.service';
-import { AnnouncementDto, AnnouncementStatus } from '../data-access/announcement.models';
+import {
+  AnnouncementDto,
+  AnnouncementPriority,
+  AnnouncementStatus,
+} from '../data-access/announcement.models';
 import { TenantDto } from '../../tenants/data-access/tenant.models';
 import { RequestCategoriesService } from '../../request-categories/data-access/request-categories.service';
 
@@ -51,6 +55,7 @@ export class AnnouncementListComponent {
   readonly categoryControl = new FormControl<string[]>([], { nonNullable: true });
   readonly statusControl = new FormControl<AnnouncementStatus | ''>('', { nonNullable: true });
   readonly tenantControl = new FormControl('', { nonNullable: true });
+  readonly priorityControl = new FormControl<AnnouncementPriority | ''>('', { nonNullable: true });
 
   private readonly statusLabels: Record<AnnouncementStatus, string> = {
     Draft: 'Borrador',
@@ -68,6 +73,18 @@ export class AnnouncementListComponent {
     Draft: 'badge bg-secondary-lt',
     Published: 'badge bg-green-lt',
     Archived: 'badge bg-red-lt',
+  };
+
+  private readonly priorityLabels: Record<AnnouncementPriority, string> = {
+    High: 'Alta',
+    Medium: 'Media',
+    Low: 'Baja',
+  };
+
+  private readonly priorityBadges: Record<AnnouncementPriority, string> = {
+    High: 'badge bg-red-lt',
+    Medium: 'badge bg-yellow-lt',
+    Low: 'badge bg-green-lt',
   };
 
   readonly columns = computed((): readonly TableColumn<AnnouncementDto>[] => [
@@ -89,7 +106,11 @@ export class AnnouncementListComponent {
           : '—',
     },
     { header: 'Audiencia', value: (r) => this.audienceLabels[r.audienceType] ?? r.audienceType },
-    { header: 'Prioridad', value: (r) => r.priority, class: 'text-end w-1' },
+    {
+      header: 'Prioridad',
+      value: (r) => this.priorityLabels[r.priority] ?? r.priority,
+      badgeClass: (r) => this.priorityBadges[r.priority] ?? 'badge',
+    },
     { header: 'Vence', value: (r) => (r.expiresAtUtc ? r.expiresAtUtc.slice(0, 10) : '—') },
   ]);
 
@@ -118,6 +139,10 @@ export class AnnouncementListComponent {
       .pipe(distinctUntilChanged(), takeUntilDestroyed())
       .subscribe(() => this.reload(1));
 
+    this.priorityControl.valueChanges
+      .pipe(distinctUntilChanged(), takeUntilDestroyed())
+      .subscribe(() => this.reload(1));
+
     this.reload(1);
   }
 
@@ -129,12 +154,14 @@ export class AnnouncementListComponent {
     const categoryIds = this.categoryControl.value;
     const status = (this.statusControl.value as AnnouncementStatus) || undefined;
     const tenantId = this.tenantControl.value || undefined;
+    const priority = (this.priorityControl.value as AnnouncementPriority) || undefined;
     this.announcementsService.list(
       page,
       this.pageSize,
       status,
       categoryIds.length ? categoryIds : undefined,
       tenantId,
+      priority,
     );
   }
 }

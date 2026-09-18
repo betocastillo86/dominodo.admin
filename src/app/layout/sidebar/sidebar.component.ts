@@ -34,6 +34,7 @@ export class SidebarComponent {
   private readonly openGroups = signal<Set<string>>(new Set(['Notificaciones', 'Solicitudes']));
 
   readonly navItems: readonly NavItem[] = [
+    { label: 'Dashboard', path: '/dashboard', icon: 'layout-dashboard' },
     { label: 'Roles', path: '/roles', icon: 'shield-lock' },
     { label: 'Conjuntos', path: '/tenants', icon: 'building-community' },
     { label: 'Usuarios', path: '/users', icon: 'user' },
@@ -48,6 +49,7 @@ export class SidebarComponent {
       ],
     },
     { label: 'Publicaciones', path: '/listings', icon: 'building-store' },
+    { label: 'Simulador de Domi', path: '/chat-simulation', icon: 'message-chatbot' },
     { label: 'Configuración', path: '/system-settings', icon: 'settings' },
     {
       label: 'Notificaciones',

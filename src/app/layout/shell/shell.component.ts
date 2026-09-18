@@ -2,15 +2,17 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { NavbarComponent } from '../navbar/navbar.component';
 import { SidebarComponent } from '../sidebar/sidebar.component';
+import { VersionBannerComponent } from '../../shared/ui/version-banner/version-banner.component';
 
 /** Authenticated panel shell: Tabler sidebar + navbar around the routed content. */
 @Component({
   selector: 'app-shell',
   standalone: true,
-  imports: [RouterOutlet, SidebarComponent, NavbarComponent],
+  imports: [RouterOutlet, SidebarComponent, NavbarComponent, VersionBannerComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="page">
+      <app-version-banner />
       <app-sidebar />
       <app-navbar />
       <div class="page-wrapper">

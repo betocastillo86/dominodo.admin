@@ -41,6 +41,9 @@ modules follow the same conventions described here.
 ## 3. API contract
 
 - **Base URL:** `http://localhost:5083/api/v1/` (configurable via `environment`). **Swagger:** `/swagger/index.html`.
+- **Health probes:** `GET /health/ready` on **both** back ends (`text/plain` `Healthy` + 200), served at the
+  **host root** — not under `/api/v1`. The API's host comes from `environment.apiBaseUrl`, Domi's from
+  `environment.domiBaseUrl`; both are unauthenticated.
 - **Paged responses:** `PagedResult<T> = { items, page, pageSize, totalCount, totalPages }`.
 - **Errors:** RFC 9457 `ProblemDetails` → `{ type, title, status, detail, errors?: [{ property, message }] }`.
 - **Multi-tenancy:** most endpoints this panel uses (`auth`, `roles`, `permissions`, `tenants`) are
@@ -52,6 +55,30 @@ modules follow the same conventions described here.
 
 > Two contract rules worth knowing up front: a role's `scope` is set on create and **immutable** on edit,
 > and **system roles** (`isSystem`) are treated as read-only in the panel.
+
+- **Chat simulation:** `POST /chat-simulation` (`{phone,text}` → `{reply}`) forwards a simulated message
+  to Domi. `GET /chat-simulation/{phone}/messages?afterTurn=N&includeBeforeReset=false` returns
+  `{ conversationId, cursor, resetAfterTurn, messages[] }` — cursor pattern (Domi ADR-0027): `afterTurn=0`
+  rehydrates the thread, subsequent calls pass the returned `cursor` for deltas. The panel polls this
+  endpoint every 4 s and merges new turns by the `turnNumber:role` pair; the `POST` reply is no longer
+  painted directly — all turns (including the agent's response and system nudges) arrive through the
+  transcript. The panel sends **phone only** — Domi resolves the tenant from the number, and any spelling
+  of a number canonicalizes to the same bare E.164 conversation (Domi ADR-0012), so the panel canonicalizes
+  before it calls.
+
+  `DELETE /chat-simulation/{phone}` **resets** the conversation — it does not delete it (Domi ADR-0013).
+  Domi's transcript is append-only: the reset clears the agent's conversational state and stamps a **cut**
+  on the transcript, reported back as `resetAfterTurn` (`0` = never reset). The pull hides everything up to
+  that cut by default, so the panel empties after a reset while the audit trail survives and is readable
+  with `includeBeforeReset=true` — which is what the "Ver historial completo" toggle sends, rendering a
+  separator at the cut. The resident's identity link survives a reset, so notifications keep reaching them.
+
+  Its statuses carry meaning: `204` there was something to reset · `404 Chat.NoConversation` the number
+  never wrote, a **benign** outcome the panel reports as information, not an error · `400 Chat.InvalidPhone`
+  Domi rejected the number · `502 Chat.UpstreamUnavailable` Domi is unreachable. The error code travels in
+  the ProblemDetails `title`. All three routes opt out of the global error toast via the `SILENT_ERRORS`
+  HTTP context token (`core/http/silent-errors.ts`) — a polled endpoint would otherwise raise one toast per
+  tick, and the reset's 404 is not an incident.
 
 ---
 
@@ -66,11 +93,13 @@ src/app/
 │   ├── auth/       # service, store (signals), token storage, jwt util
 │   ├── http/       # auth + error interceptors
 │   ├── guards/     # authGuard, superAdminGuard
+│   ├── health/     # /health/ready probes of the API + Domi (login strip and dashboard)
 │   └── models/     # shared contracts (e.g. PagedResult, ProblemDetails)
 ├── layout/      # panel chrome: shell (sidebar + navbar + outlet)
-├── shared/ui/   # reusable presentational pieces (data-table, page-header, spinner)
+├── shared/ui/   # reusable presentational pieces (data-table, page-header, spinner, service-status)
 └── features/    # lazy domains, each with data-access/ + components
     ├── auth/             # blank layout → login
+    ├── dashboard/        # default screen: the service-status widget in full detail
     ├── roles/            # list + form (create/edit share one component)
     ├── users/                  # list + form (create/edit share one component)
     ├── tenants/                # list + form (create/edit share one component)
@@ -81,7 +110,8 @@ src/app/
     ├── requests/               # cross-tenant PQRS list + detail/edit page (edit, status, participant)
     ├── request-categories/     # cross-tenant catalog: list, create, edit of PQRS categories
     ├── announcements/          # cross-tenant list (status/category/tenant filters) + create/edit form
-    └── knowledge-resources/    # cross-tenant list (status/category/tenant filters) + create/edit form
+    ├── knowledge-resources/    # cross-tenant list (status/category/tenant filters) + create/edit form
+    └── chat-simulation/        # Domi chat tester (phone gate → bubble chat); polls GET …/messages?afterTurn= for async turns, renders the reset cut
 ```
 
 - **`core/`**: single instances and cross-cutting concerns; no business UI.
@@ -94,7 +124,8 @@ src/app/
 ## 5. Routing
 
 Everything is lazy. Login lives in a **blank** layout (no shell). All other routes hang off the
-`ShellComponent` and are protected by `authGuard` + `superAdminGuard`. The shell defaults to `roles`.
+`ShellComponent` and are protected by `authGuard` + `superAdminGuard`. The shell defaults to `dashboard`,
+which is also where a successful login lands.
 New modules are added as lazy children under the shell.
 
 ---
@@ -107,6 +138,27 @@ Reference implementations that new features should mirror.
 JWT, checks the `role` claim includes `SuperAdmin`, and only then stores the session in `AuthStore` (signals)
 and enters the panel. `authInterceptor` attaches the Bearer token; `errorInterceptor` attempts a single
 refresh-and-retry on 401 and maps `ProblemDetails` to user-facing messages. Guards gate access.
+
+**Service status.** `core/health/HealthService` probes `/health/ready` on the API and on Domi and exposes
+one signal per target: `checking` (yellow) while a probe is in flight, `healthy` (green) on a 2xx,
+`down` (red) otherwise. It polls with `fetch`, never `HttpClient`, to stay out of `authInterceptor` (an
+`Authorization` header would force a needless CORS preflight) and out of `errorInterceptor` (a
+five-second poll would raise a toast per failed tick). The loop is **sequential**: the next probe is
+scheduled after the previous one settles — 5 s while a service is down, 30 s while it is healthy — with
+a 25 s timeout, because both back ends run on **Free (F1)** App Service plans that unload when idle and
+need a slow wake-up request.
+
+Two screens render it, so `start()`/`stop()` are **reference-counted**: the handover must not depend on
+whether the router destroys one screen before creating the other. The **dashboard** (the landing page)
+shows the full card — endpoint, latency, last check, failure detail — and a "Revisar ahora" button. The
+**login** shows name + state only: an API that is asleep is precisely what keeps a user from getting any
+further, so the strip explains the wait while the probes wake it up. Both share the status pill
+(`shared/ui/service-status`), which owns the state → label/color mapping so the two cannot drift.
+
+> Both probes are cross-origin, so both back ends must allow the panel's origin or the browser blocks the
+> response and the card reads red while the service is actually up. The API allows it through
+> `Cors:AllowedOrigins` (`https://*.dominodo.com` + localhost), Domi through its own `Cors:AllowedOrigins`
+> list. **A new panel origin has to be added on both sides.**
 
 **Roles** (the template for CRUD modules):
 - A **`data-access` service** owns the API calls. List state is exposed as **signals**
