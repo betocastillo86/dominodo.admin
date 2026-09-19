@@ -1,0 +1,177 @@
+<app-page-header title="Conversación" pretitle="Domi">
+  <a routerLink="/conversations" actions class="btn btn-secondary">Volver al listado</a>
+</app-page-header>
+
+<div class="page-body">
+  <div class="container-xl">
+    @if (detailError(); as message) {
+      <div class="alert alert-danger" role="alert">{{ message }}</div>
+    }
+
+    @if (detail(); as d) {
+      <div class="card mb-3">
+        <div class="card-header">
+          <h3 class="card-title">{{ d.conversation.senderId }}</h3>
+          <div class="card-actions">
+            @if (d.conversation.hasLiveSession) {
+              <span class="badge bg-green-lt">Sesión activa</span>
+            } @else {
+              <span class="badge bg-secondary-lt">Sesión expirada</span>
+            }
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="datagrid">
+            <div class="datagrid-item">
+              <div class="datagrid-title">Teléfono</div>
+              <div class="datagrid-content">{{ d.conversation.senderId }}</div>
+            </div>
+            <div class="datagrid-item">
+              <div class="datagrid-title">Conjunto</div>
+              <div class="datagrid-content">{{ d.conversation.tenantSlug }}</div>
+            </div>
+            <div class="datagrid-item">
+              <div class="datagrid-title">Mensajes</div>
+              <div class="datagrid-content">{{ d.conversation.messageCount }}</div>
+            </div>
+            <div class="datagrid-item">
+              <div class="datagrid-title">Decisiones</div>
+              <div class="datagrid-content">{{ d.conversation.decisionCount }}</div>
+            </div>
+            <div class="datagrid-item">
+              <div class="datagrid-title">Turnos en sesión</div>
+              <div class="datagrid-content">{{ d.sessionTurnCount ?? '—' }}</div>
+            </div>
+            <div class="datagrid-item">
+              <div class="datagrid-title">Episodio actual</div>
+              <div class="datagrid-content">{{ d.conversation.currentEpisode }}</div>
+            </div>
+            <div class="datagrid-item">
+              <div class="datagrid-title">Reiniciada tras el turno</div>
+              <div class="datagrid-content">
+                @if (d.conversation.resetAfterTurn > 0) {
+                  {{ d.conversation.resetAfterTurn }}
+                } @else {
+                  <span class="text-secondary">Nunca</span>
+                }
+              </div>
+            </div>
+            <div class="datagrid-item">
+              <div class="datagrid-title">Último turno</div>
+              <div class="datagrid-content">{{ formatDate(d.conversation.lastTurnAtUtc) }}</div>
+            </div>
+            <div class="datagrid-item">
+              <div class="datagrid-title">Creada</div>
+              <div class="datagrid-content">{{ formatDate(d.conversation.createdAtUtc) }}</div>
+            </div>
+            <div class="datagrid-item">
+              <div class="datagrid-title">Actualizada</div>
+              <div class="datagrid-content">{{ formatDate(d.conversation.updatedAtUtc) }}</div>
+            </div>
+            <div class="datagrid-item">
+              <div class="datagrid-title">Usuario</div>
+              <div class="datagrid-content">
+                @if (d.conversation.userId; as userId) {
+                  <span class="text-secondary font-monospace">{{ userId }}</span>
+                } @else {
+                  <span class="text-secondary">Sin vincular</span>
+                }
+              </div>
+            </div>
+            <div class="datagrid-item">
+              <div class="datagrid-title">ID</div>
+              <div class="datagrid-content">
+                <span class="text-secondary font-monospace">{{ d.conversation.conversationId }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      @if (d.sessionState) {
+        <div class="card mb-3">
+          <div class="card-header">
+            <h3 class="card-title">Estado de la sesión</h3>
+          </div>
+          <div class="card-body">
+            <pre class="mb-0 text-secondary">{{ sessionStateJson(d.sessionState) }}</pre>
+          </div>
+        </div>
+      }
+    }
+
+    <div class="card">
+      <div class="card-header">
+        <ul class="nav nav-tabs card-header-tabs">
+          <li class="nav-item">
+            <button
+              type="button"
+              class="nav-link"
+              [class.active]="activeTab() === 'messages'"
+              (click)="selectTab('messages')"
+            >
+              Mensajes
+            </button>
+          </li>
+          <li class="nav-item">
+            <button
+              type="button"
+              class="nav-link"
+              [class.active]="activeTab() === 'decisions'"
+              (click)="selectTab('decisions')"
+            >
+              Decisiones
+            </button>
+          </li>
+        </ul>
+        <div class="card-actions d-flex align-items-center gap-3">
+          @if (episodeOptions().length > 1) {
+            <select
+              class="form-select form-select-sm w-auto"
+              aria-label="Filtrar por episodio"
+              (change)="selectEpisode($any($event.target).value)"
+            >
+              <option value="">Todos los episodios</option>
+              @for (option of episodeOptions(); track option.episode) {
+                <option [value]="option.episode">{{ option.label }}</option>
+              }
+            </select>
+          }
+          <label class="form-check form-switch m-0">
+            <input
+              class="form-check-input"
+              type="checkbox"
+              [checked]="includeBeforeReset()"
+              (change)="toggleIncludeBeforeReset($any($event.target).checked)"
+            />
+            <span class="form-check-label">Incluir turnos anteriores al reinicio</span>
+          </label>
+        </div>
+      </div>
+
+      @if (activeTab() === 'messages') {
+        <app-data-table
+          [columns]="messageColumns"
+          [rows]="messages()"
+          [paging]="messagesPaging()"
+          [loading]="messagesLoading()"
+          [error]="messagesError()"
+          [rowKey]="messageKey"
+          [rowClass]="messageRowClass"
+          (pageChange)="loadMessages($event)"
+        />
+      } @else {
+        <app-data-table
+          [columns]="decisionColumns"
+          [rows]="decisions()"
+          [paging]="decisionsPaging()"
+          [loading]="decisionsLoading()"
+          [error]="decisionsError()"
+          [rowKey]="decisionKey"
+          [rowClass]="decisionRowClass"
+          (pageChange)="loadDecisions($event)"
+        />
+      }
+    </div>
+  </div>
+</div>

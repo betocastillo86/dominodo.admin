@@ -31,7 +31,7 @@ export class SidebarComponent {
   /** Mobile collapse state (avoids depending on Bootstrap's JS). */
   readonly menuOpen = signal(false);
   /** Labels of expanded nav groups (avoids depending on Bootstrap's JS). */
-  private readonly openGroups = signal<Set<string>>(new Set(['Notificaciones', 'Solicitudes']));
+  private readonly openGroups = signal<Set<string>>(new Set(['Notificaciones', 'Solicitudes', 'Domi']));
 
   readonly navItems: readonly NavItem[] = [
     { label: 'Dashboard', path: '/dashboard', icon: 'layout-dashboard' },
@@ -49,7 +49,14 @@ export class SidebarComponent {
       ],
     },
     { label: 'Publicaciones', path: '/listings', icon: 'building-store' },
-    { label: 'Simulador de Domi', path: '/chat-simulation', icon: 'message-chatbot' },
+    {
+      label: 'Domi',
+      icon: 'message-chatbot',
+      children: [
+        { label: 'Simulador de chat', path: '/chat-simulation' },
+        { label: 'Conversaciones', path: '/conversations' },
+      ],
+    },
     { label: 'Configuración', path: '/system-settings', icon: 'settings' },
     {
       label: 'Notificaciones',

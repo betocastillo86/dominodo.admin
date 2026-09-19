@@ -25,7 +25,7 @@
       </thead>
       <tbody>
         @for (row of rows(); track rowKey()(row)) {
-          <tr>
+          <tr [class]="rowClass()?.(row, $index) ?? ''">
             @for (col of columns(); track col.header) {
               <td [class]="col.class ?? ''" [class.cell-truncate]="col.truncate">
                 @if (col.badgeClass?.(row); as badge) {

@@ -56,6 +56,8 @@ export class DataTableComponent<T> {
   readonly actionQueryParams = input<((row: T) => Record<string, string>) | null>(null);
   /** Alternative to actionLink: invokes a callback with the row instead of navigating. */
   readonly actionFn = input<((row: T) => void) | null>(null);
+  /** When set, its result is applied as the CSS class of the row's `<tr>`. */
+  readonly rowClass = input<((row: T, index: number) => string) | null>(null);
 
   /** Pages rendered to each side of the current one in the numbered window. */
   readonly windowSize = input(1);

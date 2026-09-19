@@ -28,3 +28,15 @@
     white-space: nowrap;
   }
 }
+
+// Episode banding for Domi's conversation tables. A conversation is cut into
+// episodes, so instead of striping every other row we tint every other EPISODE:
+// consecutive episodes alternate between the plain and the striped background and
+// the first row of each one carries a divider, making the cut visible at a glance.
+.row-episode-alt > * {
+  --tblr-table-bg-type: var(--tblr-table-striped-bg);
+}
+
+.row-episode-start > * {
+  border-top: calc(var(--tblr-border-width) * 2) solid var(--tblr-border-color);
+}
