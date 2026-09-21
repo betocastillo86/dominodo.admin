@@ -459,7 +459,29 @@
               <tbody>
                 @for (a of attachments(); track a.id) {
                   <tr>
-                    <td>{{ a.fileName }}</td>
+                    <td>
+                      <div class="d-flex align-items-center gap-2">
+                        @if (isImage(a)) {
+                          @if (previewUrl(a); as url) {
+                            <a [href]="url" target="_blank" rel="noopener" [title]="a.fileName">
+                              <img
+                                [src]="url"
+                                [alt]="a.fileName"
+                                class="rounded border"
+                                style="height: 4rem; width: 4rem; object-fit: cover"
+                              />
+                            </a>
+                          } @else {
+                            <span
+                              class="rounded border bg-secondary-lt d-inline-block"
+                              style="height: 4rem; width: 4rem"
+                              aria-hidden="true"
+                            ></span>
+                          }
+                        }
+                        <span>{{ a.fileName }}</span>
+                      </div>
+                    </td>
                     <td class="text-secondary small">{{ a.contentType }}</td>
                     <td class="text-secondary font-monospace small">{{ a.uploadedByUserId.slice(0, 8) }}…</td>
                     <td class="text-secondary">{{ a.createdAtUtc | date:'short' }}</td>
