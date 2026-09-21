@@ -21,7 +21,9 @@ import { MembershipsService } from '../../memberships/data-access/memberships.se
 import { MembershipDto } from '../../memberships/data-access/membership.models';
 import { RequestsService, RequestFilters } from '../data-access/requests.service';
 import {
+  REQUEST_PRIORITY_BADGES,
   REQUEST_PRIORITY_LABELS,
+  REQUEST_STATUS_BADGES,
   REQUEST_STATUS_LABELS,
   REQUEST_VISIBILITY_LABELS,
   RequestCategoryDto,
@@ -154,13 +156,13 @@ export class RequestListComponent {
     {
       header: 'Estado',
       value: (r) => REQUEST_STATUS_LABELS[r.status as RequestStatus] ?? r.status,
-      badgeClass: (r) => this.statusBadge(r.status),
+      badgeClass: (r) => REQUEST_STATUS_BADGES[r.status] ?? 'badge',
       sortKey: 'Status',
     },
     {
       header: 'Prioridad',
       value: (r) => REQUEST_PRIORITY_LABELS[r.priority as RequestPriority] ?? r.priority,
-      badgeClass: (r) => this.priorityBadge(r.priority),
+      badgeClass: (r) => REQUEST_PRIORITY_BADGES[r.priority] ?? 'badge',
       sortKey: 'Priority',
     },
     {
@@ -254,25 +256,6 @@ export class RequestListComponent {
   onSortChange(sort: TableSort): void {
     this.sort.set(sort);
     this.reload(1);
-  }
-
-  private statusBadge(status: string): string {
-    const map: Record<string, string> = {
-      New: 'badge bg-blue-lt',
-      InProgress: 'badge bg-orange-lt',
-      Resolved: 'badge bg-green-lt',
-      Closed: 'badge bg-secondary-lt',
-    };
-    return map[status] ?? 'badge';
-  }
-
-  private priorityBadge(priority: string): string {
-    const map: Record<string, string> = {
-      Low: 'badge bg-green-lt',
-      Medium: 'badge bg-yellow-lt',
-      High: 'badge bg-red-lt',
-    };
-    return map[priority] ?? 'badge';
   }
 
   private formatDate(iso?: string | null): string {

@@ -80,6 +80,28 @@ export class ApartmentFormComponent implements OnInit {
 
   readonly residentRowKey = (r: ResidentDto): string => r.id;
 
+  /** Id of the residency being deleted, so the table can lock just that row. */
+  readonly deletingResident = signal<string | null>(null);
+  /** Kept apart from `residentsError` so a failed delete does not hide the table. */
+  readonly residentDeleteError = signal<string | null>(null);
+
+  /** Bound to the table's destructive action; the table asks for confirmation first. */
+  readonly removeResident = (resident: ResidentDto): void => {
+    this.residentDeleteError.set(null);
+    this.deletingResident.set(resident.id);
+    this.apartmentsService
+      .removeResident(this.id!, resident.id, this.tenantSlug)
+      .pipe(finalize(() => this.deletingResident.set(null)))
+      .subscribe({
+        next: () => {
+          this.notifications.success('Residencia eliminada');
+          this.loadResidents(this.id!);
+        },
+        error: (err: unknown) =>
+          this.residentDeleteError.set(this.toMessage(err, 'No se pudo eliminar la residencia.')),
+      });
+  };
+
   ngOnInit(): void {
     if (this.mode === 'edit' && this.tenantSlug) {
       this.loadApartment(this.id!);

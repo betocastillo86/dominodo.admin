@@ -18,7 +18,7 @@
               }
             </th>
           }
-          @if (actionLink() || actionFn()) {
+          @if (hasActions()) {
             <th class="w-1"></th>
           }
         </tr>
@@ -37,27 +37,64 @@
                 }
               </td>
             }
-            @if (actionLink(); as link) {
-              <td class="text-end">
-                <a
-                  [routerLink]="link(row)"
-                  [queryParams]="actionQueryParams()?.(row) ?? null"
-                  class="btn btn-icon btn-sm"
-                >
-                  <tabler-icon [name]="actionIcon()" />
-                </a>
-              </td>
-            } @else if (actionFn(); as fn) {
-              <td class="text-end">
-                <button type="button" class="btn btn-icon btn-sm" (click)="fn(row)">
-                  <tabler-icon [name]="actionIcon()" />
-                </button>
+            @if (hasActions()) {
+              <td class="text-end text-nowrap">
+                @if (actionLink(); as link) {
+                  <a
+                    [routerLink]="link(row)"
+                    [queryParams]="actionQueryParams()?.(row) ?? null"
+                    class="btn btn-icon btn-sm"
+                  >
+                    <tabler-icon [name]="actionIcon()" />
+                  </a>
+                } @else if (actionFn(); as fn) {
+                  <button type="button" class="btn btn-icon btn-sm" (click)="fn(row)">
+                    <tabler-icon [name]="actionIcon()" />
+                  </button>
+                }
+                @if (deleteFn(); as del) {
+                  @if (isConfirming(row)) {
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-danger ms-1"
+                      [disabled]="isDeleting(row)"
+                      (click)="confirmDelete(row, del)"
+                    >
+                      @if (isDeleting(row)) {
+                        <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                      }
+                      Eliminar
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-ghost-secondary ms-1"
+                      [disabled]="isDeleting(row)"
+                      (click)="cancelDelete()"
+                    >
+                      Cancelar
+                    </button>
+                  } @else {
+                    <button
+                      type="button"
+                      class="btn btn-icon btn-sm text-danger ms-1"
+                      aria-label="Eliminar"
+                      [disabled]="isDeleting(row)"
+                      (click)="askDelete(row)"
+                    >
+                      @if (isDeleting(row)) {
+                        <span class="spinner-border spinner-border-sm" role="status"></span>
+                      } @else {
+                        <tabler-icon name="trash" />
+                      }
+                    </button>
+                  }
+                }
               </td>
             }
           </tr>
         } @empty {
           <tr>
-            <td [attr.colspan]="columns().length + (actionLink() || actionFn() ? 1 : 0)" class="text-center text-secondary py-4">
+            <td [attr.colspan]="columns().length + (hasActions() ? 1 : 0)" class="text-center text-secondary py-4">
               No hay registros para mostrar.
             </td>
           </tr>

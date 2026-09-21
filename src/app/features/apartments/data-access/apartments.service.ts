@@ -41,6 +41,13 @@ export class ApartmentsService {
     });
   }
 
+  /** Deletes a residency row outright (history included) — `DELETE /apartments/{id}/residents/{residentId}`. */
+  removeResident(apartmentId: string, residentId: string, tenantSlug: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/${apartmentId}/residents/${residentId}`, {
+      headers: { 'X-Tenant': tenantSlug },
+    });
+  }
+
   /** Returns all apartments for a tenant (up to 500) as a plain array — for catalog/lookup selects. */
   listForTenant(tenantSlug: string): Observable<ApartmentDto[]> {
     return this.query(tenantSlug, 1, 500).pipe(map((r) => r.items));

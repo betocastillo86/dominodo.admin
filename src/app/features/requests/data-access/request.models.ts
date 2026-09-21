@@ -35,6 +35,19 @@ export const REQUEST_VISIBILITY_LABELS: Record<RequestVisibility, string> = {
   Public: 'Pública',
 };
 
+export const REQUEST_STATUS_BADGES: Record<string, string> = {
+  New: 'badge bg-blue-lt',
+  InProgress: 'badge bg-orange-lt',
+  Resolved: 'badge bg-green-lt',
+  Closed: 'badge bg-secondary-lt',
+};
+
+export const REQUEST_PRIORITY_BADGES: Record<string, string> = {
+  Low: 'badge bg-green-lt',
+  Medium: 'badge bg-yellow-lt',
+  High: 'badge bg-red-lt',
+};
+
 export const REQUEST_UPDATE_TYPE_LABELS: Record<RequestUpdateType, string> = {
   Progress: 'Avance',
   Comment: 'Comentario',

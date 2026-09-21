@@ -233,3 +233,89 @@
     </div>
   </div>
 </div>
+
+@if (mode === 'edit') {
+  <div class="page-body pt-0">
+    <div class="container-xl">
+      <div class="card mb-3">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title">Membresías</h3>
+            <p class="card-subtitle">Conjuntos a los que pertenece este usuario.</p>
+          </div>
+        </div>
+        <app-data-table
+          [columns]="membershipColumns"
+          [rows]="memberships()"
+          [loading]="loadingMemberships()"
+          [error]="membershipsError()"
+          [rowKey]="membershipRowKey"
+          [actionLink]="membershipLink"
+          [actionQueryParams]="membershipQueryParams"
+          actionIcon="external-link"
+        />
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title">Residencias</h3>
+            <p class="card-subtitle">
+              Inmuebles donde el usuario figura como residente, buscados en los conjuntos donde tiene membresía.
+            </p>
+          </div>
+        </div>
+        @if (residencyDeleteError()) {
+          <div class="card-body py-2">
+            <div class="alert alert-danger mb-0" role="alert">{{ residencyDeleteError() }}</div>
+          </div>
+        }
+        <app-data-table
+          [columns]="residencyColumns"
+          [rows]="residencies()"
+          [loading]="loadingResidencies()"
+          [error]="residenciesError()"
+          [rowKey]="residencyRowKey"
+          [actionLink]="residencyLink"
+          [actionQueryParams]="residencyQueryParams"
+          [deleteFn]="removeResidency"
+          [deletingKey]="deletingResidency()"
+        />
+      </div>
+    </div>
+  </div>
+}
+
+@if (mode === 'edit') {
+  <div class="page-body pt-0">
+    <div class="container-xl">
+      <div class="card mb-3">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title">Solicitudes</h3>
+            <p class="card-subtitle">
+              PQRS donde el usuario es reportante, seguidor o responsable asignado.
+            </p>
+          </div>
+        </div>
+        @if (requestsTruncated()) {
+          <div class="card-body py-2">
+            <div class="alert alert-warning mb-0" role="alert">
+              El usuario tiene más solicitudes de las que caben aquí; se muestran las más recientes.
+              Usá el listado de solicitudes para verlas todas.
+            </div>
+          </div>
+        }
+        <app-data-table
+          [columns]="requestColumns"
+          [rows]="requests()"
+          [loading]="loadingRequests()"
+          [error]="requestsError()"
+          [rowKey]="requestRowKey"
+          [actionLink]="requestLink"
+          [actionQueryParams]="requestQueryParams"
+        />
+      </div>
+    </div>
+  </div>
+}

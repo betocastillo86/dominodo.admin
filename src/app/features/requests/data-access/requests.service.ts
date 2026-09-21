@@ -33,7 +33,9 @@ export interface RequestFilters {
   visibility?: RequestVisibility;
   tenantId?: string;
   categoryIds?: string[];
+  /** Reporter or follower — the API deliberately excludes the assignee here. */
   participantUserId?: string;
+  assignedToUserId?: string;
   sortBy?: RequestSortBy;
   direction?: SortDirection;
 }
@@ -58,6 +60,24 @@ export class RequestsService {
     this._loading.set(true);
     this._error.set(null);
 
+    this.query(page, pageSize, filters).subscribe({
+      next: (result) => {
+        this._requests.set(result.items);
+        this._paging.set(result);
+        this._loading.set(false);
+      },
+      error: (error: unknown) => {
+        this._error.set(this.toError(error));
+        this._loading.set(false);
+      },
+    });
+  }
+
+  /**
+   * Same query as `list`, but returns the page instead of pushing it into the shared
+   * signals — for sections embedded in other pages, which must not clobber the list state.
+   */
+  query(page: number, pageSize: number, filters: RequestFilters = {}): Observable<PagedResult<RequestDto>> {
     let params = new HttpParams().set('page', page).set('pageSize', pageSize);
     if (filters.search) params = params.set('search', filters.search);
     // `statuses` and `categoryIds` are array params — repeated query keys
@@ -69,20 +89,11 @@ export class RequestsService {
     if (filters.visibility) params = params.set('visibility', filters.visibility);
     if (filters.tenantId) params = params.set('tenantId', filters.tenantId);
     if (filters.participantUserId) params = params.set('participantUserId', filters.participantUserId);
+    if (filters.assignedToUserId) params = params.set('assignedToUserId', filters.assignedToUserId);
     if (filters.sortBy) params = params.set('sortBy', filters.sortBy);
     if (filters.direction) params = params.set('direction', filters.direction);
 
-    this.http.get<PagedResult<RequestDto>>(this.base, { params }).subscribe({
-      next: (result) => {
-        this._requests.set(result.items);
-        this._paging.set(result);
-        this._loading.set(false);
-      },
-      error: (error: unknown) => {
-        this._error.set(this.toError(error));
-        this._loading.set(false);
-      },
-    });
+    return this.http.get<PagedResult<RequestDto>>(this.base, { params });
   }
 
   /** Fetches all tenants as a catalog for the list filter dropdown. */

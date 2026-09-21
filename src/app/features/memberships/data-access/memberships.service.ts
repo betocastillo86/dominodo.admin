@@ -137,6 +137,18 @@ export class MembershipsService {
     );
   }
 
+  /**
+   * Every membership of one user, across all conjuntos. Cross-tenant: no X-Tenant
+   * header, the API narrows by the `userId` query param instead. Used by the user
+   * detail page, where a person can belong to several conjuntos at once.
+   */
+  listByUser(userId: string, take = 100): Observable<MembershipDto[]> {
+    const params = new HttpParams().set('page', 1).set('pageSize', take).set('userId', userId);
+    return this.http
+      .get<PagedResult<MembershipDto>>(this.base, { params })
+      .pipe(map((r) => r.items));
+  }
+
   invite(body: InviteMemberRequest, tenantSlug: string): Observable<void> {
     return this.http.post<void>(`${this.base}/invite`, body, {
       headers: { 'X-Tenant': tenantSlug },

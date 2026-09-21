@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TablerIconComponent } from 'angular-tabler-icons';
 import { PagedResult } from '../../../core/models/paged-result';
@@ -56,6 +56,14 @@ export class DataTableComponent<T> {
   readonly actionQueryParams = input<((row: T) => Record<string, string>) | null>(null);
   /** Alternative to actionLink: invokes a callback with the row instead of navigating. */
   readonly actionFn = input<((row: T) => void) | null>(null);
+  /**
+   * When set, renders a destructive action next to the regular one. The first click only
+   * arms the row: the callback runs after the user confirms, so the caller never has to
+   * build its own dialog.
+   */
+  readonly deleteFn = input<((row: T) => void) | null>(null);
+  /** Key of the row whose deletion is in flight; its buttons show a spinner and lock. */
+  readonly deletingKey = input<unknown>(null);
   /** When set, its result is applied as the CSS class of the row's `<tr>`. */
   readonly rowClass = input<((row: T, index: number) => string) | null>(null);
 
@@ -67,6 +75,12 @@ export class DataTableComponent<T> {
 
   readonly pageChange = output<number>();
   readonly sortChange = output<TableSort>();
+
+  /** Key of the row currently asking for delete confirmation, if any. */
+  private readonly confirmingKey = signal<unknown>(null);
+
+  /** True when the table renders a trailing column of row actions. */
+  readonly hasActions = computed(() => !!(this.actionLink() || this.actionFn() || this.deleteFn()));
 
   /** True when the page count is large enough to warrant the "jump to page" input. */
   readonly showJump = computed(() => (this.paging()?.totalPages ?? 0) > 5);
@@ -104,6 +118,28 @@ export class DataTableComponent<T> {
     }
     return result;
   });
+
+  isConfirming(row: T): boolean {
+    return this.confirmingKey() === this.rowKey()(row);
+  }
+
+  isDeleting(row: T): boolean {
+    return this.deletingKey() !== null && this.deletingKey() === this.rowKey()(row);
+  }
+
+  /** Arms the row: swaps the trash button for the confirm/cancel pair. */
+  askDelete(row: T): void {
+    this.confirmingKey.set(this.rowKey()(row));
+  }
+
+  cancelDelete(): void {
+    this.confirmingKey.set(null);
+  }
+
+  confirmDelete(row: T, fn: (row: T) => void): void {
+    this.confirmingKey.set(null);
+    fn(row);
+  }
 
   /**
    * CSS class for a sortable header button: `asc`/`desc` when this column is the
