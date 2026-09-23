@@ -103,6 +103,8 @@ export interface RequestDetailDto {
   createdAtUtc: string; // date-time
   resolvedAtUtc: string | null; // date-time
   closedAtUtc: string | null; // date-time
+  /** Raw text the resident reported, kept verbatim; `description` is the editable version. */
+  originalDescription: string | null;
   metadata: string | null;
   participants: RequestParticipantDto[];
   updates: RequestUpdateDto[];

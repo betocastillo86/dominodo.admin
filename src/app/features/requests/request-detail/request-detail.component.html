@@ -88,7 +88,7 @@
                 }
               </div>
 
-              <div class="col-12">
+              <div class="col-12" [class.col-md-6]="!!d.originalDescription">
                 <label class="form-label required" for="req-description">Descripción</label>
                 <textarea
                   id="req-description"
@@ -101,6 +101,20 @@
                   <div class="invalid-feedback">La descripción es obligatoria.</div>
                 }
               </div>
+
+              @if (d.originalDescription; as originalDescription) {
+                <div class="col-12 col-md-6">
+                  <label class="form-label" for="req-original-description">Descripción original:</label>
+                  <textarea
+                    id="req-original-description"
+                    class="form-control"
+                    rows="4"
+                    [value]="originalDescription"
+                    disabled
+                  ></textarea>
+                  <small class="form-hint">Texto tal como se reportó; no puede modificarse.</small>
+                </div>
+              }
 
               <div class="col-12 col-md-6">
                 <label class="form-label required" for="req-category">Categoría</label>
