@@ -1,6 +1,6 @@
 export const environment = {
   production: true,
-  apiBaseUrl: 'https://api.dominodo.com/api/v1',
-  // PLACEHOLDER — prod Domi is not deployed yet; this is the name Terraform gives it.
+  // azurewebsites.net, not api.dominodo.com: F1 supports no custom domain.
+  apiBaseUrl: 'https://app-dominodo-api-prod.azurewebsites.net/api/v1',
   domiBaseUrl: 'https://app-dominodo-domi-prod.azurewebsites.net',
 };
