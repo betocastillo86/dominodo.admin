@@ -8,6 +8,7 @@ import {
   InvitationDto,
   InvitationFilters,
   InviteMemberRequest,
+  InviteMemberResult,
   MembershipDto,
   MembershipFilters,
   RoleSummaryDto,
@@ -149,10 +150,25 @@ export class MembershipsService {
       .pipe(map((r) => r.items));
   }
 
-  invite(body: InviteMemberRequest, tenantSlug: string): Observable<void> {
-    return this.http.post<void>(`${this.base}/invite`, body, {
+  invite(body: InviteMemberRequest, tenantSlug: string): Observable<InviteMemberResult> {
+    return this.http.post<InviteMemberResult>(`${this.base}/invite`, body, {
       headers: { 'X-Tenant': tenantSlug },
     });
+  }
+
+  /**
+   * The membership one user already has in this conjunto, or null. The invite form calls it
+   * after picking an existing user so it can warn about an active membership (a 409 waiting
+   * to happen) or about a suspended one (which the invite readmits) before anything is sent.
+   */
+  getByUser(tenantSlug: string, userId: string): Observable<MembershipDto | null> {
+    const params = new HttpParams().set('page', 1).set('pageSize', 1).set('userId', userId);
+    return this.http
+      .get<PagedResult<MembershipDto>>(this.base, {
+        params,
+        headers: { 'X-Tenant': tenantSlug },
+      })
+      .pipe(map((r) => r.items[0] ?? null));
   }
 
   suspend(userId: string, tenantSlug: string): Observable<void> {
@@ -173,9 +189,13 @@ export class MembershipsService {
     });
   }
 
-  /** Loads all roles for the role selector in the invite form. */
-  listRoles(): Observable<RoleSummaryDto[]> {
-    const params = new HttpParams().set('pageSize', 200);
+  /**
+   * Loads roles for the role selectors. Pass `scope = 'Tenant'` for the invite form: the API
+   * rejects a platform-scoped role inside a conjunto, so offering one is a dead end.
+   */
+  listRoles(scope?: string): Observable<RoleSummaryDto[]> {
+    let params = new HttpParams().set('pageSize', 200);
+    if (scope) params = params.set('scope', scope);
     return this.http
       .get<PagedResult<RoleSummaryDto>>(this.rolesBase, { params })
       .pipe(map((r) => r.items));

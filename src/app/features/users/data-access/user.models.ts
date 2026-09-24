@@ -5,6 +5,18 @@ import { RequestDto } from '../../requests/data-access/request.models';
 /** User account status as returned by the API. */
 export type UserStatus = 'PendingVerification' | 'Active' | 'Disabled';
 
+export const USER_STATUS_LABELS: Record<UserStatus, string> = {
+  PendingVerification: 'Pendiente',
+  Active: 'Activo',
+  Disabled: 'Deshabilitado',
+};
+
+export const USER_STATUS_BADGES: Record<UserStatus, string> = {
+  PendingVerification: 'badge bg-yellow-lt',
+  Active: 'badge bg-green-lt',
+  Disabled: 'badge bg-red-lt',
+};
+
 /** User as returned by GET /users (list item, camelCase — do not rename). */
 export interface UserListItemDto {
   id: string;
