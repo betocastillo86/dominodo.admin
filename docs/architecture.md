@@ -118,7 +118,7 @@ src/app/
 │   ├── health/     # /health/ready probes of the API + Domi (login strip and dashboard)
 │   └── models/     # shared contracts (e.g. PagedResult, ProblemDetails)
 ├── layout/      # panel chrome: shell (sidebar + navbar + outlet)
-├── shared/ui/   # reusable presentational pieces (data-table, page-header, spinner, service-status)
+├── shared/ui/   # reusable presentational pieces (data-table, page-header, spinner, service-status, schedule-editor)
 └── features/    # lazy domains, each with data-access/ + components
     ├── auth/             # blank layout → login
     ├── dashboard/        # default screen: the service-status widget in full detail
@@ -140,6 +140,13 @@ src/app/
 - **`core/`**: single instances and cross-cutting concerns; no business UI.
 - **`layout/`**: the sidebar/navbar chrome, kept separate from features.
 - **`shared/ui/`**: reusable Tabler-based pieces (the generic paged `data-table` is the notable one).
+  `schedule-editor` is a `ControlValueAccessor` over the tenant's opening hours: it binds to a plain
+  `string` control and writes the JSON envelope `{"v":1,"d":{"mon":["08:00-12:00"],…}}` that the API
+  stores in `contactInfo.schedules` (max 1000 chars). It is a port of the same component in
+  `dominodo.nodo` and is kept in lockstep with it — both panels write that column, so a change here
+  has to land there too. A tenant
+  saved before the editor existed holds free text there; the editor shows it read-only and requires the
+  admin to re-enter the hours as slots before saving.
 - **`features/*`**: one isolated, lazy-loaded domain each; `data-access` decouples data from presentation.
 
 ---

@@ -18,6 +18,7 @@ import { TablerIconComponent } from 'angular-tabler-icons';
 import { PageHeaderComponent } from '../../../shared/ui/page-header/page-header.component';
 import { SpinnerComponent } from '../../../shared/ui/spinner/spinner.component';
 import { DataTableComponent, TableColumn } from '../../../shared/ui/data-table/data-table.component';
+import { ScheduleEditorComponent } from '../../../shared/ui/schedule-editor/schedule-editor.component';
 import { NotificationService } from '../../../core/notifications/notification.service';
 import { ProblemDetails } from '../../../core/http/problem-details';
 import { PagedResult } from '../../../core/models/paged-result';
@@ -50,6 +51,7 @@ import { MembershipDto } from '../../memberships/data-access/membership.models';
     PageHeaderComponent,
     SpinnerComponent,
     DataTableComponent,
+    ScheduleEditorComponent,
     NgbTypeahead,
     TablerIconComponent,
   ],
@@ -112,10 +114,10 @@ export class TenantFormComponent implements OnInit {
         nonNullable: true,
         validators: [Validators.maxLength(500)],
       }),
-      schedules: new FormControl('', {
-        nonNullable: true,
-        validators: [Validators.required, Validators.maxLength(200)],
-      }),
+      // Holds the JSON envelope produced by <app-schedule-editor>, which is also
+      // its own validator (required / malformed / overlapping / over 1000 chars).
+      // Nullable because the editor emits `null` when every day is closed.
+      schedules: new FormControl<string | null>(null),
     }),
     // Create-only fields (not part of the update contract; disabled on edit).
     branding: new FormControl('', { nonNullable: true }),
@@ -303,12 +305,13 @@ export class TenantFormComponent implements OnInit {
     phone: string;
     address: string;
     additionalInfo: string;
-    schedules: string;
+    schedules: string | null;
   }): ContactInfoDto | null {
     const phone = raw.phone.trim() || null;
     const address = raw.address.trim() || null;
     const additionalInfo = raw.additionalInfo.trim() || null;
-    const schedules = raw.schedules.trim() || null;
+    // Already the serialized envelope (or null); it never needs trimming.
+    const schedules = raw.schedules;
     if (!phone && !address && !additionalInfo && !schedules) return null;
     return { phone, address, additionalInfo, schedules };
   }
@@ -333,7 +336,9 @@ export class TenantFormComponent implements OnInit {
               phone: tenant.contactInfo?.phone ?? '',
               address: tenant.contactInfo?.address ?? '',
               additionalInfo: tenant.contactInfo?.additionalInfo ?? '',
-              schedules: tenant.contactInfo?.schedules ?? '',
+              // Free text from a tenant saved before this editor existed reaches
+              // the editor as-is, which shows it read-only instead of dropping it.
+              schedules: tenant.contactInfo?.schedules ?? null,
             },
             branding: tenant.branding ?? '',
             settings: tenant.settings ?? '',
