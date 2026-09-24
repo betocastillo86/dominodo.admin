@@ -30,6 +30,15 @@
               <td [class]="col.class ?? ''" [class.cell-truncate]="col.truncate">
                 @if (col.badgeClass?.(row); as badge) {
                   <span [class]="badge">{{ col.value(row) }}</span>
+                } @else if (col.cellFn; as cellFn) {
+                  <button
+                    type="button"
+                    class="btn btn-link p-0 border-0 align-baseline"
+                    [title]="col.cellFnTitle ?? ''"
+                    (click)="cellFn(row)"
+                  >
+                    {{ col.value(row) }}
+                  </button>
                 } @else if (col.truncate) {
                   <span class="cell-truncate-text" [title]="col.value(row)">{{ col.value(row) }}</span>
                 } @else {

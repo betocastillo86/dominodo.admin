@@ -21,6 +21,13 @@ export interface TableColumn<T> {
   truncate?: boolean;
   /** When set, the header becomes a Tabler sort button emitting this key. */
   sortKey?: string;
+  /**
+   * When set, the value renders as a link that runs this callback instead of plain
+   * text — a drill-down that re-filters the listing rather than navigating away.
+   */
+  cellFn?: (row: T) => void;
+  /** Tooltip of the `cellFn` link. */
+  cellFnTitle?: string;
 }
 
 /** Current sort state: which column key and in which direction. */

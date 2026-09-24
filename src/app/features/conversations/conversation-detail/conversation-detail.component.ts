@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { finalize } from 'rxjs';
+import { debounceTime, finalize } from 'rxjs';
 import { PageHeaderComponent } from '../../../shared/ui/page-header/page-header.component';
 import { DataTableComponent, TableColumn } from '../../../shared/ui/data-table/data-table.component';
 import { ConversationsService } from '../data-access/conversations.service';
@@ -19,7 +21,7 @@ type ConversationTab = 'messages' | 'decisions';
 @Component({
   selector: 'app-conversation-detail',
   standalone: true,
-  imports: [PageHeaderComponent, DataTableComponent, RouterLink],
+  imports: [PageHeaderComponent, DataTableComponent, RouterLink, ReactiveFormsModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './conversation-detail.component.html',
 })
@@ -41,8 +43,13 @@ export class ConversationDetailComponent {
   readonly includeBeforeReset = signal(false);
   /** Selected episode, or null for every episode. Applies to both tabs. */
   readonly episode = signal<number | null>(null);
+  /** Active message search, mirroring `textControl` once debounced. Messages tab only. */
+  readonly text = signal('');
   /** Decisions are fetched the first time their tab is opened. */
   private decisionsLoaded = false;
+
+  /** Search box over the message text; the API matches it as a fragment. */
+  readonly textControl = new FormControl('', { nonNullable: true });
 
   readonly episodes = signal<ConversationEpisodeDto[]>([]);
 
@@ -71,7 +78,13 @@ export class ConversationDetailComponent {
   readonly decisionsError = this.conversationsService.decisionsError;
 
   readonly messageColumns: readonly TableColumn<ConversationMessageDto>[] = [
-    { header: 'Episodio', value: (m) => m.episode, class: 'text-end w-1' },
+    {
+      header: 'Episodio',
+      value: (m) => m.episode,
+      class: 'text-end w-1',
+      cellFn: (m) => this.focusEpisode(m),
+      cellFnTitle: 'Ver todos los mensajes de este episodio',
+    },
     { header: 'Turno', value: (m) => m.turnNumber, class: 'text-end w-1' },
     {
       header: 'Autor',
@@ -136,6 +149,12 @@ export class ConversationDetailComponent {
       },
     });
 
+    // Reads the control instead of the emitted value: a search cleared by hand (the
+    // episode link does that) may still have a keystroke in flight behind the debounce.
+    this.textControl.valueChanges
+      .pipe(debounceTime(300), takeUntilDestroyed())
+      .subscribe(() => this.applyText(this.textControl.value.trim()));
+
     this.loadMessages(1);
   }
 
@@ -167,8 +186,53 @@ export class ConversationDetailComponent {
     this.reloadTabs();
   }
 
+  /**
+   * A search spans the whole conversation by default: it lifts the reset cut and drops
+   * the episode narrowing, so no match stays hidden behind filters the operator set for
+   * a different purpose. Clearing the box leaves that widening in place — like the
+   * episode filter, the switch may have been set by hand.
+   */
+  private applyText(text: string): void {
+    if (text === this.text()) return;
+    this.text.set(text);
+
+    let widened = false;
+    if (text !== '') {
+      if (!this.includeBeforeReset()) {
+        this.includeBeforeReset.set(true);
+        widened = true;
+      }
+      if (this.episode() !== null) {
+        this.episode.set(null);
+        widened = true;
+      }
+    }
+
+    // Only the transcript takes `text`; the decision trail moves solely with the widening.
+    if (widened) {
+      this.reloadTabs();
+    } else {
+      this.loadMessages(1);
+    }
+  }
+
+  /**
+   * Episode link on a message row: drops the search and shows that episode whole, which
+   * is what an operator wants after finding the message they were looking for.
+   */
+  focusEpisode(message: ConversationMessageDto): void {
+    this.textControl.setValue('', { emitEvent: false });
+    this.text.set('');
+    this.episode.set(message.episode);
+    this.includeBeforeReset.set(true);
+    this.reloadTabs();
+  }
+
   loadMessages(page: number): void {
-    this.conversationsService.listMessages(this.conversationId, page, this.pageSize, this.filters());
+    this.conversationsService.listMessages(this.conversationId, page, this.pageSize, {
+      ...this.filters(),
+      text: this.text() || undefined,
+    });
   }
 
   loadDecisions(page: number): void {

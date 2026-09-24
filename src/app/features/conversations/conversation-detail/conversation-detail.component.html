@@ -87,17 +87,6 @@
           </div>
         </div>
       </div>
-
-      @if (d.sessionState) {
-        <div class="card mb-3">
-          <div class="card-header">
-            <h3 class="card-title">Estado de la sesión</h3>
-          </div>
-          <div class="card-body">
-            <pre class="mb-0 text-secondary">{{ sessionStateJson(d.sessionState) }}</pre>
-          </div>
-        </div>
-      }
     }
 
     <div class="card">
@@ -124,11 +113,21 @@
             </button>
           </li>
         </ul>
-        <div class="card-actions d-flex align-items-center gap-3">
+        <div class="card-actions d-flex align-items-center flex-wrap gap-3">
+          @if (activeTab() === 'messages') {
+            <input
+              type="search"
+              class="form-control form-control-sm w-auto"
+              placeholder="Buscar en los mensajes…"
+              aria-label="Buscar por texto del mensaje"
+              [formControl]="textControl"
+            />
+          }
           @if (episodeOptions().length > 1) {
             <select
               class="form-select form-select-sm w-auto"
               aria-label="Filtrar por episodio"
+              [value]="episode() ?? ''"
               (change)="selectEpisode($any($event.target).value)"
             >
               <option value="">Todos los episodios</option>
@@ -148,6 +147,13 @@
           </label>
         </div>
       </div>
+
+      @if (activeTab() === 'messages' && text()) {
+        <div class="card-body border-bottom py-2 text-secondary">
+          Buscando «{{ text() }}» en todos los episodios de la conversación. Usa el número de
+          episodio de una fila para ver ese episodio completo.
+        </div>
+      }
 
       @if (activeTab() === 'messages') {
         <app-data-table
@@ -173,5 +179,16 @@
         />
       }
     </div>
+
+    @if (detail()?.sessionState; as sessionState) {
+      <div class="card mt-3">
+        <div class="card-header">
+          <h3 class="card-title">Estado de la sesión</h3>
+        </div>
+        <div class="card-body">
+          <pre class="mb-0 text-secondary">{{ sessionStateJson(sessionState) }}</pre>
+        </div>
+      </div>
+    }
   </div>
 </div>

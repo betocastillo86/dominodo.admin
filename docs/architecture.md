@@ -94,7 +94,13 @@ modules follow the same conventions described here.
   consecutive episodes alternate background and the first row of each carries a divider
   (`.row-episode-alt` / `.row-episode-start`, driven by the `data-table`'s `rowClass` input).
   Both endpoints also take `episode` (1-based) to narrow the page to one episode; it **composes**
-  with the cut instead of lifting it. `GET …/conversations/{id}/episodes` is the index behind that
+  with the cut instead of lifting it. The transcript additionally takes `text`, a case-insensitive
+  (accent-sensitive) fragment of the message, matched **row by row** — the reply to a matched
+  message comes back only if it matches too. The detail page exposes it as a search box on the
+  Mensajes tab and treats a search as a question about the whole conversation: typing turns
+  `includeBeforeReset` on and drops the episode narrowing, so no match stays hidden. The way back
+  is the episode number of a matched row, rendered as a link (the `data-table`'s `cellFn` column
+  hook): it clears the search and filters the tabs to that episode. `GET …/conversations/{id}/episodes` is the index behind that
   filter — turn span, instants and counts per episode — and is the one route that deliberately
   ignores the reset cut, so the panel flags the options that fall below it as `(archivado)`
   and picking any episode turns `includeBeforeReset` on — otherwise an episode that ended

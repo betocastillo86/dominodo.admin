@@ -10,6 +10,7 @@ import {
   ConversationEpisodeDto,
   ConversationFilters,
   ConversationMessageDto,
+  ConversationMessageFilters,
   ConversationSummaryDto,
   ConversationTurnFilters,
   DecisionRecordDto,
@@ -85,18 +86,20 @@ export class ConversationsService {
 
   /**
    * Fetches a page of the transcript, oldest first. By default it starts after the last
-   * reset cut; `includeBeforeReset` returns the whole audit trail instead.
+   * reset cut; `includeBeforeReset` returns the whole audit trail instead. `text` keeps
+   * only the messages containing that fragment, on top of the cut and the episode.
    */
   listMessages(
     conversationId: string,
     page: number,
     pageSize: number,
-    filters: ConversationTurnFilters = {},
+    filters: ConversationMessageFilters = {},
   ): void {
     this._messagesLoading.set(true);
     this._messagesError.set(null);
 
-    const params = this.pageParams(page, pageSize, filters);
+    let params = this.pageParams(page, pageSize, filters);
+    if (filters.text) params = params.set('text', filters.text);
     this.http
       .get<PagedResult<ConversationMessageDto>>(`${this.base}/${conversationId}/messages`, {
         params,

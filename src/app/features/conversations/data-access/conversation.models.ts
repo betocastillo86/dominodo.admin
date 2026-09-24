@@ -112,6 +112,17 @@ export interface ConversationTurnFilters {
   episode?: number | null;
 }
 
+/**
+ * Query params of one conversation's transcript: the shared turn filters plus the text
+ * search. The API matches `text` as a case-insensitive fragment of the message and
+ * **row by row** — the reply to a matched message only comes back if it matches too —
+ * and it narrows what the reset cut and the episode already left.
+ */
+export interface ConversationMessageFilters extends ConversationTurnFilters {
+  /** Message fragment; blank means no filter. */
+  text?: string;
+}
+
 /** Query params accepted by the conversations list (all optional, all cross-tenant). */
 export interface ConversationFilters {
   /** Phone fragment; the API matches it as a substring. */
