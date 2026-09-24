@@ -8,12 +8,15 @@ Azure DevOps. This mirrors the `pollaya.admin.front` pattern, modernized for Ang
 
 | Environment | Branch    | Build configuration | Front-end URL                       | API base URL (`apiBaseUrl`)                                  | FTP variable group      |
 | ----------- | --------- | ------------------- | ----------------------------------- | ------------------------------------------------------------ | ----------------------- |
-| **prod**    | `main`    | `production`        | *(TBD)*                             | `https://api.dominodo.com/api/v1` *(PLACEHOLDER)*            | `dominodo-admin-prod`   |
+| **prod**    | `main`    | `production`        | `https://admin.dominodo.com`        | `https://app-dominodo-api-prod.azurewebsites.net/api/v1`      | `dominodo-admin-prod`   |
 | **stage**   | `develop` | `stage`             | `https://adminstage.dominodo.com`   | `https://app-dominodo-api-stage.azurewebsites.net/api/v1`     | `dominodo-admin-stage`  |
 
-The **stage** API URL is live (`app-dominodo-api-stage.azurewebsites.net`). The **prod** API URL is
-still a **placeholder** — the prod API is not deployed yet. Update it once the API is live (see
-[Placeholders to fill](#placeholders-to-fill-once-the-api-is-deployed)).
+Both API URLs are `azurewebsites.net` hosts rather than `api.dominodo.com`: the web apps run on Free
+(F1) App Service plans, which support no custom domain. When prod moves to B1, `api.dominodo.com`
+becomes a DNS record plus a hostname binding, and only `apiBaseUrl` changes here.
+
+`admin.dominodo.com` is a DNS record on the **same FTP/IIS hosting** as stage — the admin panel is
+never served from Azure.
 
 ## Branch → environment mapping
 
@@ -203,19 +206,22 @@ variable-group design supports either without YAML changes.
 2. Create the pipeline from the GitHub repo pointing at `pipelines/build-ftp-pipeline.yaml`
    (GitHub service connection, as pollaya does).
 
-## Placeholders to fill (once the API is deployed)
+## Placeholders to fill
 
-1. **Prod API URL** — `src/environments/environment.ts` → `apiBaseUrl` (still a placeholder).
+1. ~~**Prod API URL**~~ — done: `app-dominodo-api-prod.azurewebsites.net/api/v1`.
 2. ~~**Stage API URL**~~ — done: `app-dominodo-api-stage.azurewebsites.net/api/v1`.
 3. **FTP host/creds/folders** — the two variable groups (never commit these). Stage folder:
    `dominodoadminstage` (SmarterASP); prod folder TBD.
+4. **DNS** — `admin.dominodo.com` must point at the prod folder's hosting.
 
 ## Cross-repo prerequisite — CORS
 
-The API's `cors_allowed_origins` (`dominodo.api/infra/envs/*/*.tfvars`) is currently `localhost`-only
-(stage) / empty (prod). The stage/prod **front-end URLs must be added there** and the API re-applied
-before cross-origin login works. This is an API-repo action, but it is a hard prerequisite for a green
-login on either hosted environment.
+Cross-origin login needs the front-end origin in the **API's** `Cors:AllowedOrigins`, which lives in
+`dominodo.api/src/Bootstrap/Dominodo.Api/appsettings.<Env>.json` — **not** in
+`infra/envs/*/*.tfvars`, whose `cors_allowed_origins` configures the storage account's blob CORS
+(direct SAS uploads/downloads), a different thing. Both already cover this panel:
 
-- **stage** — add `https://adminstage.dominodo.com` to the stage API's `cors_allowed_origins`.
-- **prod** — add the prod front-end URL (TBD) once it is defined.
+- **stage** — `appsettings.Staging.json` allows `https://*.dominodo.com`, which matches
+  `adminstage.dominodo.com`.
+- **prod** — `appsettings.Production.json` allows `https://*.dominodo.com`, which matches
+  `admin.dominodo.com`.

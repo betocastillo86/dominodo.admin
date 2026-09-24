@@ -35,6 +35,10 @@ Angular SPA: the Dominodo **super administrator** panel. Consumes the `dominodo.
 
 **Env & hosting artifacts:** `src/environments/environment.stage.ts` holds stage config (prod is
 `environment.ts`); `public/web.config` is the IIS SPA-fallback, copied to the deploy root at build time.
+Prod is served at **`admin.dominodo.com`** from the same FTP/IIS hosting as stage, and points at
+`app-dominodo-api-prod.azurewebsites.net` / `app-dominodo-domi-prod.azurewebsites.net` — the prod web
+apps run on a Free (F1) plan, which supports no custom domain. Domi's `TestChat` is **off** in prod, so
+the chat-simulation screen only works against stage.
 
 **Caching (do not regress):** the hosting caches every static file for a year, so `public/web.config`
 carves out `index.html` as `no-cache` — otherwise deploys stay invisible to users for days. Never add an
