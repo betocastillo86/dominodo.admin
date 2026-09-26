@@ -4,7 +4,11 @@ import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { debounceTime, finalize } from 'rxjs';
 import { PageHeaderComponent } from '../../../shared/ui/page-header/page-header.component';
-import { DataTableComponent, TableColumn } from '../../../shared/ui/data-table/data-table.component';
+import {
+  DataTableComponent,
+  RowDetailSection,
+  TableColumn,
+} from '../../../shared/ui/data-table/data-table.component';
 import { ConversationsService } from '../data-access/conversations.service';
 import {
   CHAT_ROLE_BADGE,
@@ -72,6 +76,9 @@ export class ConversationDetailComponent {
   readonly messagesLoading = this.conversationsService.messagesLoading;
   readonly messagesError = this.conversationsService.messagesError;
 
+  /** Transcript by message id, to show a decision's message under it. */
+  readonly messageIndex = this.conversationsService.messageIndex;
+
   readonly decisions = this.conversationsService.decisions;
   readonly decisionsPaging = this.conversationsService.decisionsPaging;
   readonly decisionsLoading = this.conversationsService.decisionsLoading;
@@ -99,9 +106,20 @@ export class ConversationDetailComponent {
     },
   ];
 
+  /**
+   * The trail is wide, so the identity of a row comes first — when it happened and
+   * which episode/turn it belongs to — and the headers of those two are abbreviated so
+   * they take no more room than the numbers under them. What does not fit a column at
+   * all (the message and the tool calls) hangs off the row instead: see `decisionDetail`.
+   */
   readonly decisionColumns: readonly TableColumn<DecisionRecordDto>[] = [
-    { header: 'Episodio', value: (d) => d.episode, class: 'text-end w-1' },
-    { header: 'Turno', value: (d) => d.turnNumber, class: 'text-end w-1' },
+    {
+      header: 'Fecha',
+      value: (d) => this.formatDate(d.createdAtUtc),
+      class: 'text-secondary text-nowrap',
+    },
+    { header: 'Epi', value: (d) => d.episode, class: 'text-end w-1' },
+    { header: 'T', value: (d) => d.turnNumber, class: 'text-end w-1' },
     { header: 'Contribuidor', value: (d) => d.contributor, class: 'text-nowrap' },
     {
       header: 'Transición',
@@ -117,12 +135,6 @@ export class ConversationDetailComponent {
     },
     { header: 'Ruta', value: (d) => d.route ?? '—' },
     { header: 'Resultado', value: (d) => d.resultKind ?? '—' },
-    { header: 'Herramientas', value: (d) => this.formatToolCalls(d), class: 'cell-wrap' },
-    {
-      header: 'Fecha',
-      value: (d) => this.formatDate(d.createdAtUtc),
-      class: 'text-secondary text-nowrap',
-    },
   ];
 
   readonly messageKey = (m: ConversationMessageDto): string => m.id;
@@ -161,6 +173,9 @@ export class ConversationDetailComponent {
   selectTab(tab: ConversationTab): void {
     this.activeTab.set(tab);
     if (tab === 'decisions' && !this.decisionsLoaded) {
+      // The trail names the message it resolved by id only, so index the transcript
+      // alongside it — once per conversation, whatever page of the trail is on screen.
+      this.conversationsService.indexMessages(this.conversationId);
       this.loadDecisions(1);
     }
   }
@@ -282,8 +297,79 @@ export class ConversationDetailComponent {
     return classes.join(' ');
   }
 
-  private formatToolCalls(d: DecisionRecordDto): string {
-    if (!d.toolCalls?.length) return '—';
-    return d.toolCalls.map((t) => `${t.tool} · ${t.outcome}`).join(', ');
+  /**
+   * What hangs under a decision row across the whole table: the message it resolved —
+   * the trail stores only its id, so it is read from the transcript index — and the
+   * upstream calls it made, as a table of their own. Each block only shows up when
+   * there is something to show, so a bare decision stays a single row.
+   */
+  readonly decisionDetail = (d: DecisionRecordDto): RowDetailSection[] => {
+    const sections: RowDetailSection[] = [];
+
+    const message = this.messageIndex().get(d.messageId);
+    if (message) {
+      sections.push({
+        label: 'Mensaje',
+        values: [
+          {
+            text: CHAT_ROLE_LABELS[message.role] ?? message.role,
+            badgeClass: CHAT_ROLE_BADGE[message.role] ?? 'badge',
+          },
+          { text: message.text },
+        ],
+      });
+    }
+
+    if (d.toolCalls?.length) {
+      sections.push({
+        label: 'Herramientas',
+        table: {
+          head: ['Método', 'Estado', 'Endpoint'],
+          body: d.toolCalls.map((t) => [
+            { text: this.httpMethod(t.endpoint), badgeClass: 'badge bg-secondary-lt' },
+            { text: t.outcome, badgeClass: this.statusBadge(t.outcome) },
+            { text: this.endpointPath(t.endpoint), mono: true },
+          ]),
+        },
+      });
+    }
+
+    return sections;
+  };
+
+  /**
+   * Domi records a tool call as `"{método} {url}"` and its outcome as the HTTP status,
+   * so the table reads like a request log: the verb, the status tinted by its class
+   * (2xx green, 4xx amber, 5xx red) and the path. `tool` is that same path without the
+   * query string, so it is left out rather than repeated in a column of its own.
+   */
+  private httpMethod(endpoint: string): string {
+    const space = endpoint.indexOf(' ');
+    return space > 0 ? endpoint.slice(0, space) : '—';
+  }
+
+  /**
+   * Path and query of a tool call. The origin is Domi's own API on every row, so it is
+   * dropped; an endpoint that does not parse as a URL goes through untouched.
+   */
+  private endpointPath(endpoint: string): string {
+    const space = endpoint.indexOf(' ');
+    const url = space > 0 ? endpoint.slice(space + 1) : endpoint;
+    try {
+      const parsed = new URL(url);
+      return parsed.pathname + parsed.search;
+    } catch {
+      return url;
+    }
+  }
+
+  private statusBadge(outcome: string): string {
+    const status = Number(outcome);
+    if (!Number.isFinite(status)) return 'badge bg-secondary-lt';
+    if (status >= 500) return 'badge bg-red-lt';
+    if (status >= 400) return 'badge bg-yellow-lt';
+    if (status >= 300) return 'badge bg-azure-lt';
+    if (status >= 200) return 'badge bg-green-lt';
+    return 'badge bg-secondary-lt';
   }
 }

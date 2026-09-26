@@ -1,6 +1,6 @@
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
-import { map, Observable } from 'rxjs';
+import { EMPTY, expand, map, Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { PagedResult } from '../../../core/models/paged-result';
 import { ProblemDetails } from '../../../core/http/problem-details';
@@ -45,6 +45,23 @@ export class ConversationsService {
   readonly messagesPaging = this._messagesPaging.asReadonly();
   readonly messagesLoading = this._messagesLoading.asReadonly();
   readonly messagesError = this._messagesError.asReadonly();
+
+  /**
+   * The indexed conversation's transcript, by message id. A decision carries only the id
+   * of the message it resolved, so the row that shows that message reads its text here.
+   */
+  private readonly _messageIndex = signal<ReadonlyMap<string, ConversationMessageDto>>(new Map());
+
+  readonly messageIndex = this._messageIndex.asReadonly();
+
+  /** Conversation the index currently holds; a second request for it is a no-op. */
+  private indexedConversationId: string | null = null;
+
+  /** Domi clamps a page to 100 rows, so that is as much as one walk step can take. */
+  private readonly indexPageSize = 100;
+
+  /** Ceiling on the walk. A transcript longer than this is indexed only as far as it. */
+  private readonly indexPageCap = 10;
 
   private readonly _decisions = signal<DecisionRecordDto[]>([]);
   private readonly _decisionsPaging = signal<PagedResult<DecisionRecordDto> | null>(null);
@@ -140,6 +157,47 @@ export class ConversationsService {
           this._decisionsError.set(this.toError(error, 'No se pudieron cargar las decisiones.'));
           this._decisionsLoading.set(false);
         },
+      });
+  }
+
+  /**
+   * Indexes one conversation's whole transcript by message id, walking it in pages. It
+   * ignores the reset cut and the episode on purpose: the decision trail is filtered
+   * independently, so the index has to answer for whatever page of it is on screen.
+   * Failing is not fatal — a decision whose message is missing just shows no message row.
+   */
+  indexMessages(conversationId: string): void {
+    if (this.indexedConversationId === conversationId) {
+      return;
+    }
+    this.indexedConversationId = conversationId;
+    this._messageIndex.set(new Map());
+
+    const page = (n: number): Observable<PagedResult<ConversationMessageDto>> =>
+      this.http.get<PagedResult<ConversationMessageDto>>(
+        `${this.base}/${conversationId}/messages`,
+        { params: this.pageParams(n, this.indexPageSize, { includeBeforeReset: true }) },
+      );
+
+    page(1)
+      .pipe(
+        expand((result) =>
+          result.page < Math.min(result.totalPages, this.indexPageCap)
+            ? page(result.page + 1)
+            : EMPTY,
+        ),
+      )
+      .subscribe({
+        next: (result) =>
+          this._messageIndex.update((index) => {
+            const next = new Map(index);
+            for (const message of result.items) {
+              next.set(message.id, message);
+            }
+            return next;
+          }),
+        // Drop the marker so opening the tab again retries the walk.
+        error: () => (this.indexedConversationId = null),
       });
   }
 

@@ -40,3 +40,48 @@
 .row-episode-start > * {
   border-top: calc(var(--tblr-border-width) * 2) solid var(--tblr-border-color);
 }
+
+// A row whose values overflow its columns is followed by a full-width detail row
+// (`[rowDetail]` on the data table). The two are one record: the border between them
+// goes, the detail hugs the row above, and it never repeats the episode divider —
+// that one belongs to the first row of the episode.
+tr.row-has-detail > * {
+  border-bottom-width: 0;
+}
+
+tr.row-detail > * {
+  padding-top: 0;
+  border-top: 0;
+  // The data table is `text-nowrap`; a detail carries prose and urls, which must wrap.
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+// Caption of a detail block, small enough to read as a label rather than a value.
+.row-detail-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+// Table nested inside a detail row: it hugs its content and paints no background of
+// its own, so the episode tint of the row it belongs to shows through.
+.row-detail-table {
+  --tblr-table-bg: transparent;
+  --tblr-table-bg-type: transparent;
+  --tblr-table-accent-bg: transparent;
+  width: auto;
+
+  th,
+  td {
+    padding: 0.125rem 1.5rem 0.125rem 0;
+    white-space: nowrap;
+  }
+
+  // Last column holds the endpoint: it takes the room left and wraps if it must.
+  th:last-child,
+  td:last-child {
+    padding-right: 0;
+    white-space: normal;
+  }
+}

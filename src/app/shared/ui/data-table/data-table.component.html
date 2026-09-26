@@ -24,8 +24,9 @@
         </tr>
       </thead>
       <tbody>
-        @for (row of rows(); track rowKey()(row)) {
-          <tr [class]="rowClass()?.(row, $index) ?? ''">
+        @for (row of rows(); track rowKey()(row); let rowIndex = $index) {
+          @let sections = rowDetail()?.(row) ?? [];
+          <tr [class]="rowClass()?.(row, rowIndex) ?? ''" [class.row-has-detail]="sections.length > 0">
             @for (col of columns(); track col.header) {
               <td [class]="col.class ?? ''" [class.cell-truncate]="col.truncate">
                 @if (col.badgeClass?.(row); as badge) {
@@ -101,9 +102,48 @@
               </td>
             }
           </tr>
+          @for (section of sections; track section.label; let lastSection = $last) {
+            <tr
+              [class]="(rowClass()?.(row, rowIndex) ?? '') + ' row-detail'"
+              [class.row-has-detail]="!lastSection"
+            >
+              <td [attr.colspan]="columnCount()">
+                <div class="row-detail-label text-secondary">{{ section.label }}</div>
+                @if (section.values; as values) {
+                  <div class="d-flex flex-wrap align-items-baseline gap-2">
+                    @for (value of values; track $index) {
+                      <span [class]="valueClass(value)">{{ value.text }}</span>
+                    }
+                  </div>
+                }
+                @if (section.table; as table) {
+                  <table class="table table-sm table-borderless row-detail-table m-0">
+                    <thead>
+                      <tr>
+                        @for (head of table.head; track head) {
+                          <th class="text-secondary fw-normal">{{ head }}</th>
+                        }
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (line of table.body; track $index) {
+                        <tr>
+                          @for (value of line; track $index) {
+                            <td>
+                              <span [class]="valueClass(value)">{{ value.text }}</span>
+                            </td>
+                          }
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                }
+              </td>
+            </tr>
+          }
         } @empty {
           <tr>
-            <td [attr.colspan]="columns().length + (hasActions() ? 1 : 0)" class="text-center text-secondary py-4">
+            <td [attr.colspan]="columnCount()" class="text-center text-secondary py-4">
               No hay registros para mostrar.
             </td>
           </tr>

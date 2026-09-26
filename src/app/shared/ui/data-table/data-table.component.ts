@@ -30,6 +30,32 @@ export interface TableColumn<T> {
   cellFnTitle?: string;
 }
 
+/** A value inside a detail row: plain text, or a badge when `badgeClass` is set. */
+export interface RowDetailValue {
+  text: string;
+  /** Full badge class, e.g. `badge bg-green-lt`. */
+  badgeClass?: string;
+  /** Renders the value in a monospace face — for urls, ids and the like. */
+  mono?: boolean;
+}
+
+/**
+ * A block of a row's detail, rendered as its own full-width row under it: a caption
+ * plus either a run of values or a small table of its own. A row can have several,
+ * one per block, and none of them is rendered when the row has nothing to show.
+ */
+export interface RowDetailSection {
+  /** Caption of the block. */
+  label: string;
+  /** Values rendered inline, right after the caption. */
+  values?: readonly RowDetailValue[];
+  /** Compact table of its own; `head` labels the columns of every row in `body`. */
+  table?: {
+    head: readonly string[];
+    body: readonly (readonly RowDetailValue[])[];
+  };
+}
+
 /** Current sort state: which column key and in which direction. */
 export interface TableSort {
   key: string;
@@ -73,6 +99,12 @@ export class DataTableComponent<T> {
   readonly deletingKey = input<unknown>(null);
   /** When set, its result is applied as the CSS class of the row's `<tr>`. */
   readonly rowClass = input<((row: T, index: number) => string) | null>(null);
+  /**
+   * When set, each section it returns for a row is rendered as an extra `<tr>` under it
+   * spanning every column — room for values that would otherwise squeeze the whole
+   * table. Return `[]` for a row that has nothing to add.
+   */
+  readonly rowDetail = input<((row: T) => readonly RowDetailSection[]) | null>(null);
 
   /** Pages rendered to each side of the current one in the numbered window. */
   readonly windowSize = input(1);
@@ -88,6 +120,9 @@ export class DataTableComponent<T> {
 
   /** True when the table renders a trailing column of row actions. */
   readonly hasActions = computed(() => !!(this.actionLink() || this.actionFn() || this.deleteFn()));
+
+  /** Columns a full-width cell has to span, actions included. */
+  readonly columnCount = computed(() => this.columns().length + (this.hasActions() ? 1 : 0));
 
   /** True when the page count is large enough to warrant the "jump to page" input. */
   readonly showJump = computed(() => (this.paging()?.totalPages ?? 0) > 5);
@@ -125,6 +160,12 @@ export class DataTableComponent<T> {
     }
     return result;
   });
+
+  /** Class of one detail value: its badge when it has one, plus the monospace opt-in. */
+  valueClass(value: RowDetailValue): string {
+    const classes = [value.badgeClass ?? '', value.mono ? 'font-monospace' : ''];
+    return classes.filter(Boolean).join(' ');
+  }
 
   isConfirming(row: T): boolean {
     return this.confirmingKey() === this.rowKey()(row);
