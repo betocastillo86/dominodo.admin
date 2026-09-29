@@ -1,6 +1,6 @@
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
-import { Observable } from 'rxjs';
+import { map, Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { PagedResult } from '../../../core/models/paged-result';
 import { ProblemDetails } from '../../../core/http/problem-details';
@@ -52,6 +52,19 @@ export class UsersService {
         this._loading.set(false);
       },
     });
+  }
+
+  /**
+   * Looks a user up by phone, for the invite flow. The API matches `phone` with a
+   * LIKE, so a partial number (no country code, spaces already stripped by the
+   * caller) still finds the account. Returns just the items — no signal
+   * side-effects — so it can run per search without disturbing the list state.
+   */
+  searchByPhone(phone: string, take = 10): Observable<UserListItemDto[]> {
+    const params = new HttpParams().set('page', 1).set('pageSize', take).set('phone', phone);
+    return this.http
+      .get<PagedResult<UserListItemDto>>(this.base, { params })
+      .pipe(map((r) => r.items));
   }
 
   getById(id: string): Observable<UserDetailDto> {

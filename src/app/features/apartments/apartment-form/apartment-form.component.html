@@ -109,12 +109,19 @@
         <div class="card-header">
           <h3 class="card-title">Residentes</h3>
         </div>
+        @if (residentDeleteError()) {
+          <div class="card-body py-2">
+            <div class="alert alert-danger mb-0" role="alert">{{ residentDeleteError() }}</div>
+          </div>
+        }
         <app-data-table
           [columns]="residentColumns"
           [rows]="residents()"
           [loading]="loadingResidents()"
           [error]="residentsError()"
           [rowKey]="residentRowKey"
+          [deleteFn]="removeResident"
+          [deletingKey]="deletingResident()"
         />
       </div>
     }

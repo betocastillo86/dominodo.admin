@@ -1,4 +1,13 @@
-import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  DestroyRef,
+  inject,
+  OnInit,
+  signal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatePipe } from '@angular/common';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -33,6 +42,7 @@ import { RequestsService } from '../data-access/requests.service';
 import {
   AddRequestUpdateRequest,
   REQUEST_PRIORITY_LABELS,
+  REQUEST_STATUS_BADGES,
   REQUEST_STATUS_LABELS,
   REQUEST_TYPE_LABELS,
   REQUEST_UPDATE_TYPE_LABELS,
@@ -74,6 +84,7 @@ export class RequestDetailComponent implements OnInit {
   private readonly membershipsService = inject(MembershipsService);
   private readonly usersService = inject(UsersService);
   private readonly notifications = inject(NotificationService);
+  private readonly destroyRef = inject(DestroyRef);
 
   private readonly id = this.route.snapshot.paramMap.get('id')!;
   private readonly tenantId = this.route.snapshot.queryParamMap.get('tenantId');
@@ -83,6 +94,14 @@ export class RequestDetailComponent implements OnInit {
   readonly detail = signal<RequestDetailDto | null>(null);
   readonly categories = signal<RequestCategoryDto[]>([]);
   readonly attachments = signal<RequestAttachmentDto[]>([]);
+
+  /**
+   * Object URLs for the image attachments, keyed by attachment id. The API's download URL is
+   * a SAS that lives ~5 minutes, so pointing an `<img>` straight at it would break on a page
+   * left open; the bytes are fetched once and kept as a blob instead. Revoked when the list
+   * is replaced and when the component is destroyed.
+   */
+  private readonly previews = signal<Record<string, string>>({});
 
   /** Apartment linked to the request (fetched when the detail has an apartmentId). */
   readonly apartment = signal<ApartmentDetailDto | null>(null);
@@ -226,6 +245,10 @@ export class RequestDetailComponent implements OnInit {
    */
   readonly userFormatter = (m: string | MembershipDto): string =>
     typeof m === 'string' ? m : `${m.userName} · ${m.phone}`;
+
+  constructor() {
+    this.destroyRef.onDestroy(() => this.revokePreviews());
+  }
 
   ngOnInit(): void {
     if (!this.tenantId) {
@@ -422,6 +445,16 @@ export class RequestDetailComponent implements OnInit {
       });
   }
 
+  /** Only image attachments get a thumbnail; everything else keeps the plain file row. */
+  isImage(attachment: RequestAttachmentDto): boolean {
+    return attachment.contentType.startsWith('image/');
+  }
+
+  /** Blob URL of an image attachment once it has been fetched, `null` while it is pending. */
+  previewUrl(attachment: RequestAttachmentDto): string | null {
+    return this.previews()[attachment.id] ?? null;
+  }
+
   onDownload(attachment: RequestAttachmentDto): void {
     const slug = this.tenantSlug();
     if (!slug) return;
@@ -479,13 +512,7 @@ export class RequestDetailComponent implements OnInit {
   }
 
   statusBadge(status: string): string {
-    const map: Record<string, string> = {
-      New: 'badge bg-blue-lt',
-      InProgress: 'badge bg-orange-lt',
-      Resolved: 'badge bg-green-lt',
-      Closed: 'badge bg-secondary-lt',
-    };
-    return map[status] ?? 'badge';
+    return REQUEST_STATUS_BADGES[status] ?? 'badge';
   }
 
   trackParticipant(_: number, p: RequestParticipantDto): string {
@@ -527,7 +554,7 @@ export class RequestDetailComponent implements OnInit {
       .subscribe({
         next: ({ detail, categories, attachments }) => {
           this.categories.set(categories);
-          this.attachments.set(attachments);
+          this.setAttachments(attachments);
           this.applyDetail(detail);
           if (detail.apartmentId) this.loadApartment(detail.apartmentId);
         },
@@ -558,9 +585,48 @@ export class RequestDetailComponent implements OnInit {
     const slug = this.tenantSlug();
     if (!slug) return;
     this.requestsService.listAttachments(this.id, slug).subscribe({
-      next: (list) => this.attachments.set(list),
+      next: (list) => this.setAttachments(list),
       error: () => { /* silently ignore */ },
     });
+  }
+
+  /**
+   * Publishes a new attachment list and refreshes the image thumbnails for it. Previews are
+   * supplementary, so a download that fails just leaves that row without one.
+   */
+  private setAttachments(list: RequestAttachmentDto[]): void {
+    this.revokePreviews();
+    this.attachments.set(list);
+
+    const slug = this.tenantSlug();
+    if (!slug) return;
+
+    for (const attachment of list.filter((a) => this.isImage(a))) {
+      this.requestsService
+        .getDownloadUrl(this.id, attachment.id, slug)
+        .pipe(
+          switchMap(({ url }) => from(fetch(url))),
+          switchMap((response) =>
+            response.ok ? from(response.blob()) : throwError(() => new Error('preview')),
+          ),
+          catchError(() => of(null)),
+          takeUntilDestroyed(this.destroyRef),
+        )
+        .subscribe((blob) => {
+          if (!blob) return;
+          this.previews.update((current) => ({
+            ...current,
+            [attachment.id]: URL.createObjectURL(blob),
+          }));
+        });
+    }
+  }
+
+  private revokePreviews(): void {
+    for (const url of Object.values(this.previews())) {
+      URL.revokeObjectURL(url);
+    }
+    this.previews.set({});
   }
 
   private applyDetail(d: RequestDetailDto): void {

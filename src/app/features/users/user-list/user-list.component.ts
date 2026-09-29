@@ -6,19 +6,12 @@ import { debounceTime, distinctUntilChanged } from 'rxjs';
 import { PageHeaderComponent } from '../../../shared/ui/page-header/page-header.component';
 import { DataTableComponent, TableColumn } from '../../../shared/ui/data-table/data-table.component';
 import { UsersService } from '../data-access/users.service';
-import { UserListItemDto, UserStatus } from '../data-access/user.models';
-
-const STATUS_LABELS: Record<UserStatus, string> = {
-  PendingVerification: 'Pendiente',
-  Active: 'Activo',
-  Disabled: 'Deshabilitado',
-};
-
-const STATUS_BADGE: Record<UserStatus, string> = {
-  PendingVerification: 'badge bg-yellow-lt',
-  Active: 'badge bg-green-lt',
-  Disabled: 'badge bg-red-lt',
-};
+import {
+  USER_STATUS_BADGES,
+  USER_STATUS_LABELS,
+  UserListItemDto,
+  UserStatus,
+} from '../data-access/user.models';
 
 /** Read-only, server-paginated listing of users. */
 @Component({
@@ -48,8 +41,8 @@ export class UserListComponent {
     { header: 'Email', value: (u) => u.email ?? '—', class: 'text-secondary' },
     {
       header: 'Estado',
-      value: (u) => STATUS_LABELS[u.status] ?? u.status,
-      badgeClass: (u) => STATUS_BADGE[u.status] ?? '',
+      value: (u) => USER_STATUS_LABELS[u.status] ?? u.status,
+      badgeClass: (u) => USER_STATUS_BADGES[u.status] ?? '',
     },
     {
       header: 'Tel. verificado',

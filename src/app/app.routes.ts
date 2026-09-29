@@ -93,6 +93,13 @@ export const routes: Routes = [
           import('./features/listings/listings.routes').then((m) => m.listingsRoutes),
       },
       {
+        path: 'conversations',
+        loadChildren: () =>
+          import('./features/conversations/conversations.routes').then(
+            (m) => m.conversationsRoutes,
+          ),
+      },
+      {
         path: 'chat-simulation',
         loadChildren: () =>
           import('./features/chat-simulation/chat-simulation.routes').then(

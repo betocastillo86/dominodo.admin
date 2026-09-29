@@ -14,6 +14,13 @@ export interface MembershipDto {
   joinedAtUtc: string | null;
 }
 
+/**
+ * Id of the system `Residente` role (API `SystemRoleIds.Residente`). The invite rules hinge
+ * on it: only a Residente may carry an apartment assignment — and it is the only role whose
+ * invite pre-registers an unknown phone instead of creating a pending invitation.
+ */
+export const RESIDENT_ROLE_ID = 5;
+
 export interface InviteMemberRequest {
   phone: string;
   roleId: number;
@@ -23,6 +30,15 @@ export interface InviteMemberRequest {
   apartmentId?: string | null;
   relationType?: ResidentRelationType;
   livesHere?: boolean | null;
+}
+
+/**
+ * What `POST /memberships/invite` created: a `membership` (registered phone, or a
+ * pre-registered resident) or a pending `invitation` waiting on the email link.
+ */
+export interface InviteMemberResult {
+  id: string;
+  kind: 'membership' | 'invitation';
 }
 
 /** Minimal role shape for the role selector. */

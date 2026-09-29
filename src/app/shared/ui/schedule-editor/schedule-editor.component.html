@@ -1,0 +1,145 @@
+@if (previousText(); as previous) {
+  <div class="alert alert-warning" role="alert">
+    <div class="d-flex">
+      <tabler-icon name="alert-triangle" class="me-2 flex-shrink-0" />
+      <div>
+        Este conjunto tenía los horarios escritos como texto:
+        <em>«{{ previous }}»</em>. Al guardar se reemplazarán por las franjas de abajo.
+      </div>
+    </div>
+  </div>
+}
+
+@for (day of entries; track day.key) {
+  @if (day.key === holidayKey) {
+    <!-- Holidays are not part of the week; the rule detaches them from it. -->
+    <hr class="my-3" />
+  }
+
+  <div class="card mb-2" [class.card-active]="expanded() === day.key">
+    <div class="card-body p-2 d-flex align-items-center gap-2">
+      <label class="form-check form-check-single form-switch mb-0">
+        <input
+          type="checkbox"
+          class="form-check-input"
+          [checked]="isOpen(day.key)"
+          [disabled]="disabled()"
+          (change)="toggleDay(day.key)"
+          [attr.aria-label]="'Abrir ' + day.label"
+        />
+      </label>
+
+      <span class="fw-medium" [class.text-secondary]="!isOpen(day.key)">{{ day.label }}</span>
+
+      @if (isOpen(day.key) && expanded() !== day.key) {
+        <span class="text-secondary small text-truncate">· {{ summaryFor(day.key) }}</span>
+      } @else if (!isOpen(day.key)) {
+        <span class="text-secondary small">· Cerrado</span>
+      }
+
+      @if (isOpen(day.key)) {
+        <button
+          type="button"
+          class="btn btn-icon btn-ghost-secondary ms-auto"
+          (click)="toggleExpanded(day.key)"
+          [attr.aria-expanded]="expanded() === day.key"
+          [attr.aria-label]="(expanded() === day.key ? 'Contraer ' : 'Editar ') + day.label"
+        >
+          <tabler-icon [name]="expanded() === day.key ? 'chevron-up' : 'chevron-down'" />
+        </button>
+      }
+    </div>
+
+    @if (expanded() === day.key) {
+      <div class="card-body pt-0">
+        @for (range of rangesFor(day.key); track $index) {
+          <div class="row g-2 align-items-center mb-2">
+            <div class="col">
+              <input
+                type="time"
+                class="form-control"
+                [value]="range.from"
+                [disabled]="disabled()"
+                [class.is-invalid]="showErrors() && isRangeInvalid(day.key, $index)"
+                (change)="updateRange(day.key, $index, 'from', $any($event.target).value)"
+                [attr.aria-label]="day.label + ' — hora de inicio'"
+              />
+            </div>
+            <div class="col-auto text-secondary small">a</div>
+            <div class="col">
+              <input
+                type="time"
+                class="form-control"
+                [value]="range.to"
+                [disabled]="disabled()"
+                [class.is-invalid]="showErrors() && isRangeInvalid(day.key, $index)"
+                (change)="updateRange(day.key, $index, 'to', $any($event.target).value)"
+                [attr.aria-label]="day.label + ' — hora de fin'"
+              />
+            </div>
+            <div class="col-auto">
+              <button
+                type="button"
+                class="btn btn-icon btn-ghost-danger"
+                [disabled]="disabled()"
+                (click)="removeRange(day.key, $index)"
+                [attr.aria-label]="'Quitar franja de ' + day.label"
+                ngbTooltip="Quitar franja"
+              >
+                <tabler-icon name="trash" />
+              </button>
+            </div>
+          </div>
+
+          @if (showErrors() && isRangeInvalid(day.key, $index)) {
+            <div class="text-danger small mb-2">
+              La hora de fin debe ser posterior a la de inicio y las franjas no pueden cruzarse.
+            </div>
+          }
+        }
+
+        <div class="d-flex gap-2">
+          @if (rangesFor(day.key).length < maxRangesPerDay) {
+            <button
+              type="button"
+              class="btn btn-sm btn-ghost-primary"
+              [disabled]="disabled()"
+              (click)="addRange(day.key)"
+            >
+              <tabler-icon name="plus" class="me-1" />
+              Agregar franja
+            </button>
+          }
+
+          <div ngbDropdown class="d-inline-block">
+            <button
+              type="button"
+              class="btn btn-sm btn-ghost-secondary"
+              ngbDropdownToggle
+              [disabled]="disabled()"
+            >
+              <tabler-icon name="copy" class="me-1" />
+              Copiar a…
+            </button>
+            <div ngbDropdownMenu>
+              @for (target of otherEntries(day.key); track target.key) {
+                <button type="button" ngbDropdownItem (click)="copyDayTo(day.key, target.key)">
+                  {{ target.label }}
+                </button>
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+}
+
+@if (preview()) {
+  <!-- `form-label-description` floats right in Tabler, which breaks a block
+       caption — plain utilities keep the preview stacked. -->
+  <div class="mt-3">
+    <div class="text-secondary small mb-1">Así lo verán los residentes</div>
+    <div class="text-secondary">{{ preview() }}</div>
+  </div>
+}

@@ -35,6 +35,19 @@ export const REQUEST_VISIBILITY_LABELS: Record<RequestVisibility, string> = {
   Public: 'Pública',
 };
 
+export const REQUEST_STATUS_BADGES: Record<string, string> = {
+  New: 'badge bg-blue-lt',
+  InProgress: 'badge bg-orange-lt',
+  Resolved: 'badge bg-green-lt',
+  Closed: 'badge bg-secondary-lt',
+};
+
+export const REQUEST_PRIORITY_BADGES: Record<string, string> = {
+  Low: 'badge bg-green-lt',
+  Medium: 'badge bg-yellow-lt',
+  High: 'badge bg-red-lt',
+};
+
 export const REQUEST_UPDATE_TYPE_LABELS: Record<RequestUpdateType, string> = {
   Progress: 'Avance',
   Comment: 'Comentario',
@@ -87,8 +100,11 @@ export interface RequestDetailDto {
   createdByUserId: string;
   apartmentId: string | null;
   assignedToUserId: string | null;
-  resolvedAtUtc: string | null;
-  closedAtUtc: string | null;
+  createdAtUtc: string; // date-time
+  resolvedAtUtc: string | null; // date-time
+  closedAtUtc: string | null; // date-time
+  /** Raw text the resident reported, kept verbatim; `description` is the editable version. */
+  originalDescription: string | null;
   metadata: string | null;
   participants: RequestParticipantDto[];
   updates: RequestUpdateDto[];

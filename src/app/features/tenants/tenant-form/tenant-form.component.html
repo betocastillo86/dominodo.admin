@@ -208,59 +208,30 @@
                 </div>
 
                 <div class="col-md-6 mb-3">
-                  <label class="form-label required" for="tenant-contact-schedules">Horarios</label>
+                  <label class="form-label" for="tenant-contact-address">Dirección de contacto</label>
                   <input
-                    id="tenant-contact-schedules"
+                    id="tenant-contact-address"
                     type="text"
                     class="form-control"
-                    formControlName="schedules"
+                    formControlName="address"
                     [class.is-invalid]="
-                      form.controls.contactInfo.controls.schedules.invalid &&
-                      form.controls.contactInfo.controls.schedules.touched
+                      form.controls.contactInfo.controls.address.invalid &&
+                      form.controls.contactInfo.controls.address.touched
                     "
                   />
-                  <small class="form-hint">P. ej. Lun a Vie 8:00–17:00.</small>
                   @if (
-                    form.controls.contactInfo.controls.schedules.invalid &&
-                    form.controls.contactInfo.controls.schedules.touched
+                    form.controls.contactInfo.controls.address.invalid &&
+                    form.controls.contactInfo.controls.address.touched
                   ) {
                     <div class="invalid-feedback">
-                      @if (form.controls.contactInfo.controls.schedules.errors?.['server']) {
-                        {{ form.controls.contactInfo.controls.schedules.errors?.['server'] }}
-                      } @else if (form.controls.contactInfo.controls.schedules.errors?.['required']) {
-                        Los horarios son obligatorios.
-                      } @else if (form.controls.contactInfo.controls.schedules.errors?.['maxlength']) {
-                        Los horarios no pueden superar los 200 caracteres.
+                      @if (form.controls.contactInfo.controls.address.errors?.['server']) {
+                        {{ form.controls.contactInfo.controls.address.errors?.['server'] }}
+                      } @else if (form.controls.contactInfo.controls.address.errors?.['maxlength']) {
+                        La dirección de contacto no puede superar los 200 caracteres.
                       }
                     </div>
                   }
                 </div>
-              </div>
-
-              <div class="mb-3">
-                <label class="form-label" for="tenant-contact-address">Dirección de contacto</label>
-                <input
-                  id="tenant-contact-address"
-                  type="text"
-                  class="form-control"
-                  formControlName="address"
-                  [class.is-invalid]="
-                    form.controls.contactInfo.controls.address.invalid &&
-                    form.controls.contactInfo.controls.address.touched
-                  "
-                />
-                @if (
-                  form.controls.contactInfo.controls.address.invalid &&
-                  form.controls.contactInfo.controls.address.touched
-                ) {
-                  <div class="invalid-feedback">
-                    @if (form.controls.contactInfo.controls.address.errors?.['server']) {
-                      {{ form.controls.contactInfo.controls.address.errors?.['server'] }}
-                    } @else if (form.controls.contactInfo.controls.address.errors?.['maxlength']) {
-                      La dirección de contacto no puede superar los 200 caracteres.
-                    }
-                  </div>
-                }
               </div>
 
               <div class="mb-3">
@@ -284,6 +255,28 @@
                       {{ form.controls.contactInfo.controls.additionalInfo.errors?.['server'] }}
                     } @else if (form.controls.contactInfo.controls.additionalInfo.errors?.['maxlength']) {
                       La información adicional no puede superar los 500 caracteres.
+                    }
+                  </div>
+                }
+              </div>
+
+              <div class="mb-3">
+                <!-- No `for`: the editor is a component, not a labelable control;
+                     each inner input carries its own aria-label. -->
+                <span class="form-label required d-block">Horarios de atención</span>
+                <app-schedule-editor formControlName="schedules" [showErrors]="submitted()" />
+                @if (submitted() && form.controls.contactInfo.controls.schedules.invalid) {
+                  <div class="text-danger small mt-1">
+                    @if (form.controls.contactInfo.controls.schedules.errors?.['server']) {
+                      {{ form.controls.contactInfo.controls.schedules.errors?.['server'] }}
+                    } @else if (form.controls.contactInfo.controls.schedules.errors?.['required']) {
+                      Indica al menos un día con su horario de atención.
+                    } @else if (form.controls.contactInfo.controls.schedules.errors?.['overlappingRanges']) {
+                      Hay franjas que se cruzan dentro de un mismo día.
+                    } @else if (form.controls.contactInfo.controls.schedules.errors?.['maxlength']) {
+                      El horario es demasiado largo (máx. 1000 caracteres).
+                    } @else {
+                      Revisa las franjas marcadas: la hora de fin debe ser posterior a la de inicio.
                     }
                   </div>
                 }

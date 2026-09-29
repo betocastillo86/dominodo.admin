@@ -80,6 +80,34 @@ modules follow the same conventions described here.
   HTTP context token (`core/http/silent-errors.ts`) — a polled endpoint would otherwise raise one toast per
   tick, and the reset's 404 is not an incident.
 
+- **Conversations (Domi):** `GET /chat-simulation/conversations` lists what Domi persisted, newest first
+  and **cross-tenant** — no `X-Tenant`, the `tenant` filter takes the tenant **slug** (not its id), and
+  `senderId` matches the phone as a fragment. `pageSize` is clamped to 100 upstream and the response
+  reports the effective page. `GET …/conversations/{id}` adds Domi's redacted `sessionState` (opaque to
+  the panel, rendered as JSON; `null` once the transcript outlived its session), and
+  `GET …/conversations/{id}/messages` / `…/decisions` page the transcript and the agent's decision trail
+  oldest first — the decisions one row per `contributor` within a turn, ordered by `sequence`. Both
+  honour the same reset cut as the simulator: they start after it unless `includeBeforeReset=true`,
+  which the detail page exposes as a switch shared by the two tabs. Both rows also carry an `episode`
+  (`currentEpisode` on the summary): a conversation is cut into episodes while `turnNumber` stays
+  monotonic across them, so the panel bands the tables **by episode** rather than by row parity —
+  consecutive episodes alternate background and the first row of each carries a divider
+  (`.row-episode-alt` / `.row-episode-start`, driven by the `data-table`'s `rowClass` input).
+  Both endpoints also take `episode` (1-based) to narrow the page to one episode; it **composes**
+  with the cut instead of lifting it. The transcript additionally takes `text`, a case-insensitive
+  (accent-sensitive) fragment of the message, matched **row by row** — the reply to a matched
+  message comes back only if it matches too. The detail page exposes it as a search box on the
+  Mensajes tab and treats a search as a question about the whole conversation: typing turns
+  `includeBeforeReset` on and drops the episode narrowing, so no match stays hidden. The way back
+  is the episode number of a matched row, rendered as a link (the `data-table`'s `cellFn` column
+  hook): it clears the search and filters the tabs to that episode. `GET …/conversations/{id}/episodes` is the index behind that
+  filter — turn span, instants and counts per episode — and is the one route that deliberately
+  ignores the reset cut, so the panel flags the options that fall below it as `(archivado)`
+  and picking any episode turns `includeBeforeReset` on — otherwise an episode that ended
+  below the cut would come back empty.
+  `404 Chat.ConversationNotFound` for an unknown id, `502 Chat.UpstreamUnavailable` when Domi is down.
+  These routes do **not** opt out of the global error toast — they are not polled.
+
 ---
 
 ## 4. Project structure
@@ -96,7 +124,7 @@ src/app/
 │   ├── health/     # /health/ready probes of the API + Domi (login strip and dashboard)
 │   └── models/     # shared contracts (e.g. PagedResult, ProblemDetails)
 ├── layout/      # panel chrome: shell (sidebar + navbar + outlet)
-├── shared/ui/   # reusable presentational pieces (data-table, page-header, spinner, service-status)
+├── shared/ui/   # reusable presentational pieces (data-table, page-header, spinner, service-status, schedule-editor)
 └── features/    # lazy domains, each with data-access/ + components
     ├── auth/             # blank layout → login
     ├── dashboard/        # default screen: the service-status widget in full detail
@@ -111,12 +139,20 @@ src/app/
     ├── request-categories/     # cross-tenant catalog: list, create, edit of PQRS categories
     ├── announcements/          # cross-tenant list (status/category/tenant filters) + create/edit form
     ├── knowledge-resources/    # cross-tenant list (status/category/tenant filters) + create/edit form
-    └── chat-simulation/        # Domi chat tester (phone gate → bubble chat); polls GET …/messages?afterTurn= for async turns, renders the reset cut
+    ├── chat-simulation/        # Domi chat tester (phone gate → bubble chat); polls GET …/messages?afterTurn= for async turns, renders the reset cut
+    └── conversations/          # Domi's persisted conversations: cross-tenant list (phone/tenant/date filters) + detail with transcript & decision tabs
 ```
 
 - **`core/`**: single instances and cross-cutting concerns; no business UI.
 - **`layout/`**: the sidebar/navbar chrome, kept separate from features.
 - **`shared/ui/`**: reusable Tabler-based pieces (the generic paged `data-table` is the notable one).
+  `schedule-editor` is a `ControlValueAccessor` over the tenant's opening hours: it binds to a plain
+  `string` control and writes the JSON envelope `{"v":1,"d":{"mon":["08:00-12:00"],…}}` that the API
+  stores in `contactInfo.schedules` (max 1000 chars). It is a port of the same component in
+  `dominodo.nodo` and is kept in lockstep with it — both panels write that column, so a change here
+  has to land there too. A tenant
+  saved before the editor existed holds free text there; the editor shows it read-only and requires the
+  admin to re-enter the hours as slots before saving.
 - **`features/*`**: one isolated, lazy-loaded domain each; `data-access` decouples data from presentation.
 
 ---
