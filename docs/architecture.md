@@ -52,6 +52,12 @@ modules follow the same conventions described here.
 - **Auth:** `POST /auth/login` (`{phone,password}` → tokens), `/auth/refresh`, `/auth/logout`. The JWT is
   tenant-agnostic and carries **no** permissions; the SuperAdmin is identified by a `role` claim that
   includes **`SuperAdmin`**. Fine-grained permissions are enforced **server-side** (a `403` surfaces as `ProblemDetails`).
+- **Permissions:** `GET /auth/current` → `{ user, permissions[], memberships[] }`. Because the panel sends no
+  `X-Tenant`, the API resolves **Platform scope only** — so a code present here is a platform-scope grant,
+  which is what the platform-gated writes demand. `AuthService.loadCurrentUser()` pushes the codes into
+  `AuthStore` (signal `permissions`, predicate `has(code)`); it runs after login and, for a session
+  rehydrated from storage, from an app initializer that is deliberately **not** awaited. Codes the panel
+  gates on live in `core/auth/permissions.ts`. The gate is UI only — the API is still the authority.
 
 > Two contract rules worth knowing up front: a role's `scope` is set on create and **immutable** on edit,
 > and **system roles** (`isSystem`) are treated as read-only in the panel.

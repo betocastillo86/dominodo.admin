@@ -30,3 +30,27 @@ export interface AuthUser {
   id: string;
   roles: string[];
 }
+
+/** Profile of the authenticated principal, as `GET /auth/current` returns it. */
+export interface CurrentUserProfileDto {
+  id: string;
+  phone: string;
+  email?: string;
+  firstName: string;
+  lastName: string;
+  status: string;
+  phoneVerified: boolean;
+  createdAtUtc: string; // date-time
+  updatedAtUtc?: string | null; // date-time
+}
+
+/**
+ * Answer of `GET /auth/current`. Permissions are the codes in effect for the caller;
+ * with no `X-Tenant` — the panel never sends one — the API resolves Platform scope only,
+ * and `memberships` comes back empty.
+ */
+export interface CurrentUserResponse {
+  user: CurrentUserProfileDto;
+  permissions: string[];
+  memberships: readonly unknown[];
+}

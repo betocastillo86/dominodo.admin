@@ -1,15 +1,19 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { catchError, finalize, forkJoin, map, Observable, of, switchMap } from 'rxjs';
+import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { TablerIconComponent } from 'angular-tabler-icons';
 import { PageHeaderComponent } from '../../../shared/ui/page-header/page-header.component';
 import { SpinnerComponent } from '../../../shared/ui/spinner/spinner.component';
 import { DataTableComponent, TableColumn } from '../../../shared/ui/data-table/data-table.component';
 import { NotificationService } from '../../../core/notifications/notification.service';
 import { ProblemDetails } from '../../../core/http/problem-details';
+import { AuthStore } from '../../../core/auth/auth.store';
+import { PERMISSION_USERS_EDIT } from '../../../core/auth/permissions';
 import { UsersService } from '../data-access/users.service';
+import { UserPasswordModalComponent } from '../user-password-modal/user-password-modal.component';
 import {
   UserMembershipRow,
   UserRequestRow,
@@ -65,6 +69,8 @@ export class UserFormComponent implements OnInit {
   private readonly apartmentsService = inject(ApartmentsService);
   private readonly requestsService = inject(RequestsService);
   private readonly notifications = inject(NotificationService);
+  private readonly authStore = inject(AuthStore);
+  private readonly modal = inject(NgbModal);
 
   private readonly id = this.route.snapshot.paramMap.get('id');
   readonly mode: 'create' | 'edit' = this.id ? 'edit' : 'create';
@@ -106,6 +112,12 @@ export class UserFormComponent implements OnInit {
 
   readonly userStatus = signal<UserStatus | null>(null);
   readonly userPhone = signal<string>('');
+
+  /**
+   * `PUT /users/{id}/password` demands `users.edit` at PLATFORM scope, so the action only
+   * shows for an operator who actually holds it — see `core/auth/permissions.ts`.
+   */
+  readonly canSetPassword = computed(() => this.authStore.has(PERMISSION_USERS_EDIT));
 
   readonly otpRequested = signal(false);
   readonly otpSending = signal(false);
@@ -289,6 +301,18 @@ export class UserFormComponent implements OnInit {
           error: (err: unknown) => this.handleError(err),
         });
     }
+  }
+
+  /** Opens the administrative password reset; the modal owns the form and the call. */
+  openPasswordModal(): void {
+    const raw = this.form.getRawValue();
+    const ref = this.modal.open(UserPasswordModalComponent, { centered: true, backdrop: 'static' });
+    ref.componentInstance.userId = this.id!;
+    ref.componentInstance.userName = `${raw.firstName} ${raw.lastName}`.trim();
+    // Only a successful reset closes the modal — a cancel dismisses it and never lands here.
+    ref.closed.subscribe(() =>
+      this.notifications.success('Contraseña actualizada. Se cerraron las sesiones del usuario.'),
+    );
   }
 
   requestOtp(): void {

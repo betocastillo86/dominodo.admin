@@ -1,11 +1,12 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Router } from '@angular/router';
-import { catchError, map, Observable, of, tap, throwError } from 'rxjs';
+import { catchError, map, Observable, of, switchMap, tap, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { AuthTokens, LoginRequest } from './auth.models';
+import { AuthTokens, CurrentUserResponse, LoginRequest } from './auth.models';
 import { AuthStore } from './auth.store';
 import { decodeToken, isSuperAdmin } from './jwt.util';
+import { silentErrors } from '../http/silent-errors';
 
 /** Handles the authentication lifecycle against `/auth/*`. */
 @Injectable({ providedIn: 'root' })
@@ -18,6 +19,7 @@ export class AuthService {
   /**
    * Authenticate by phone + password. Rejects (clearing storage) if the token's
    * role does not include `SuperAdmin`, so a non-admin never enters the panel.
+   * The permissions follow in a second call, which must not be able to fail the login.
    */
   login(credentials: LoginRequest): Observable<void> {
     return this.http.post<AuthTokens>(`${this.base}/login`, credentials).pipe(
@@ -29,7 +31,23 @@ export class AuthService {
         }
         this.store.setSession(tokens);
       }),
+      switchMap(() => this.loadCurrentUser().pipe(catchError(() => of(void 0)))),
     );
+  }
+
+  /**
+   * Loads the session's effective permissions into the store. The panel sends no `X-Tenant`,
+   * so the API answers with Platform-scope grants only — which is what the platform-gated
+   * writes are checked against. Errors are left to the caller; the toast is suppressed because
+   * a missing permission list only hides UI, it is not an incident to alert the operator about.
+   */
+  loadCurrentUser(): Observable<void> {
+    return this.http
+      .get<CurrentUserResponse>(`${this.base}/current`, { context: silentErrors() })
+      .pipe(
+        tap((current) => this.store.setPermissions(current.permissions)),
+        map(() => void 0),
+      );
   }
 
   /** Exchange the refresh token for a fresh token set (rotates the refresh token). */
