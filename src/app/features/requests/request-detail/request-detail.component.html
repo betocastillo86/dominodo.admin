@@ -1,5 +1,5 @@
 <app-page-header [title]="pageTitle()" pretitle="Solicitudes">
-  <a routerLink="/requests" actions class="btn btn-secondary">Volver al listado</a>
+  <a routerLink="/requests" [queryParams]="backQueryParams" actions class="btn btn-secondary">Volver al listado</a>
 </app-page-header>
 
 <div class="page-body">
@@ -175,7 +175,7 @@
                 }
                 Guardar cambios
               </button>
-              <a routerLink="/requests" class="btn btn-link">Cancelar</a>
+              <a routerLink="/requests" [queryParams]="backQueryParams" class="btn btn-link">Cancelar</a>
             </div>
           </form>
         </div>

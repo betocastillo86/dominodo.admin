@@ -10,7 +10,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatePipe } from '@angular/common';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Params, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   catchError,
@@ -78,6 +78,7 @@ import {
 })
 export class RequestDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly requestsService = inject(RequestsService);
   private readonly tenantsService = inject(TenantsService);
   private readonly apartmentsService = inject(ApartmentsService);
@@ -108,6 +109,15 @@ export class RequestDetailComponent implements OnInit {
 
   /** Resolved participant users keyed by userId, so the table can show name + phone. */
   readonly participantUsers = signal<Record<string, UserDetailDto>>({});
+
+  /**
+   * Filters of the listing we came from, carried here as the `back` query param. Both
+   * ways out of this page replay them, so the listing comes back exactly as it was.
+   */
+  readonly backQueryParams: Params = (() => {
+    const back = this.route.snapshot.queryParamMap.get('back');
+    return back ? this.router.parseUrl(`/requests?${back}`).queryParams : {};
+  })();
 
   /** Router link to the request's conjunto (tenant) edit page. */
   readonly conjuntoLink = this.tenantId ? ['/tenants', this.tenantId, 'edit'] : null;

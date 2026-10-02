@@ -72,7 +72,7 @@
               [editable]="false"
               (selectItem)="onSelectParticipant($event)"
             />
-            @if (selectedParticipant()) {
+            @if (participantUserId()) {
               <button
                 type="button"
                 class="btn"
@@ -86,6 +86,17 @@
           @if (selectedParticipant(); as p) {
             <small class="form-hint">Participante: {{ p.userName }} · {{ p.phone }}</small>
           }
+        </div>
+        <div class="col-12 col-sm-4 col-lg-4 d-flex align-items-center">
+          <button
+            type="button"
+            class="btn btn-link px-0"
+            [disabled]="!hasFilters()"
+            (click)="clearFilters()"
+          >
+            <i-tabler name="filter-off" class="icon"></i-tabler>
+            Limpiar filtros
+          </button>
         </div>
       </div>
     </div>
