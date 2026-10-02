@@ -52,6 +52,12 @@ modules follow the same conventions described here.
 - **Auth:** `POST /auth/login` (`{phone,password}` → tokens), `/auth/refresh`, `/auth/logout`. The JWT is
   tenant-agnostic and carries **no** permissions; the SuperAdmin is identified by a `role` claim that
   includes **`SuperAdmin`**. Fine-grained permissions are enforced **server-side** (a `403` surfaces as `ProblemDetails`).
+- **Permissions:** `GET /auth/current` → `{ user, permissions[], memberships[] }`. Because the panel sends no
+  `X-Tenant`, the API resolves **Platform scope only** — so a code present here is a platform-scope grant,
+  which is what the platform-gated writes demand. `AuthService.loadCurrentUser()` pushes the codes into
+  `AuthStore` (signal `permissions`, predicate `has(code)`); it runs after login and, for a session
+  rehydrated from storage, from an app initializer that is deliberately **not** awaited. Codes the panel
+  gates on live in `core/auth/permissions.ts`. The gate is UI only — the API is still the authority.
 
 > Two contract rules worth knowing up front: a role's `scope` is set on create and **immutable** on edit,
 > and **system roles** (`isSystem`) are treated as read-only in the panel.
@@ -242,6 +248,17 @@ Searching memberships (rather than users) guarantees the target already belongs 
 Because write endpoints require the `X-Tenant` header (a slug), the detail component resolves the
 slug from the `tenantId` query param by calling `TenantsService.getById()` before loading the
 request detail.
+
+The requests list keeps its **whole state in the query string** — filters, participant, sort and
+page — so a reload, a shared link, and the browser's back button from a detail all land on the same
+listing. The URL is the source of truth: the component seeds its controls from it on entry and
+re-seeds whenever the URL changes without its doing (the sidebar link back to `/requests`, a pasted
+link, back/forward), while every filter change mirrors itself back with `replaceUrl: true` so a run
+of edits stays a single history entry. A participant filter travels as a bare `participantUserId`
+and its name/phone are resolved with `UsersService.getById()`. Row links carry that query string to
+the detail as a single `back` param, which the detail's "Volver al listado" and "Cancelar" replay. A
+**Limpiar filtros** button drops every filter at once (sorting and page size stay) and is disabled
+when none is applied.
 
 **Notification Messages** are the **materialized** (already-sent) notifications, exposed as three
 **read-only** paged lists — Email (`GET /messages/email`), Push (`GET /messages/push`), and In-App

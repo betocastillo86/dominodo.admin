@@ -60,6 +60,11 @@ export interface UpdateUserRequest {
   preferredLanguage: string;
 }
 
+/** Body of `PUT /users/{id}/password` — an administrative reset, no current password asked. */
+export interface SetUserPasswordRequest {
+  newPassword: string;
+}
+
 export interface RequestVerificationRequest {
   phone: string;
 }

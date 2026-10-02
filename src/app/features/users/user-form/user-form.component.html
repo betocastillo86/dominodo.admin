@@ -227,6 +227,21 @@
                 </div>
               }
             </div>
+
+            @if (canSetPassword()) {
+              <hr class="my-4" />
+
+              <h4 class="mb-2">Contraseña</h4>
+              <p class="text-secondary small mb-3">
+                Asigná una contraseña nueva sin pedir la actual. Al hacerlo se cierran las sesiones
+                activas del usuario.
+              </p>
+
+              <button type="button" class="btn btn-secondary" (click)="openPasswordModal()">
+                <tabler-icon name="key" class="me-1" />
+                Cambiar contraseña
+              </button>
+            }
           }
         }
       </div>

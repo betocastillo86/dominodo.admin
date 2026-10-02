@@ -8,6 +8,7 @@ import {
   ConfirmVerificationRequest,
   RegisterUserRequest,
   RequestVerificationRequest,
+  SetUserPasswordRequest,
   UpdateUserRequest,
   UserDetailDto,
   UserListItemDto,
@@ -77,6 +78,15 @@ export class UsersService {
 
   update(id: string, body: UpdateUserRequest): Observable<void> {
     return this.http.put<void>(`${this.base}/${id}`, body);
+  }
+
+  /**
+   * Sets a user's password without asking for the current one. Gated by the API on `users.edit`
+   * at PLATFORM scope, and it revokes the user's active refresh tokens — any live session of
+   * theirs dies with the old credential.
+   */
+  setPassword(id: string, body: SetUserPasswordRequest): Observable<void> {
+    return this.http.put<void>(`${this.base}/${id}/password`, body);
   }
 
   requestVerification(body: RequestVerificationRequest): Observable<void> {
