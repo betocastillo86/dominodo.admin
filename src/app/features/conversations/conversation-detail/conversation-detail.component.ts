@@ -298,13 +298,21 @@ export class ConversationDetailComponent {
   }
 
   /**
-   * What hangs under a decision row across the whole table: the message it resolved —
-   * the trail stores only its id, so it is read from the transcript index — and the
-   * upstream calls it made, as a table of their own. Each block only shows up when
-   * there is something to show, so a bare decision stays a single row.
+   * What hangs under a decision row across the whole table: the correlation id that ties
+   * the turn to Domi's logs, the message it resolved — the trail stores only its id, so
+   * it is read from the transcript index — and the upstream calls it made, as a table of
+   * their own. Each block only shows up when there is something to show, so a bare
+   * decision stays a single row.
    */
   readonly decisionDetail = (d: DecisionRecordDto): RowDetailSection[] => {
     const sections: RowDetailSection[] = [];
+
+    if (d.correlationId) {
+      sections.push({
+        label: 'CorrelationId',
+        values: [{ text: d.correlationId, mono: true }],
+      });
+    }
 
     const message = this.messageIndex().get(d.messageId);
     if (message) {
