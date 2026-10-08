@@ -7,4 +7,11 @@
 // against a package that internally uses `@import` cannot do.
 @import '@tabler/core/scss/tabler';
 
+// Tabler's theme switches (`data-bs-theme-primary`, `-base`, `-radius`, `-font`). They
+// live outside `tabler.scss`, so they only exist if imported on their own — and they must
+// come AFTER the theme: the rules are attribute selectors that re-point `--tblr-primary`
+// and tie with the `:root` declaration in `_props.scss`, so source order decides.
+// `applyEnvTheme` uses `data-bs-theme-primary` to tint the panel per environment.
+@import '@tabler/core/scss/tabler-themes';
+
 // Panel-specific overrides go below (applied after Tabler's own rules).

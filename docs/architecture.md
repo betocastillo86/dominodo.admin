@@ -29,7 +29,8 @@ modules follow the same conventions described here.
 - **Angular (v20+), standalone + signals** — no `NgModule`; `provideRouter`/`provideHttpClient`,
   **functional** interceptors and guards, `@if`/`@for`, `inject()`.
 - **Tabler** (`@tabler/core`, SCSS) as the global theme (Bootstrap 5, no jQuery); the layout is ported to
-  Angular components.
+  Angular components. `tabler-themes.scss` is imported on top of the theme for Tabler's
+  `data-bs-theme-primary` switch — see §4.1, *Environment theming*.
 - **ng-bootstrap** for interactive components (dropdowns, modals…) on top of Tabler's CSS — Bootstrap's JS is not used.
 - **`angular-tabler-icons`** for icons.
 - **State**: signals + services (`AuthStore`, `data-access` services). No NgRx.
@@ -128,9 +129,10 @@ src/app/
 │   ├── http/       # auth + error interceptors
 │   ├── guards/     # authGuard, superAdminGuard
 │   ├── health/     # /health/ready probes of the API + Domi (login strip and dashboard)
+│   ├── theme/      # per-environment tint applied to <html> before bootstrap
 │   └── models/     # shared contracts (e.g. PagedResult, ProblemDetails)
 ├── layout/      # panel chrome: shell (sidebar + navbar + outlet)
-├── shared/ui/   # reusable presentational pieces (data-table, page-header, spinner, service-status, schedule-editor)
+├── shared/ui/   # reusable presentational pieces (data-table, page-header, spinner, service-status, schedule-editor, env-badge)
 └── features/    # lazy domains, each with data-access/ + components
     ├── auth/             # blank layout → login
     ├── dashboard/        # default screen: the service-status widget in full detail
@@ -160,6 +162,37 @@ src/app/
   saved before the editor existed holds free text there; the editor shows it read-only and requires the
   admin to re-enter the hours as slots before saving.
 - **`features/*`**: one isolated, lazy-loaded domain each; `data-access` decouples data from presentation.
+
+### 4.1 Environment theming
+
+The panel looks different depending on which deployment it is pointed at, so a production tab is never
+mistaken for stage or a local run — the failure mode this guards against is editing a real tenant while
+believing you are in a test environment.
+
+Two fields in `src/environments/environment*.ts` (typed by `environment.model.ts`, which keeps the three
+files in step) drive it:
+
+| Build | `envName` | `envTone` |
+| --- | --- | --- |
+| `--configuration development` | `Local` | `blue` |
+| `--configuration stage` | `Stage` | `blue` |
+| `--configuration production` | `Producción` | `orange` |
+
+- **The tint.** `applyEnvTheme()` (`core/theme/env-theme.ts`) sets `data-bs-theme-primary="<envTone>"` on
+  `<html>`. Tabler resolves `--tblr-primary` from that attribute, so the one attribute re-colours buttons,
+  links, the active sidebar item, badges and spinners at once. It runs in `main.ts` **before** bootstrap,
+  so the colour is there on the first paint with no flash of the default blue.
+  - The rules live in `@tabler/core/scss/tabler-themes.scss`, which `tabler.scss` does **not** include —
+    `src/styles/_tabler.scss` imports it separately, and it must come **after** the theme: the attribute
+    selector ties with the `:root` declaration in Tabler's `_props.scss`, so source order decides the winner.
+  - Tabler bakes the Sass `$primary` into a literal in two places that therefore do not follow the switch:
+    `--tblr-brand` (unused here) and `.btn-link` (every "Cancelar" in the panel). `styles.scss` re-ties
+    `.btn-link` to `var(--tblr-link-color)`. Anything else that hardcodes a colour would need the same.
+  - Changing an environment's colour is a one-word edit of `envTone`; the allowed values are Tabler's
+    palette names, listed as `EnvTone` in `environment.model.ts`.
+- **The label.** `shared/ui/env-badge` names the environment in the navbar and under the login logo. The
+  colour catches the eye; the badge says what the colour means, so the convention does not have to be
+  remembered.
 
 ---
 
