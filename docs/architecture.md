@@ -73,12 +73,25 @@ modules follow the same conventions described here.
   of a number canonicalizes to the same bare E.164 conversation (Domi ADR-0012), so the panel canonicalizes
   before it calls.
 
-  `DELETE /chat-simulation/{phone}` **resets** the conversation — it does not delete it (Domi ADR-0013).
-  Domi's transcript is append-only: the reset clears the agent's conversational state and stamps a **cut**
-  on the transcript, reported back as `resetAfterTurn` (`0` = never reset). The pull hides everything up to
-  that cut by default, so the panel empties after a reset while the audit trail survives and is readable
-  with `includeBeforeReset=true` — which is what the "Ver historial completo" toggle sends, rendering a
-  separator at the cut. The resident's identity link survives a reset, so notifications keep reaching them.
+  `DELETE /chat-simulation/{phone}` **resets** the conversation — it does not delete it
+  (Domi ADR-0004 §13–§14). Domi's transcript is append-only: the reset clears the agent's conversational
+  state and stamps a **cut** on the transcript, reported back as `resetAfterTurn` (`0` = never reset). The
+  pull hides everything up to that cut by default, so the panel empties after a reset while the audit trail
+  survives and is readable with `includeBeforeReset=true` — which is what the "Ver historial completo"
+  toggle sends, rendering a separator at the cut. The resident's identity link survives a reset, so
+  notifications keep reaching them.
+
+  **The cut is no longer only ours** (Domi ADR-0004 §18–§19): Domi closes a conversation by itself when a
+  request is created, and stamps the cut on the very turn that carries the goodbye — the cut lands on
+  `MAX(turnNumber)` *after* the turn is recorded. A default pull therefore answers that turn with an empty
+  page, and the closing message would never reach the screen. So when the panel sees `resetAfterTurn` move
+  **past its own cursor**, it reads across the cut once with `includeBeforeReset=true`, starting no earlier
+  than the cut it had already settled on (`archiveFloor` in the component) — enough to recover the turns
+  that were closed away while it watched, never enough to drag the older archive back in. The new cut is
+  published by *that* read, so the separator cannot land above a bubble it is about to replace and a failed
+  read is simply retried by the next poll. For the same reason the separator reads **"Conversación
+  cerrada"**, not "reiniciada", and archived bubbles are dimmed only when the cut actually divides what is
+  on screen: a thread lying entirely behind the cut is the conversation the operator just had.
 
   Its statuses carry meaning: `204` there was something to reset · `404 Chat.NoConversation` the number
   never wrote, a **benign** outcome the panel reports as information, not an error · `400 Chat.InvalidPhone`
