@@ -142,6 +142,11 @@ stages:
     displayName: Deploy to Prod (manual gate)
     dependsOn: []
     trigger: manual
+    # Keeps the branch restriction the old `eq(Build.SourceBranch, 'refs/heads/main')` condition
+    # gave us. Without it this stage has NO branch guard at all: the pipeline can be queued on any
+    # branch and DeployProd then run from it, putting unreviewed code into production with prod
+    # credentials. `condition` is allowed on a manual stage — only `dependsOn` is not.
+    condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
     variables:
       - group: dominodo-admin-prod      # FTP_HOST, FTP_USERNAME, FTP_PASSWORD, FTP_REMOTE_DIR
     jobs:
