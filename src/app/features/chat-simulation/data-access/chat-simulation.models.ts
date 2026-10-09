@@ -68,9 +68,11 @@ export interface ChatBubble {
 }
 
 /**
- * What the thread renders: bubbles plus the marker for the reset cut. The marker only
- * appears when archived turns are on screen, i.e. when the full history is being shown.
+ * What the thread renders: bubbles plus the marker for the cut. `archived` is pre-computed
+ * rather than derived in the template because it is not simply "behind the cut": a thread
+ * that lies *entirely* behind it is the conversation the operator just had, and the marker
+ * closing it already says so — dimming all of it would contrast it against nothing.
  */
 export type ChatThreadItem =
-  | { kind: 'message'; id: string; message: ChatBubble }
+  | { kind: 'message'; id: string; message: ChatBubble; archived: boolean }
   | { kind: 'reset'; id: string; turnNumber: number };

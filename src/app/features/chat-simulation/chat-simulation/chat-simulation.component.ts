@@ -67,12 +67,17 @@ function e164Validator(control: AbstractControl): ValidationErrors | null {
  * new turns into the bubble list deduplicating by turnNumber. The POST reply is not
  * painted directly — all turns arrive through the transcript.
  *
- * Reset semantics (Domi ADR-0013): DELETE clears the agent's conversational state but
- * NEVER deletes the transcript — it stamps a cut on it, reported back as
+ * Reset semantics (Domi ADR-0004 §13–§14): DELETE clears the agent's conversational
+ * state but NEVER deletes the transcript — it stamps a cut on it, reported back as
  * `resetAfterTurn`, and the pull hides everything up to that cut by default. So the
  * screen empties after a reset while the audit trail survives, readable on demand via
  * `includeBeforeReset`. A 404 on the reset means the number simply never wrote: a
  * benign outcome, not a failure.
+ *
+ * The cut is NOT only ours any more (Domi ADR-0004 §18–§19): Domi closes a conversation
+ * by itself when a request is created, and stamps the cut on the very turn that carries
+ * the goodbye. The default pull starts after the cut, so that last turn would never
+ * arrive — `pullAcrossCut()` is what goes and gets it. See `archiveFloor`.
  */
 @Component({
   selector: 'app-chat-simulation',
@@ -108,29 +113,37 @@ export class ChatSimulationComponent {
   readonly hasArchivedHistory = computed(() => this.resetAfterTurn() > 0);
 
   /**
-   * The rendered thread: bubbles plus the cut marker, inserted before the first turn
-   * that survives the reset. It only shows up once archived turns are on screen, so
-   * the default view (which starts after the cut) never renders a dangling separator.
+   * The rendered thread: bubbles plus the cut marker, inserted before the first turn that
+   * survives the cut — or at the end when nothing does, which is what a conversation Domi
+   * just closed looks like. The marker only shows up once turns from behind the cut are on
+   * screen, so the default view never renders a dangling separator.
    */
   readonly thread = computed<ChatThreadItem[]>(() => {
     const cut = this.resetAfterTurn();
     const bubbles = this.messages();
-    const isArchived = (b: ChatBubble) => b.turnNumber != null && b.turnNumber <= cut;
+    const isBehindCut = (b: ChatBubble) => b.turnNumber != null && b.turnNumber <= cut;
+    const item = (message: ChatBubble, archived: boolean) =>
+      ({ kind: 'message', id: message.id, message, archived }) as const;
 
-    if (cut <= 0 || !bubbles.some(isArchived)) {
-      return bubbles.map((message) => ({ kind: 'message', id: message.id, message }) as const);
+    if (cut <= 0 || !bubbles.some(isBehindCut)) {
+      return bubbles.map((message) => item(message, false));
     }
+
+    // Dim the archive only when something on screen survives the cut. Since Domi closes a
+    // conversation on its own, the common shape is a thread that lies entirely behind the
+    // cut — the conversation the operator just finished. Greying all of it says nothing.
+    const divides = bubbles.some((b) => !isBehindCut(b));
 
     const items: ChatThreadItem[] = [];
     let divided = false;
     for (const message of bubbles) {
-      if (!divided && !isArchived(message)) {
+      if (!divided && !isBehindCut(message)) {
         items.push({ kind: 'reset', id: `reset-${cut}`, turnNumber: cut });
         divided = true;
       }
-      items.push({ kind: 'message', id: message.id, message });
+      items.push(item(message, divides && isBehindCut(message)));
     }
-    // Reset with no turn since: the cut closes the thread.
+    // Nothing since the cut: it closes the thread.
     if (!divided) {
       items.push({ kind: 'reset', id: `reset-${cut}`, turnNumber: cut });
     }
@@ -149,6 +162,17 @@ export class ChatSimulationComponent {
   private readonly scrollAnchor = viewChild<ElementRef<HTMLElement>>('scrollAnchor');
   private pollSub?: Subscription;
 
+  /**
+   * The cut this screen settled on when it first pulled, and the floor every read across a
+   * later cut starts from. `null` until that first pull answers: whatever was already behind
+   * the cut on arrival is archive the operator did not ask for, so it must never be dragged
+   * back in — only turns cut away *while we were watching* are ours to recover.
+   */
+  private archiveFloor: number | null = null;
+
+  /** A read across the cut is in flight; it is never chained onto itself. */
+  private crossingCut = false;
+
   /** Enters the conversation for the typed phone and starts live polling (rehydrates from afterTurn=0). */
   startConversation(): void {
     if (this.phoneControl.invalid) {
@@ -158,6 +182,7 @@ export class ChatSimulationComponent {
     this.phone.set(canonicalPhone(this.phoneControl.value));
     this.includeBeforeReset.set(false);
     this.resetAfterTurn.set(0);
+    this.archiveFloor = null;
     this.conversationId.set(null);
     this.messages.set([]);
     this.cursor.set(0);
@@ -260,6 +285,7 @@ export class ChatSimulationComponent {
     this.pollError.set(null);
     this.resetAfterTurn.set(0);
     this.includeBeforeReset.set(false);
+    this.archiveFloor = null;
     this.phoneControl.reset('');
     this.messageControl.reset('');
   }
@@ -306,6 +332,7 @@ export class ChatSimulationComponent {
     this.error.set(null);
     this.cursor.set(0);
     this.pollError.set(null);
+    this.archiveFloor = null;
     // The new default view starts after the fresh cut; the archive stays one click away.
     this.includeBeforeReset.set(false);
     this.startPolling();
@@ -316,6 +343,7 @@ export class ChatSimulationComponent {
     this.messages.set([]);
     this.cursor.set(0);
     this.pollError.set(null);
+    this.archiveFloor = null;
     if (this.polling()) {
       this.startPolling();
     } else {
@@ -418,7 +446,43 @@ export class ChatSimulationComponent {
 
     this.cursor.set(Math.max(this.cursor(), resp.cursor));
     this.conversationId.set(resp.conversationId);
+
+    // The cut moved past our cursor: turns were closed away between two pulls and the default
+    // view will never hand them over. Go read them, from no earlier than the cut this screen
+    // had already settled on. The new cut is deliberately NOT published yet — that pull
+    // publishes it, which keeps the separator from landing above a bubble it is about to
+    // replace, and leaves the next poll free to try again if this read fails.
+    if (!this.crossingCut && this.archiveFloor !== null && resp.resetAfterTurn > this.cursor()) {
+      this.pullAcrossCut(Math.max(this.cursor(), this.archiveFloor));
+      return;
+    }
+
     this.resetAfterTurn.set(resp.resetAfterTurn);
+    this.archiveFloor ??= resp.resetAfterTurn;
+  }
+
+  /**
+   * Pulls the turns a close swallowed: the same read, ignoring the cut, starting at
+   * `afterTurn`. Domi stamps the cut on the turn it is answering (ADR-0004 §19), so a
+   * conversation it closes by itself buries its own goodbye behind it. Bounded by the
+   * caller to what came after the previous cut, so recovering one closing turn never drags
+   * the whole archive onto the screen.
+   *
+   * The flag is held across the merge, not just the request: a cut the pull cannot reach
+   * past (an upstream `resetAfterTurn` beyond the last turn) would otherwise re-arm the
+   * condition and spin. Held, the retry falls back to the 4 s poll, which is a safe rhythm.
+   */
+  private pullAcrossCut(afterTurn: number): void {
+    const phone = this.phone();
+    if (!phone) return;
+    this.crossingCut = true;
+    this.chatService
+      .getMessages(phone, afterTurn, true)
+      .pipe(finalize(() => (this.crossingCut = false)))
+      .subscribe({
+        next: (resp) => this.mergeTranscript(resp),
+        error: (err: unknown) => this.pollError.set(this.chatService.toError(err)),
+      });
   }
 
   private mapRole(role: ChatMessageRole): ChatDirection {

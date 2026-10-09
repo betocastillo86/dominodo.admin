@@ -28,13 +28,14 @@ Angular SPA: the Dominodo **super administrator** panel. Consumes the `dominodo.
 
 ## Structure (`src/app/`)
 - `core/` — singletons & cross-cutting, no feature UI: `auth/` (store, service, jwt util, token storage),
-  `http/` (auth + error interceptors), `guards/`, `health/` (`/health/ready` probes), `models/`.
+  `http/` (auth + error interceptors), `guards/`, `health/` (`/health/ready` probes), `theme/` (per-env tint), `models/`.
 - `layout/` — panel chrome ported from Tabler: `shell/`, `sidebar/`, `navbar/`.
-- `shared/ui/` — reusable presentational pieces: `data-table/` (generic paged table), `page-header/`, `spinner/`.
+- `shared/ui/` — reusable presentational pieces: `data-table/` (generic paged table), `page-header/`, `spinner/`, `env-badge/`.
 - `features/<name>/` — lazy-loaded domains; each splits `data-access/` (services + models) from components.
 
 **Env & hosting artifacts:** `src/environments/environment.stage.ts` holds stage config (prod is
-`environment.ts`); `public/web.config` is the IIS SPA-fallback, copied to the deploy root at build time.
+`environment.ts`), all three typed by `environment.model.ts`; `public/web.config` is the IIS SPA-fallback,
+copied to the deploy root at build time.
 Prod is served at **`admin.dominodo.com`** from the same FTP/IIS hosting as stage, and points at
 `app-dominodo-api-prod.azurewebsites.net` / `app-dominodo-domi-prod.azurewebsites.net` — the prod web
 apps run on a Free (F1) plan, which supports no custom domain. Domi's `TestChat` is **off** in prod, so
@@ -43,6 +44,14 @@ the chat-simulation screen only works against stage.
 **Caching (do not regress):** the hosting caches every static file for a year, so `public/web.config`
 carves out `index.html` as `no-cache` — otherwise deploys stay invisible to users for days. Never add an
 unhashed file to `public/` without its own `<location>` block.
+
+**Environment theming (do not regress):** production must not look like stage or a local run — the point
+is that nobody edits a real tenant believing they are in a test environment. `envName` + `envTone` in each
+`environment*.ts` drive it: `applyEnvTheme()` (`core/theme/env-theme.ts`) sets Tabler's
+`data-bs-theme-primary` on `<html>` from `main.ts` before bootstrap (prod = `orange`, the rest stay `blue`),
+and `shared/ui/env-badge` names the environment in the navbar and on login. The switch lives in
+`@tabler/core/scss/tabler-themes.scss`, imported in `_tabler.scss` **after** the theme — source order is
+what makes it win. See `docs/architecture.md` §4.1.
 
 **Version banner:** the pipeline stamps `$(Build.BuildId)` into `core/version/app-version.ts` and
 `public/version.json`; `VersionCheckService` polls the latter and prompts open tabs to reload. The

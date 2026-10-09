@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  OnInit,
+  signal,
+} from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -24,10 +31,13 @@ import { ProblemDetails } from '../../../core/http/problem-details';
 import { PagedResult } from '../../../core/models/paged-result';
 import { TenantsService } from '../data-access/tenants.service';
 import {
+  ALL_FEATURE_KEYS,
   ContactInfoDto,
+  FEATURE_DESCRIPTIONS,
+  FEATURE_LABELS,
+  FeatureKey,
   TENANT_STATUS_BADGES,
   TENANT_STATUS_LABELS,
-  TenantFeatureDto,
   TenantStatus,
   TenantType,
 } from '../data-access/tenant.models';
@@ -190,13 +200,23 @@ export class TenantFormComponent implements OnInit {
   readonly TENANT_STATUS_BADGES = TENANT_STATUS_BADGES;
   readonly ALL_STATUSES: TenantStatus[] = ['Onboarding', 'Active', 'Suspended'];
 
-  // Features section (edit mode only).
-  readonly tenantFeatures = signal<TenantFeatureDto[]>([]);
+  // Features section (edit mode only). The keys are the API's `FeatureKey` enum, so the
+  // panel renders a fixed switch per feature instead of asking for a key by hand.
+  private readonly featureState = signal<Partial<Record<FeatureKey, boolean>>>({});
   readonly loadingFeatures = signal(false);
   readonly featuresError = signal<string | null>(null);
-  readonly newFeatureKey = new FormControl('', { nonNullable: true });
-  readonly addingFeature = signal(false);
-  readonly togglingFeature = signal<string | null>(null);
+  readonly togglingFeature = signal<FeatureKey | null>(null);
+
+  /** One row per known feature; a feature the tenant has no record for reads as off. */
+  readonly featureRows = computed(() => {
+    const state = this.featureState();
+    return ALL_FEATURE_KEYS.map((key) => ({
+      key,
+      label: FEATURE_LABELS[key],
+      description: FEATURE_DESCRIPTIONS[key],
+      enabled: state[key] ?? false,
+    }));
+  });
 
   readonly apartmentRowKey = (apt: ApartmentDto): string => apt.id;
 
@@ -393,39 +413,37 @@ export class TenantFormComponent implements OnInit {
       .getFeatures(this.id)
       .pipe(finalize(() => this.loadingFeatures.set(false)))
       .subscribe({
-        next: (features) => this.tenantFeatures.set(features),
+        next: (features) =>
+          this.featureState.set(
+            Object.fromEntries(
+              features
+                .filter((f) => ALL_FEATURE_KEYS.includes(f.featureKey as FeatureKey))
+                .map((f) => [f.featureKey, f.enabled]),
+            ),
+          ),
         error: (err: unknown) =>
           this.featuresError.set(this.toMessage(err, 'No se pudieron cargar las features.')),
       });
   }
 
-  addFeature(): void {
-    const key = this.newFeatureKey.value.trim();
-    if (!key || !this.id) return;
-    this.addingFeature.set(true);
-    this.tenantsService
-      .setFeature(this.id, key, { enabled: true })
-      .pipe(finalize(() => this.addingFeature.set(false)))
-      .subscribe({
-        next: () => {
-          this.newFeatureKey.reset();
-          this.loadFeatures();
-        },
-        error: (err: unknown) =>
-          this.featuresError.set(this.toMessage(err, 'No se pudo agregar la feature.')),
-      });
-  }
-
-  toggleFeature(feature: TenantFeatureDto): void {
+  /**
+   * Flips one feature. The switch moves right away and is put back if the PUT fails,
+   * so the checkbox never shows a state the API did not accept.
+   */
+  toggleFeature(key: FeatureKey, enabled: boolean): void {
     if (!this.id) return;
-    this.togglingFeature.set(feature.featureKey);
+    const previous = this.featureState();
+    this.featureState.set({ ...previous, [key]: enabled });
+    this.togglingFeature.set(key);
+    this.featuresError.set(null);
     this.tenantsService
-      .setFeature(this.id, feature.featureKey, { enabled: !feature.enabled })
+      .setFeature(this.id, key, { enabled })
       .pipe(finalize(() => this.togglingFeature.set(null)))
       .subscribe({
-        next: () => this.loadFeatures(),
-        error: (err: unknown) =>
-          this.featuresError.set(this.toMessage(err, 'No se pudo actualizar la feature.')),
+        error: (err: unknown) => {
+          this.featureState.set(previous);
+          this.featuresError.set(this.toMessage(err, 'No se pudo actualizar la feature.'));
+        },
       });
   }
 

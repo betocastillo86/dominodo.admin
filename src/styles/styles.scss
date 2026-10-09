@@ -85,3 +85,15 @@ tr.row-detail > * {
     white-space: normal;
   }
 }
+
+// `.btn-link` is the one widely-used rule where Tabler bakes `$primary` into a literal at
+// compile time, so it keeps the default blue when `data-bs-theme-primary` re-points
+// `--tblr-primary` per environment (see `core/theme/env-theme.ts`). Every "Cancelar" in the
+// panel is a `.btn-link`, so tie it back to the live variable.
+.btn-link {
+  color: var(--tblr-link-color);
+
+  &:hover {
+    color: var(--tblr-link-hover-color);
+  }
+}

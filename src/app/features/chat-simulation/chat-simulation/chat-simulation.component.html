@@ -90,8 +90,8 @@
                 [class.btn-outline-secondary]="includeBeforeReset()"
                 [title]="
                   includeBeforeReset()
-                    ? 'Ver solo la conversación posterior al último reinicio'
-                    : 'Ver el historial completo, incluidos los turnos anteriores al reinicio'
+                    ? 'Ver solo la conversación posterior al último cierre'
+                    : 'Ver el historial completo, incluidos los turnos anteriores al cierre'
                 "
                 [disabled]="sending() || resetting()"
                 (click)="toggleHistory()"
@@ -130,7 +130,7 @@
               <p class="empty-title">Sin mensajes</p>
               <p class="empty-subtitle text-secondary">
                 @if (hasArchivedHistory()) {
-                  La conversación se reinició en el turno {{ resetAfterTurn() }}. Escribe un mensaje
+                  La conversación se cerró en el turno {{ resetAfterTurn() }}. Escribe un mensaje
                   para empezar de nuevo, o consulta el historial archivado.
                 } @else {
                   Escribe un mensaje para iniciar la conversación con Domi.
@@ -142,16 +142,14 @@
               @for (item of thread(); track item.id) {
                 @if (item.kind === 'reset') {
                   <div class="chat-cut" role="separator">
-                    <span>Conversación reiniciada · turno {{ item.turnNumber }}</span>
+                    <span>Conversación cerrada · turno {{ item.turnNumber }}</span>
                   </div>
                 } @else {
                   <div
                     class="chat-row"
                     [class.chat-row-outgoing]="item.message.direction === 'outgoing'"
                     [class.chat-row-incoming]="item.message.direction === 'incoming'"
-                    [class.chat-row-archived]="
-                      item.message.turnNumber != null && item.message.turnNumber <= resetAfterTurn()
-                    "
+                    [class.chat-row-archived]="item.archived"
                   >
                     <div
                       class="chat-bubble"

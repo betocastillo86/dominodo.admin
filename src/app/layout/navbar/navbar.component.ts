@@ -4,12 +4,13 @@ import { TablerIconComponent } from 'angular-tabler-icons';
 import { AuthService } from '../../core/auth/auth.service';
 import { AuthStore } from '../../core/auth/auth.store';
 import { VersionCheckService } from '../../core/version/version-check.service';
+import { EnvBadgeComponent } from '../../shared/ui/env-badge/env-badge.component';
 
-/** Top navbar: shows the signed-in user and a logout action. */
+/** Top navbar: shows the environment, the running version, the signed-in user and a logout action. */
 @Component({
   selector: 'app-navbar',
   standalone: true,
-  imports: [NgbDropdownModule, TablerIconComponent],
+  imports: [NgbDropdownModule, TablerIconComponent, EnvBadgeComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     class: 'navbar navbar-expand-md d-print-none',

@@ -119,6 +119,11 @@ export class UserFormComponent implements OnInit {
    */
   readonly canSetPassword = computed(() => this.authStore.has(PERMISSION_USERS_EDIT));
 
+  /**
+   * Only drives the request button's label. The confirmation field stays visible regardless,
+   * so a code sent before a reload can still be entered — `/auth/verify/confirm` takes just
+   * the phone and the code.
+   */
   readonly otpRequested = signal(false);
   readonly otpSending = signal(false);
   readonly otpConfirming = signal(false);

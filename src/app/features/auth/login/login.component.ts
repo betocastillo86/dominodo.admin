@@ -6,6 +6,7 @@ import { TablerIconComponent } from 'angular-tabler-icons';
 import { AuthService } from '../../../core/auth/auth.service';
 import { HealthService } from '../../../core/health/health.service';
 import { ProblemDetails } from '../../../core/http/problem-details';
+import { EnvBadgeComponent } from '../../../shared/ui/env-badge/env-badge.component';
 import { ServiceStatusComponent } from '../../../shared/ui/service-status/service-status.component';
 
 /**
@@ -18,7 +19,7 @@ import { ServiceStatusComponent } from '../../../shared/ui/service-status/servic
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [ReactiveFormsModule, TablerIconComponent, ServiceStatusComponent],
+  imports: [ReactiveFormsModule, TablerIconComponent, ServiceStatusComponent, EnvBadgeComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './login.component.html',
 })
