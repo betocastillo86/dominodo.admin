@@ -170,7 +170,8 @@
               }
             </div>
             <p class="text-secondary small mb-3">
-              Enviá un código OTP al teléfono del usuario para verificar su cuenta y activarla.
+              Enviá un código OTP al teléfono del usuario para verificar su cuenta y activarla. Si
+              ya le enviaste uno, ingresalo abajo: no hace falta volver a solicitarlo.
             </p>
 
             @if (otpError()) {
@@ -194,38 +195,36 @@
                 </button>
               </div>
 
-              @if (otpRequested()) {
-                <div class="flex-grow-1" style="max-width: 200px;">
-                  <label class="form-label" for="otp-code">Código OTP</label>
-                  <input
-                    id="otp-code"
-                    type="text"
-                    class="form-control"
-                    placeholder="123456"
-                    [formControl]="otpCode"
-                    [class.is-invalid]="otpCode.invalid && otpCode.touched"
-                    autocomplete="one-time-code"
-                  />
-                  @if (otpCode.invalid && otpCode.touched) {
-                    <div class="invalid-feedback">Ingresá el código recibido.</div>
+              <div class="flex-grow-1" style="max-width: 200px;">
+                <label class="form-label" for="otp-code">Código OTP</label>
+                <input
+                  id="otp-code"
+                  type="text"
+                  class="form-control"
+                  placeholder="123456"
+                  [formControl]="otpCode"
+                  [class.is-invalid]="otpCode.invalid && otpCode.touched"
+                  autocomplete="one-time-code"
+                />
+                @if (otpCode.invalid && otpCode.touched) {
+                  <div class="invalid-feedback">Ingresá el código recibido.</div>
+                }
+              </div>
+              <div>
+                <button
+                  type="button"
+                  class="btn btn-primary"
+                  (click)="confirmOtp()"
+                  [disabled]="otpConfirming() || otpSending()"
+                >
+                  @if (otpConfirming()) {
+                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                  } @else {
+                    <tabler-icon name="circle-check" class="me-1" />
                   }
-                </div>
-                <div>
-                  <button
-                    type="button"
-                    class="btn btn-primary"
-                    (click)="confirmOtp()"
-                    [disabled]="otpConfirming() || otpSending()"
-                  >
-                    @if (otpConfirming()) {
-                      <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                    } @else {
-                      <tabler-icon name="circle-check" class="me-1" />
-                    }
-                    Confirmar OTP
-                  </button>
-                </div>
-              }
+                  Confirmar OTP
+                </button>
+              </div>
             </div>
 
             @if (canSetPassword()) {
