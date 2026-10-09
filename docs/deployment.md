@@ -6,10 +6,10 @@ Azure DevOps. This mirrors the `pollaya.admin.front` pattern, modernized for Ang
 
 ## Environments
 
-| Environment | Branch    | Build configuration | Front-end URL                       | API base URL (`apiBaseUrl`)                                  | FTP variable group      |
-| ----------- | --------- | ------------------- | ----------------------------------- | ------------------------------------------------------------ | ----------------------- |
-| **prod**    | `main`    | `production`        | `https://admin.dominodo.com`        | `https://app-dominodo-api-prod.azurewebsites.net/api/v1`      | `dominodo-admin-prod`   |
-| **stage**   | `develop` | `stage`             | `https://adminstage.dominodo.com`   | `https://app-dominodo-api-stage.azurewebsites.net/api/v1`     | `dominodo-admin-stage`  |
+| Environment | Deployed by | Build configuration | Front-end URL                       | API base URL (`apiBaseUrl`)                                  | FTP variable group      |
+| ----------- | ----------- | ------------------- | ----------------------------------- | ------------------------------------------------------------ | ----------------------- |
+| **prod**    | **manual** (`Run stage`) | `production` | `https://admin.dominodo.com`        | `https://app-dominodo-api-prod.azurewebsites.net/api/v1`      | `dominodo-admin-prod`   |
+| **stage**   | every push to `main` | `stage`      | `https://adminstage.dominodo.com`   | `https://app-dominodo-api-stage.azurewebsites.net/api/v1`     | `dominodo-admin-stage`  |
 
 Both API URLs are `azurewebsites.net` hosts rather than `api.dominodo.com`: the web apps run on Free
 (F1) App Service plans, which support no custom domain. When prod moves to B1, `api.dominodo.com`
@@ -18,12 +18,36 @@ becomes a DNS record plus a hostname binding, and only `apiBaseUrl` changes here
 `admin.dominodo.com` is a DNS record on the **same FTP/IIS hosting** as stage — the admin panel is
 never served from Azure.
 
-## Branch → environment mapping
+## Deploy model — one branch, two bundles, a manual prod gate
 
-- Push / merge to **`main`** → builds `production` → deploys to the **prod** FTP folder.
-- Push / merge to **`develop`** → builds `stage` → deploys to the **stage** FTP folder.
+`main` is the **only** branch (`dominodo.api` ADR-0015). There is no branch→environment mapping any
+more, because there is only one branch:
+
+- **One push → one run that builds BOTH configurations** (`stage` and `production`) from that single
+  commit, publishing them as two pipeline artifacts, `web-stage` and `web-prod`.
+- **`DeployStage` is automatic** — it FTPs `web-stage` to the stage folder on every push.
+- **`DeployProd` is a manual stage** — it FTPs `web-prod`, and only when you open a run and hit
+  **Run stage**. Any run inside the 30-day retention window can be promoted, not just the newest, so
+  releasing a chosen version or rolling back is a click rather than a commit.
 
 PRs do not deploy (the pipeline `pr` trigger is disabled).
+
+### Why two bundles instead of promoting one artifact
+
+The bundle is **environment-specific**: the `stage` configuration swaps `environment.ts` for
+`environment.stage.ts` via `fileReplacements`, so `apiBaseUrl` and `domiBaseUrl` are *compiled into
+the JavaScript*. Verified by grepping the emitted bundles:
+
+```
+dist/stage/browser → app-dominodo-api-stage.azurewebsites.net
+dist/prod/browser  → app-dominodo-api-prod.azurewebsites.net
+```
+
+A stage bundle uploaded to the prod folder would therefore point **production at the stage API**, and
+the page would load without complaint. That is why the `Build` stage fails if either bundle does not
+contain its own environment's API host, if `web.config` is missing, or if `version.json` was not
+stamped — and why the post-release check is the **orange** production tint (`applyEnvTheme()`), which
+only the production bundle produces.
 
 ## Build configurations
 
@@ -176,12 +200,46 @@ the deploy root and that the site returns 200 and not a `500.19` configuration e
 
 ## Pipeline — `pipelines/build-ftp-pipeline.yaml`
 
-One Azure DevOps pipeline, branch-scoped:
+One Azure DevOps pipeline (definition `dominodo.admin.ftp`, id 63 in `castillopradagabriel/Pollaya`),
+three stages:
 
-1. Selects the variable group + `BUILD_CONFIG` from `Build.SourceBranchName` (`main`→prod, `develop`→stage).
-2. Installs Node.js 20, runs `npm ci` (respects `.npmrc` `legacy-peer-deps=true`).
-3. `npx ng build --configuration $(BUILD_CONFIG)`.
-4. `FtpUpload@2` uploads `dist/dominodo-admin/browser` to `$(FTP_REMOTE_DIR)` on `$(FTP_HOST)`.
+**`Build`** — runs on every push to `main`:
+
+1. Installs Node.js 20, runs `npm ci` (respects `.npmrc` `legacy-peer-deps=true`).
+2. Stamps `$(Build.BuildId)` **once** into `src/app/core/version/app-version.ts` and
+   `public/version.json`, so both bundles carry the same release id.
+3. `npx ng build --configuration stage --output-path dist/stage`.
+4. `npx ng build --configuration production --output-path dist/prod`
+   (the `application` builder appends `browser/` to whatever `--output-path` is given).
+5. Verifies both bundles: `index.html` / `web.config` / `version.json` present, `version.json`
+   stamped, and each bundle carrying its *own* environment's API host.
+6. Publishes artifacts `web-stage` and `web-prod`.
+
+**`DeployStage`** — automatic, `environment: dominodo-stage`. Scopes the `dominodo-admin-stage`
+variable group to itself, downloads `web-stage`, and `FtpUpload@2`s it to `$(FTP_REMOTE_DIR)`.
+
+**`DeployProd`** — `trigger: manual`, `environment: dominodo-prod`. Same shape with the
+`dominodo-admin-prod` group and the `web-prod` artifact.
+
+Two details that are not obvious from the YAML:
+
+- **The variable groups are stage-scoped, not pipeline-scoped.** Both define the same four keys
+  (`FTP_HOST`, `FTP_USERNAME`, `FTP_PASSWORD`, `FTP_REMOTE_DIR`), so they must never be in scope
+  together. This replaces the old compile-time `${{ if eq(Build.SourceBranchName, …) }}` selector,
+  which had nothing left to select on once `develop` was gone.
+- **`DeployProd` declares `dependsOn: []`, and it has to.** Azure DevOps rejects any manual stage
+  that declares a dependency (*"Manually triggered stages cannot have dependencies"*). So nothing in
+  the YAML enforces "prod only gets what stage got" — the run page showing `DeployStage`'s result
+  above the button is the practical guard.
+
+To promote from the command line (note `run`; `retry` answers `204` and does nothing on a stage that
+never executed):
+
+```bash
+curl -u ":$ADO_PAT" -X PATCH -H "Content-Type: application/json" \
+  "https://dev.azure.com/castillopradagabriel/Pollaya/_apis/build/builds/<buildId>/stages/DeployProd?api-version=7.1-preview.1" \
+  -d '{"state":"run"}'
+```
 
 ### Variable groups (Pipelines → Library)
 
@@ -205,6 +263,13 @@ variable-group design supports either without YAML changes.
 1. Create the two variable groups above.
 2. Create the pipeline from the GitHub repo pointing at `pipelines/build-ftp-pipeline.yaml`
    (GitHub service connection, as pollaya does).
+3. **Authorize this pipeline for the resources the deploy stages consume** — otherwise the first run
+   stops asking for permission:
+   - variable groups `dominodo-admin-stage` **and** `dominodo-admin-prod`
+     (Pipelines → Library → the group → *Pipeline permissions*);
+   - environments `dominodo-stage` **and** `dominodo-prod` (Pipelines → Environments → the
+     environment → *Security*). These are the same environments the API and Domi pipelines deploy
+     through, which is deliberate: one place shows what is live where.
 
 ## Placeholders to fill
 

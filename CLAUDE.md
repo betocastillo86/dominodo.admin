@@ -80,5 +80,5 @@ navbar shows the running version. Keep the `___buildid___` placeholder intact in
 
 ## Docs
 - `docs/architecture.md` — authoritative architecture, structure, and API contract.
-- `docs/deployment.md` — stage/prod FTP deployment: branch→env mapping, build configs, `web.config`, the **cache strategy**, Azure DevOps pipeline + variable groups.
+- `docs/deployment.md` — stage/prod FTP deployment: the single-branch deploy model (push deploys stage, prod is a **manual** pipeline stage), why one run builds **two** bundles, build configs, `web.config`, the **cache strategy**, Azure DevOps pipeline + variable groups.
 - `plan_init.md` — phased implementation plan for the first slice (auth + roles).

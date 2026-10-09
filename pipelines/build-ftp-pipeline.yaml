@@ -1,57 +1,171 @@
+# Dominodo Admin — CI/CD for the stage and prod hosting folders.
+#
+# `main` is the only branch. One push produces ONE run that builds BOTH Angular configurations, then
+# deploys stage automatically and leaves prod behind a manual gate: open the run you want and hit
+# "Run stage" on DeployProd. Any retained run can be promoted, not just the newest one.
+#
+# Why two bundles and not one promoted artifact: the Angular bundle is environment-SPECIFIC. The
+# `stage` configuration swaps `environment.ts` for `environment.stage.ts` via `fileReplacements`, so
+# `apiBaseUrl` / `domiBaseUrl` are COMPILED IN — verified by grepping the emitted bundles:
+#   stage → app-dominodo-api-stage.azurewebsites.net
+#   prod  → app-dominodo-api-prod.azurewebsites.net
+# A stage bundle FTP'd to the prod folder would therefore point production at the stage API. Building
+# both from one commit is what makes "promote the version I choose" possible at all.
+#
+# `dependsOn: []` on DeployProd is REQUIRED: Azure DevOps rejects any manual stage that declares a
+# dependency ("Manually triggered stages cannot have dependencies"). As a result "prod only gets what
+# stage got" is an operator convention, not something this YAML enforces — the run page shows
+# DeployStage's result right above the button.
+#
+# Scripted promotion (note `run`, NOT `retry` — `retry` answers 204 and does nothing on a stage that
+# never executed):
+#   PATCH .../_apis/build/builds/<buildId>/stages/DeployProd?api-version=7.1-preview.1
+#   {"state":"run"}
+
 trigger:
   branches:
-    include: [ 'main', 'develop' ]
+    include: [ 'main' ]
     exclude: [ 'refs/pull/*/merge' ]
 pr:
   branches:
     exclude: [ '*' ]
 
-pool:
-  vmImage: 'ubuntu-latest'
+stages:
+  # ── Build BOTH bundles from the one commit ──────────────────────────────────────
+  - stage: Build
+    displayName: Build stage + prod bundles
+    jobs:
+      - job: build
+        displayName: Build both Angular configurations
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - task: NodeTool@0
+            inputs:
+              versionSpec: '20.x'
+            displayName: 'Install Node.js 20'
 
-variables:
-  - ${{ if eq(variables['Build.SourceBranchName'], 'main') }}:
-    - group: dominodo-admin-prod      # FTP_HOST, FTP_USERNAME, FTP_PASSWORD, FTP_REMOTE_DIR
-    - name: BUILD_CONFIG
-      value: production
-  - ${{ if eq(variables['Build.SourceBranchName'], 'develop') }}:
-    - group: dominodo-admin-stage     # FTP_HOST, FTP_USERNAME, FTP_PASSWORD, FTP_REMOTE_DIR
-    - name: BUILD_CONFIG
-      value: stage
+          - script: npm ci
+            displayName: 'npm ci (respects .npmrc legacy-peer-deps)'
 
-steps:
-  - task: NodeTool@0
-    inputs:
-      versionSpec: '20.x'
-    displayName: 'Install Node.js 20'
+          # Stamp the release id into the bundle AND into the published version.json, so
+          # VersionCheckService can compare them and prompt long-lived tabs to reload.
+          # Must run before the builds: `public/` is copied and the .ts is compiled by them.
+          # Stamped ONCE, so both bundles carry the same release id — a promoted prod bundle
+          # reports the build it was actually produced by.
+          - script: |
+              set -e
+              sed -i "s/___buildid___/$BUILD_BUILDID/g" \
+                src/app/core/version/app-version.ts \
+                public/version.json
+              echo "Stamped build $BUILD_BUILDID"
+              cat public/version.json
+            displayName: 'Stamp build version (once, for both bundles)'
 
-  - script: npm ci
-    displayName: 'npm ci (respects .npmrc legacy-peer-deps)'
+          # `--output-path X` emits to `X/browser` (the `application` builder appends it).
+          - script: npx ng build --configuration stage --output-path dist/stage
+            displayName: 'Build Angular (stage)'
 
-  # Stamp the release id into the bundle AND into the published version.json, so
-  # VersionCheckService can compare them and prompt long-lived tabs to reload.
-  # Must run before the build: `public/` is copied and the .ts is compiled by it.
-  - script: |
-      set -e
-      sed -i "s/___buildid___/$BUILD_BUILDID/g" \
-        src/app/core/version/app-version.ts \
-        public/version.json
-      echo "Stamped build $BUILD_BUILDID"
-      cat public/version.json
-    displayName: 'Stamp build version'
+          - script: npx ng build --configuration production --output-path dist/prod
+            displayName: 'Build Angular (production)'
 
-  - script: npx ng build --configuration $(BUILD_CONFIG)
-    displayName: 'Build Angular ($(BUILD_CONFIG))'
+          # The gate that catches a silently broken bundle before it can be promoted: web.config is
+          # the IIS SPA fallback AND the index.html no-cache carve-out, so a missing one makes deploys
+          # invisible for days; an unstamped version.json makes the reload banner report the old
+          # release forever. Also asserts the two bundles really did get different API hosts.
+          - script: |
+              set -euo pipefail
+              for d in dist/stage/browser dist/prod/browser; do
+                for f in index.html web.config version.json; do
+                  test -f "$d/$f" || { echo "##vso[task.logissue type=error]$d/$f missing"; exit 1; }
+                done
+                grep -q "$BUILD_BUILDID" "$d/version.json" \
+                  || { echo "##vso[task.logissue type=error]$d/version.json not stamped"; exit 1; }
+              done
+              grep -rqE 'app-dominodo-api-stage\.azurewebsites\.net' dist/stage/browser/*.js \
+                || { echo "##vso[task.logissue type=error]stage bundle does not target the stage API"; exit 1; }
+              grep -rqE 'app-dominodo-api-prod\.azurewebsites\.net' dist/prod/browser/*.js \
+                || { echo "##vso[task.logissue type=error]prod bundle does not target the prod API"; exit 1; }
+              echo "both bundles verified"
+            displayName: 'Verify both bundles'
 
-  - task: FtpUpload@2
-    displayName: 'FTP Upload to $(FTP_REMOTE_DIR)'
-    inputs:
-      credentialsOption: 'inputs'
-      serverUrl: '$(FTP_HOST)'          # e.g. ftp://winXXXX.site4now.net/
-      username: '$(FTP_USERNAME)'
-      password: '$(FTP_PASSWORD)'
-      rootDirectory: '$(Build.SourcesDirectory)/dist/dominodo-admin/browser'
-      filePatterns: '**'
-      remoteDirectory: '$(FTP_REMOTE_DIR)'   # e.g. /dominodoadmin/ or /dominodoadmin-stage/
-      clean: false
-      preservePaths: true
+          - task: PublishPipelineArtifact@1
+            displayName: 'Publish artifact (web-stage)'
+            inputs:
+              targetPath: 'dist/stage/browser'
+              artifact: web-stage
+
+          - task: PublishPipelineArtifact@1
+            displayName: 'Publish artifact (web-prod)'
+            inputs:
+              targetPath: 'dist/prod/browser'
+              artifact: web-prod
+
+  # ── Stage: automatic on every push ──────────────────────────────────────────────
+  # The variable group is scoped to THIS stage: both groups define the same four keys
+  # (FTP_HOST / FTP_USERNAME / FTP_PASSWORD / FTP_REMOTE_DIR), so they must never be in scope
+  # together. This replaces the old compile-time `${{ if eq(Build.SourceBranchName, …) }}` selector,
+  # which had nothing left to select on once `develop` was gone.
+  - stage: DeployStage
+    displayName: Deploy to Stage
+    dependsOn: Build
+    variables:
+      - group: dominodo-admin-stage     # FTP_HOST, FTP_USERNAME, FTP_PASSWORD, FTP_REMOTE_DIR
+    jobs:
+      - deployment: ftp
+        displayName: FTP upload (stage)
+        pool:
+          vmImage: 'ubuntu-latest'
+        environment: dominodo-stage
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - download: current
+                  artifact: web-stage
+
+                - task: FtpUpload@2
+                  displayName: 'FTP Upload to $(FTP_REMOTE_DIR)'
+                  inputs:
+                    credentialsOption: 'inputs'
+                    serverUrl: '$(FTP_HOST)'          # e.g. ftp://winXXXX.site4now.net/
+                    username: '$(FTP_USERNAME)'
+                    password: '$(FTP_PASSWORD)'
+                    rootDirectory: '$(Pipeline.Workspace)/web-stage'
+                    filePatterns: '**'
+                    remoteDirectory: '$(FTP_REMOTE_DIR)'   # e.g. /dominodoadminstage/
+                    clean: false
+                    preservePaths: true
+
+  # ── Prod: the manual gate ───────────────────────────────────────────────────────
+  - stage: DeployProd
+    displayName: Deploy to Prod (manual gate)
+    dependsOn: []
+    trigger: manual
+    variables:
+      - group: dominodo-admin-prod      # FTP_HOST, FTP_USERNAME, FTP_PASSWORD, FTP_REMOTE_DIR
+    jobs:
+      - deployment: ftp
+        displayName: FTP upload (prod)
+        pool:
+          vmImage: 'ubuntu-latest'
+        environment: dominodo-prod
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - download: current
+                  artifact: web-prod
+
+                - task: FtpUpload@2
+                  displayName: 'FTP Upload to $(FTP_REMOTE_DIR)'
+                  inputs:
+                    credentialsOption: 'inputs'
+                    serverUrl: '$(FTP_HOST)'
+                    username: '$(FTP_USERNAME)'
+                    password: '$(FTP_PASSWORD)'
+                    rootDirectory: '$(Pipeline.Workspace)/web-prod'
+                    filePatterns: '**'
+                    remoteDirectory: '$(FTP_REMOTE_DIR)'   # e.g. /dominodoadmin/
+                    clean: false
+                    preservePaths: true
