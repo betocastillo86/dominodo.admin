@@ -1,0 +1,55 @@
+<div class="modal-header">
+  <h5 class="modal-title">Llamado al modelo</h5>
+  <button type="button" class="btn-close" aria-label="Cerrar" (click)="activeModal.dismiss()"></button>
+</div>
+
+<div class="modal-body">
+  @if (view(); as c) {
+    <div class="datagrid mb-3">
+      <div class="datagrid-item">
+        <div class="datagrid-title">Modelo</div>
+        <div class="datagrid-content font-monospace">{{ c.model }}</div>
+      </div>
+      <div class="datagrid-item">
+        <div class="datagrid-title">Estado</div>
+        <div class="datagrid-content">
+          <span [class]="c.outcome === 'ok' ? 'badge bg-green-lt' : 'badge bg-red-lt'">
+            {{ c.outcome }}
+          </span>
+        </div>
+      </div>
+      <div class="datagrid-item">
+        <div class="datagrid-title">Operación</div>
+        <div class="datagrid-content">{{ c.operation }}</div>
+      </div>
+      <div class="datagrid-item">
+        <div class="datagrid-title">Origen</div>
+        <div class="datagrid-content">{{ c.caller }}</div>
+      </div>
+    </div>
+
+    <h4 class="mb-2">Prompt</h4>
+    @if (c.prompt) {
+      <pre class="model-call-text mb-3">{{ c.prompt }}</pre>
+    } @else {
+      <p class="text-secondary mb-3">La auditoría no guardó el prompt de este llamado.</p>
+    }
+
+    <h4 class="mb-2">Respuesta</h4>
+    @if (c.completion) {
+      <pre class="model-call-text mb-0">{{ c.completion }}</pre>
+    } @else if (c.operation === 'embedding') {
+      <p class="text-secondary mb-0">
+        Una incrustación no devuelve texto: solo el vector, que no se guarda en la auditoría.
+      </p>
+    } @else {
+      <p class="text-secondary mb-0">El llamado no devolvió respuesta.</p>
+    }
+  } @else {
+    <p class="text-secondary mb-0">No se recibió el llamado a inspeccionar.</p>
+  }
+</div>
+
+<div class="modal-footer">
+  <button type="button" class="btn btn-link" (click)="activeModal.dismiss()">Cerrar</button>
+</div>

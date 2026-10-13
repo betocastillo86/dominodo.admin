@@ -86,6 +86,75 @@ tr.row-detail > * {
   }
 }
 
+// Tab strip of a tabbed detail block (tools vs. models under a decision). It stands in
+// for the block's caption, so it reads at the caption's size and leaves the detail row as
+// compact as a plain label would.
+// Qualified with `.nav-tabs` on purpose: Tabler's own `.nav-tabs .nav-link` rules carry two
+// classes, and underlining a tab means out-specifying its boxed border on every state.
+.nav-tabs.row-detail-tabs {
+  margin-bottom: 0.5rem;
+  border-bottom: 0;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+
+  .nav-link {
+    padding: 0 0 0.125rem;
+    // Also cancels the negative bottom margin that laps a boxed tab over the strip's border.
+    margin: 0 1.5rem 0 0;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    background: none;
+    color: var(--tblr-secondary);
+
+    &:hover,
+    &:focus {
+      color: var(--tblr-body-color);
+      border-color: transparent;
+      border-bottom-color: var(--tblr-border-color);
+    }
+
+    &.active {
+      color: var(--tblr-body-color);
+      border-color: transparent;
+      border-bottom-color: var(--tblr-primary);
+      background: none;
+    }
+  }
+}
+
+// A detail table row that opens a record of its own (a model call and its prompt). The
+// whole line is the target rather than a link in one cell: every column is a heading of
+// the same record, so there is no cell the click belongs to more than the others.
+.row-detail-table tr.row-detail-clickable {
+  cursor: pointer;
+
+  &:hover > td,
+  &:focus-visible > td {
+    background: var(--tblr-bg-surface-secondary);
+  }
+}
+
+// Prompt and completion of a model call, in the modal that shows them whole: both are
+// long and already laid out by whoever wrote them, so they keep their line breaks and
+// scroll instead of stretching the dialog.
+// Tabler paints a bare `pre` as a dark code block (light text on `--tblr-bg-surface-dark`),
+// and this one sits on the modal's own light surface instead — so the text colour and the
+// scrollbar, which Tabler ties to the same light tone, have to come along with the surface.
+.model-call-text {
+  max-height: 22rem;
+  overflow: auto;
+  padding: 0.75rem;
+  border: var(--tblr-border-width) solid var(--tblr-border-color);
+  border-radius: var(--tblr-border-radius);
+  background: var(--tblr-bg-surface-secondary);
+  color: var(--tblr-body-color);
+  --tblr-scrollbar-color: var(--tblr-body-color);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 // `.btn-link` is the one widely-used rule where Tabler bakes `$primary` into a literal at
 // compile time, so it keeps the default blue when `data-bs-theme-primary` re-points
 // `--tblr-primary` per environment (see `core/theme/env-theme.ts`). Every "Cancelar" in the

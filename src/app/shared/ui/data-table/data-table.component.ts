@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TablerIconComponent } from 'angular-tabler-icons';
@@ -39,21 +40,42 @@ export interface RowDetailValue {
   mono?: boolean;
 }
 
+/** Compact table inside a row's detail; `head` labels the columns of every row in `body`. */
+export interface RowDetailTable {
+  head: readonly string[];
+  body: readonly (readonly RowDetailValue[])[];
+  /**
+   * When set, every body row becomes activatable and hands back its index — room for a
+   * value no cell can hold (a prompt, a payload) to be opened somewhere of its own.
+   */
+  rowFn?: (index: number) => void;
+  /** Tooltip of an activatable row. */
+  rowFnTitle?: string;
+}
+
+/** One tab of a detail block: its caption and the table behind it. */
+export interface RowDetailTab {
+  label: string;
+  table: RowDetailTable;
+}
+
 /**
  * A block of a row's detail, rendered as its own full-width row under it: a caption
  * plus either a run of values or a small table of its own. A row can have several,
  * one per block, and none of them is rendered when the row has nothing to show.
  */
 export interface RowDetailSection {
-  /** Caption of the block. */
+  /** Caption of the block, and the key its tab selection is remembered under. */
   label: string;
   /** Values rendered inline, right after the caption. */
   values?: readonly RowDetailValue[];
-  /** Compact table of its own; `head` labels the columns of every row in `body`. */
-  table?: {
-    head: readonly string[];
-    body: readonly (readonly RowDetailValue[])[];
-  };
+  /** Compact table of its own. */
+  table?: RowDetailTable;
+  /**
+   * Several tables behind a tab strip, which stands in for the caption. Dropping the
+   * tabs that have nothing to show is the caller's job.
+   */
+  tabs?: readonly RowDetailTab[];
 }
 
 /** Current sort state: which column key and in which direction. */
@@ -69,7 +91,7 @@ export interface TableSort {
 @Component({
   selector: 'app-data-table',
   standalone: true,
-  imports: [SpinnerComponent, RouterLink, TablerIconComponent],
+  imports: [SpinnerComponent, RouterLink, TablerIconComponent, NgTemplateOutlet],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './data-table.component.html',
 })
@@ -118,6 +140,13 @@ export class DataTableComponent<T> {
   /** Key of the row currently asking for delete confirmation, if any. */
   private readonly confirmingKey = signal<unknown>(null);
 
+  /**
+   * Active tab of each tabbed detail block, keyed by row and block. It lives here rather
+   * than in the section because `rowDetail` is a plain function the template re-runs on
+   * every change detection: anything it returns is rebuilt and could not hold a selection.
+   */
+  private readonly detailTabs = signal<Record<string, string>>({});
+
   /** True when the table renders a trailing column of row actions. */
   readonly hasActions = computed(() => !!(this.actionLink() || this.actionFn() || this.deleteFn()));
 
@@ -165,6 +194,20 @@ export class DataTableComponent<T> {
   valueClass(value: RowDetailValue): string {
     const classes = [value.badgeClass ?? '', value.mono ? 'font-monospace' : ''];
     return classes.filter(Boolean).join(' ');
+  }
+
+  /** Identity of one tabbed block, scoped to its row so sibling rows do not share a tab. */
+  detailTabKey(row: T, section: RowDetailSection): string {
+    return `${String(this.rowKey()(row))}::${section.label}`;
+  }
+
+  /** Tab on screen for a block; the first one until the operator picks another. */
+  activeDetailTab(key: string, tabs: readonly RowDetailTab[]): string {
+    return this.detailTabs()[key] ?? tabs[0]?.label ?? '';
+  }
+
+  selectDetailTab(key: string, label: string): void {
+    this.detailTabs.update((tabs) => ({ ...tabs, [key]: label }));
   }
 
   isConfirming(row: T): boolean {

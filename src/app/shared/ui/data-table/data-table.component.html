@@ -108,7 +108,34 @@
               [class.row-has-detail]="!lastSection"
             >
               <td [attr.colspan]="columnCount()">
-                <div class="row-detail-label text-secondary">{{ section.label }}</div>
+                @if (section.tabs; as tabs) {
+                  @let tabKey = detailTabKey(row, section);
+                  @let activeTab = activeDetailTab(tabKey, tabs);
+                  <ul class="nav nav-tabs row-detail-tabs">
+                    @for (tab of tabs; track tab.label) {
+                      <li class="nav-item">
+                        <button
+                          type="button"
+                          class="nav-link"
+                          [class.active]="tab.label === activeTab"
+                          (click)="selectDetailTab(tabKey, tab.label)"
+                        >
+                          {{ tab.label }}
+                        </button>
+                      </li>
+                    }
+                  </ul>
+                  @for (tab of tabs; track tab.label) {
+                    @if (tab.label === activeTab) {
+                      <ng-container
+                        [ngTemplateOutlet]="detailTable"
+                        [ngTemplateOutletContext]="{ $implicit: tab.table }"
+                      />
+                    }
+                  }
+                } @else {
+                  <div class="row-detail-label text-secondary">{{ section.label }}</div>
+                }
                 @if (section.values; as values) {
                   <div class="d-flex flex-wrap align-items-baseline gap-2">
                     @for (value of values; track $index) {
@@ -117,26 +144,10 @@
                   </div>
                 }
                 @if (section.table; as table) {
-                  <table class="table table-sm table-borderless row-detail-table m-0">
-                    <thead>
-                      <tr>
-                        @for (head of table.head; track head) {
-                          <th class="text-secondary fw-normal">{{ head }}</th>
-                        }
-                      </tr>
-                    </thead>
-                    <tbody>
-                      @for (line of table.body; track $index) {
-                        <tr>
-                          @for (value of line; track $index) {
-                            <td>
-                              <span [class]="valueClass(value)">{{ value.text }}</span>
-                            </td>
-                          }
-                        </tr>
-                      }
-                    </tbody>
-                  </table>
+                  <ng-container
+                    [ngTemplateOutlet]="detailTable"
+                    [ngTemplateOutletContext]="{ $implicit: table }"
+                  />
                 }
               </td>
             </tr>
@@ -208,3 +219,48 @@
     </div>
   }
 }
+
+<!--
+  One compact table of a row's detail, shared by a plain block and by every tab of a
+  tabbed one. With `rowFn` set the row is activatable by click or by keyboard — the
+  `<tr>` carries the role rather than a button in a cell, so the whole line is the target.
+-->
+<ng-template #detailTable let-table>
+  <table class="table table-sm table-borderless row-detail-table m-0">
+    <thead>
+      <tr>
+        @for (head of table.head; track head) {
+          <th class="text-secondary fw-normal">{{ head }}</th>
+        }
+      </tr>
+    </thead>
+    <tbody>
+      @for (line of table.body; track $index; let lineIndex = $index) {
+        @if (table.rowFn; as rowFn) {
+          <tr
+            class="row-detail-clickable"
+            role="button"
+            tabindex="0"
+            [title]="table.rowFnTitle ?? ''"
+            (click)="rowFn(lineIndex)"
+            (keydown.enter)="rowFn(lineIndex)"
+          >
+            @for (value of line; track $index) {
+              <td>
+                <span [class]="valueClass(value)">{{ value.text }}</span>
+              </td>
+            }
+          </tr>
+        } @else {
+          <tr>
+            @for (value of line; track $index) {
+              <td>
+                <span [class]="valueClass(value)">{{ value.text }}</span>
+              </td>
+            }
+          </tr>
+        }
+      }
+    </tbody>
+  </table>
+</ng-template>

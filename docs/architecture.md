@@ -125,6 +125,13 @@ modules follow the same conventions described here.
   ignores the reset cut, so the panel flags the options that fall below it as `(archivado)`
   and picking any episode turns `includeBeforeReset` on — otherwise an episode that ended
   below the cut would come back empty.
+  A decision carries more than its columns can hold, so the `data-table`'s `rowDetail` hook hangs the
+  rest under the row: its `correlationId`, the message it resolved (read from the transcript index —
+  the trail stores only the id) and the calls it made, `toolCalls` and `modelCalls` behind one tab
+  each. The two outcomes are **not** the same vocabulary: a tool call's is the HTTP status, a model
+  call's is `ok` or the name of the exception that broke it. A model call's `prompt` and `completion`
+  fit no cell, so its row opens them whole in a modal (`model-call-modal`), which re-indents an answer
+  that is JSON — Domi's reasoning steps answer with an object on a single line.
   `404 Chat.ConversationNotFound` for an unknown id, `502 Chat.UpstreamUnavailable` when Domi is down.
   These routes do **not** opt out of the global error toast — they are not polled.
 

@@ -66,6 +66,23 @@ export interface ToolCallDto {
   outcome: string;
 }
 
+/**
+ * One chat completion or embedding the agent asked for while resolving a turn.
+ * `operation` is `chat` or `embedding`; `completion` is null for an embedding and on a
+ * failure. `outcome` is `ok` or the name of the exception that broke the call — it is
+ * not an HTTP status, unlike `ToolCallDto.outcome`.
+ */
+export interface ModelCallDto {
+  /** Component that asked, in the same vocabulary as a decision's `contributor`. */
+  caller: string;
+  model: string;
+  operation: string;
+  /** The messages sent, already rendered as `"{rol}: {texto}"` lines. */
+  prompt: string;
+  completion: string | null;
+  outcome: string;
+}
+
 /** The agent's decision trail for a single turn. */
 export interface DecisionRecordDto {
   id: string;
@@ -84,6 +101,7 @@ export interface DecisionRecordDto {
   confidence: number | null;
   route: string | null;
   toolCalls: ToolCallDto[];
+  modelCalls: ModelCallDto[];
   correlationId: string | null;
   createdAtUtc: string;
 }

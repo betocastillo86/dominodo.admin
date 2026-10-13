@@ -2,11 +2,13 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { debounceTime, finalize } from 'rxjs';
 import { PageHeaderComponent } from '../../../shared/ui/page-header/page-header.component';
 import {
   DataTableComponent,
   RowDetailSection,
+  RowDetailTab,
   TableColumn,
 } from '../../../shared/ui/data-table/data-table.component';
 import { ConversationsService } from '../data-access/conversations.service';
@@ -17,7 +19,9 @@ import {
   ConversationEpisodeDto,
   ConversationMessageDto,
   DecisionRecordDto,
+  ModelCallDto,
 } from '../data-access/conversation.models';
+import { ModelCallModalComponent } from '../model-call-modal/model-call-modal.component';
 
 type ConversationTab = 'messages' | 'decisions';
 
@@ -32,6 +36,7 @@ type ConversationTab = 'messages' | 'decisions';
 export class ConversationDetailComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly conversationsService = inject(ConversationsService);
+  private readonly modal = inject(NgbModal);
 
   private readonly conversationId = this.route.snapshot.paramMap.get('id')!;
 
@@ -110,7 +115,7 @@ export class ConversationDetailComponent {
    * The trail is wide, so the identity of a row comes first — when it happened and
    * which episode/turn it belongs to — and the headers of those two are abbreviated so
    * they take no more room than the numbers under them. What does not fit a column at
-   * all (the message and the tool calls) hangs off the row instead: see `decisionDetail`.
+   * all (the message and the calls it made) hangs off the row instead: see `decisionDetail`.
    */
   readonly decisionColumns: readonly TableColumn<DecisionRecordDto>[] = [
     {
@@ -300,8 +305,8 @@ export class ConversationDetailComponent {
   /**
    * What hangs under a decision row across the whole table: the correlation id that ties
    * the turn to Domi's logs, the message it resolved — the trail stores only its id, so
-   * it is read from the transcript index — and the upstream calls it made, as a table of
-   * their own. Each block only shows up when there is something to show, so a bare
+   * it is read from the transcript index — and the calls it made, tools and models behind
+   * a tab each. Each block only shows up when there is something to show, so a bare
    * decision stays a single row.
    */
   readonly decisionDetail = (d: DecisionRecordDto): RowDetailSection[] => {
@@ -328,8 +333,10 @@ export class ConversationDetailComponent {
       });
     }
 
+    const calls: RowDetailTab[] = [];
+
     if (d.toolCalls?.length) {
-      sections.push({
+      calls.push({
         label: 'Herramientas',
         table: {
           head: ['Método', 'Estado', 'Endpoint'],
@@ -342,8 +349,41 @@ export class ConversationDetailComponent {
       });
     }
 
+    // The prompt and the answer are far too long for a cell, so the table holds the
+    // heading of each call and the row opens the exchange itself.
+    if (d.modelCalls?.length) {
+      calls.push({
+        label: 'Modelos',
+        table: {
+          head: ['Modelo', 'Estado', 'Operación', 'Origen'],
+          body: d.modelCalls.map((m) => [
+            { text: m.model, mono: true },
+            { text: m.outcome, badgeClass: this.modelOutcomeBadge(m.outcome) },
+            { text: m.operation },
+            { text: m.caller },
+          ]),
+          rowFn: (index) => this.openModelCall(d.modelCalls[index]),
+          rowFnTitle: 'Ver el prompt y la respuesta del modelo',
+        },
+      });
+    }
+
+    if (calls.length) {
+      sections.push({ label: 'Llamados', tabs: calls });
+    }
+
     return sections;
   };
+
+  /** Opens one model call in full: the trail itself only has room for its heading. */
+  private openModelCall(call: ModelCallDto): void {
+    const ref = this.modal.open(ModelCallModalComponent, {
+      size: 'lg',
+      centered: true,
+      scrollable: true,
+    });
+    ref.componentInstance.call = call;
+  }
 
   /**
    * Domi records a tool call as `"{método} {url}"` and its outcome as the HTTP status,
@@ -369,6 +409,14 @@ export class ConversationDetailComponent {
     } catch {
       return url;
     }
+  }
+
+  /**
+   * A model call records `"ok"` or the name of the exception that broke it, so unlike a
+   * tool call there is nothing to grade: it either answered or it did not.
+   */
+  private modelOutcomeBadge(outcome: string): string {
+    return outcome === 'ok' ? 'badge bg-green-lt' : 'badge bg-red-lt';
   }
 
   private statusBadge(outcome: string): string {
