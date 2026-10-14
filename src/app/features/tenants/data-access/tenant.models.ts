@@ -68,13 +68,14 @@ export interface UpdateTenantRequest {
  * Features the panel offers, so nobody has to remember a key. The API's `FeatureKey`
  * enum also has `WhatsApp`, which is no longer used and is therefore not listed here.
  */
-export type FeatureKey = 'Requests' | 'Deliveries' | 'Visits' | 'Announcements';
+export type FeatureKey = 'Requests' | 'Deliveries' | 'Visits' | 'Announcements' | 'Amenities';
 
 export const ALL_FEATURE_KEYS: readonly FeatureKey[] = [
   'Requests',
   'Deliveries',
   'Visits',
   'Announcements',
+  'Amenities',
 ];
 
 export const FEATURE_LABELS: Record<FeatureKey, string> = {
@@ -82,6 +83,7 @@ export const FEATURE_LABELS: Record<FeatureKey, string> = {
   Deliveries: 'Domicilios',
   Visits: 'Visitas',
   Announcements: 'Anuncios',
+  Amenities: 'Áreas sociales',
 };
 
 export const FEATURE_DESCRIPTIONS: Record<FeatureKey, string> = {
@@ -89,6 +91,7 @@ export const FEATURE_DESCRIPTIONS: Record<FeatureKey, string> = {
   Deliveries: 'Registro y aviso de domicilios y paquetes en portería.',
   Visits: 'Autorización y registro de visitantes en portería.',
   Announcements: 'Comunicados y avisos de la administración.',
+  Amenities: 'Reserva de áreas sociales (salón social, BBQ, gimnasio y demás).',
 };
 
 /** Feature flag record for a tenant, returned by `GET /tenants/{tenantId}/features`. */
