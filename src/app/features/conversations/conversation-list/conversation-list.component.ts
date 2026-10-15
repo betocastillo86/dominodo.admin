@@ -60,8 +60,9 @@ export class ConversationListComponent {
       class: 'text-secondary text-nowrap',
     },
     {
-      header: 'Creada',
-      value: (c) => this.formatDate(c.createdAtUtc),
+      header: 'Actualizada',
+      // Falls back to the creation date: `updatedAtUtc` is null until the row changes.
+      value: (c) => this.formatDate(c.updatedAtUtc ?? c.createdAtUtc),
       class: 'text-secondary text-nowrap',
     },
   ]);
