@@ -24,13 +24,20 @@ import { EMPTY, interval, Subscription, catchError, finalize, startWith, switchM
 import { TablerIconComponent } from 'angular-tabler-icons';
 import { PageHeaderComponent } from '../../../shared/ui/page-header/page-header.component';
 import { NotificationService } from '../../../core/notifications/notification.service';
-import { ChatSimulationService } from '../data-access/chat-simulation.service';
 import {
+  ChatMediaUploadError,
+  ChatSimulationService,
+} from '../data-access/chat-simulation.service';
+import {
+  CHAT_MEDIA_MAX_BYTES,
+  CHAT_MEDIA_MAX_FILES,
+  CHAT_MEDIA_TYPES,
   ChatBubble,
   ChatDirection,
   ChatMessageRole,
   ChatThreadItem,
   ChatTranscriptResponse,
+  PendingAttachment,
 } from '../data-access/chat-simulation.models';
 
 const POLL_INTERVAL_MS = 4000;
@@ -97,6 +104,16 @@ export class ChatSimulationComponent {
   readonly phone = signal<string | null>(null);
   readonly messages = signal<ChatBubble[]>([]);
   readonly sending = signal(false);
+
+  /** Files waiting to ride with the next turn, in the order they were picked. */
+  readonly attachments = signal<PendingAttachment[]>([]);
+
+  /** Room left in the turn: drives the attach button and the counter beside the chips. */
+  readonly attachmentSlots = computed(() => CHAT_MEDIA_MAX_FILES - this.attachments().length);
+
+  /** Exposed for the template's counter. */
+  readonly maxAttachments = CHAT_MEDIA_MAX_FILES;
+
   readonly resetting = signal(false);
   readonly error = signal<string | null>(null);
   readonly cursor = signal(0);
@@ -184,18 +201,91 @@ export class ChatSimulationComponent {
     this.resetAfterTurn.set(0);
     this.archiveFloor = null;
     this.conversationId.set(null);
-    this.messages.set([]);
+    this.dropThread();
+    this.clearAttachments();
     this.cursor.set(0);
     this.error.set(null);
     this.pollError.set(null);
     this.startPolling();
   }
 
-  /** Sends the typed message to Domi; the reply arrives through the transcript via pullOnce(). */
+  /**
+   * Adds the picked files to the turn. Type, size and the per-turn count are checked here against
+   * the same limits the API enforces, so the operator hears about a bad file before a round trip —
+   * the API checks again, and Domi after it. A file that does not pass is named and the rest still
+   * go in: rejecting the whole pick over one oversized photo would make the operator start over.
+   */
+  onFilesSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const picked = Array.from(input.files ?? []);
+    // Clearing the input lets the same file be picked again after it has been removed.
+    input.value = '';
+    if (!picked.length) {
+      return;
+    }
+
+    const slots = this.attachmentSlots();
+    const accepted: PendingAttachment[] = [];
+    const refused: string[] = [];
+
+    for (const file of picked) {
+      if (!CHAT_MEDIA_TYPES.includes(file.type)) {
+        refused.push(`«${file.name}»: no es una imagen ni un PDF`);
+      } else if (file.size > CHAT_MEDIA_MAX_BYTES) {
+        refused.push(`«${file.name}»: supera el límite de 5 MB`);
+      } else if (accepted.length >= slots) {
+        refused.push(`«${file.name}»: un mensaje admite ${CHAT_MEDIA_MAX_FILES} archivos`);
+      } else {
+        accepted.push({
+          id: crypto.randomUUID(),
+          file,
+          preview: {
+            name: file.name,
+            contentType: file.type,
+            objectUrl: file.type.startsWith('image/') ? URL.createObjectURL(file) : null,
+          },
+        });
+      }
+    }
+
+    if (accepted.length) {
+      this.attachments.update((list) => [...list, ...accepted]);
+    }
+    this.error.set(refused.length ? `Sin adjuntar — ${refused.join('; ')}.` : null);
+  }
+
+  /** Drops one pending file. Its object URL is revoked here, never in the thread. */
+  removeAttachment(id: string): void {
+    const target = this.attachments().find((pending) => pending.id === id);
+    if (target?.preview.objectUrl) {
+      URL.revokeObjectURL(target.preview.objectUrl);
+    }
+    this.attachments.update((list) => list.filter((pending) => pending.id !== id));
+  }
+
+  /** Empties the composer, revoking the previews it still owns. */
+  clearAttachments(): void {
+    for (const pending of this.attachments()) {
+      if (pending.preview.objectUrl) {
+        URL.revokeObjectURL(pending.preview.objectUrl);
+      }
+    }
+    this.attachments.set([]);
+  }
+
+  /**
+   * Sends the turn: the files go up first — one call each — and then the message carries the
+   * pointers they minted. The order is not ours to choose: the API only accepts a pointer it
+   * has just issued, so an upload that fails stops the turn before it is sent.
+   *
+   * The reply arrives through the transcript via pullOnce() — a turn carrying only files answers
+   * empty (Domi ADR-0012 §16), so nothing is painted from the POST either way.
+   */
   sendMessage(): void {
     const phone = this.phone();
     const text = this.messageControl.value.trim();
-    if (!phone || !text || this.sending()) {
+    const pending = this.attachments();
+    if (!phone || (!text && !pending.length) || this.sending()) {
       return;
     }
 
@@ -205,16 +295,22 @@ export class ChatSimulationComponent {
       text,
       sentAt: new Date(),
       status: 'sending',
+      ...(pending.length ? { attachments: pending.map((item) => item.preview) } : {}),
     };
     this.messages.update((list) => [...list, outgoing]);
     this.messageControl.setValue('');
+    // The previews now belong to the bubble; the composer's slots are free again.
+    this.attachments.set([]);
     this.error.set(null);
     this.sending.set(true);
     this.scrollToBottom();
 
     this.chatService
-      .send(phone, text)
-      .pipe(finalize(() => this.sending.set(false)))
+      .uploadAll(pending.map((item) => item.file))
+      .pipe(
+        switchMap((media) => this.chatService.send(phone, text || null, media)),
+        finalize(() => this.sending.set(false)),
+      )
       .subscribe({
         next: () => {
           this.markStatus(outgoing.id, 'sent');
@@ -222,7 +318,10 @@ export class ChatSimulationComponent {
         },
         error: (err: unknown) => {
           this.markStatus(outgoing.id, 'error');
-          this.error.set(this.chatService.toError(err));
+          // A refused upload already names the file it was; anything else is the turn failing.
+          this.error.set(
+            err instanceof ChatMediaUploadError ? err.message : this.chatService.toError(err),
+          );
           this.scrollToBottom();
         },
       });
@@ -278,7 +377,8 @@ export class ChatSimulationComponent {
     }
     this.stopPolling();
     this.phone.set(null);
-    this.messages.set([]);
+    this.dropThread();
+    this.clearAttachments();
     this.error.set(null);
     this.cursor.set(0);
     this.conversationId.set(null);
@@ -328,7 +428,7 @@ export class ChatSimulationComponent {
 
   /** Clears the local thread after a reset landed; the cut is re-read from the next pull. */
   private afterReset(): void {
-    this.messages.set([]);
+    this.dropThread();
     this.error.set(null);
     this.cursor.set(0);
     this.pollError.set(null);
@@ -338,9 +438,24 @@ export class ChatSimulationComponent {
     this.startPolling();
   }
 
+  /**
+   * Empties the thread, revoking the object URLs its previews hold. Every place that drops the
+   * on-screen conversation goes through here, or a long session leaks one blob per photo sent.
+   */
+  private dropThread(): void {
+    for (const bubble of this.messages()) {
+      for (const preview of bubble.attachments ?? []) {
+        if (preview.objectUrl) {
+          URL.revokeObjectURL(preview.objectUrl);
+        }
+      }
+    }
+    this.messages.set([]);
+  }
+
   /** Drops the on-screen thread and pulls it again from turn 0 under the current view. */
   private rehydrate(): void {
-    this.messages.set([]);
+    this.dropThread();
     this.cursor.set(0);
     this.pollError.set(null);
     this.archiveFloor = null;
@@ -416,7 +531,7 @@ export class ChatSimulationComponent {
       if (seen.has(key)) continue;
       seen.add(key);
 
-      const bubble: ChatBubble = {
+      let bubble: ChatBubble = {
         id: crypto.randomUUID(),
         direction: this.mapRole(msg.role),
         text: msg.text,
@@ -427,10 +542,18 @@ export class ChatSimulationComponent {
       };
 
       if (msg.role === 'User') {
+        // The oldest optimistic bubble is the turn that just landed (they replace in send order).
         const idx = currentList.findIndex(
           (m) => m.direction === 'outgoing' && m.turnNumber == null,
         );
         if (idx >= 0) {
+          // The transcript carries no media, so the bubble being replaced holds the ONLY record
+          // of what went out. Hand the previews to the turn replacing it, or the photo vanishes
+          // one poll after it was sent — and its object URL leaks with it.
+          const optimistic = currentList[idx];
+          if (optimistic.attachments) {
+            bubble = { ...bubble, attachments: optimistic.attachments };
+          }
           currentList = [...currentList.slice(0, idx), ...currentList.slice(idx + 1)];
         }
       }

@@ -96,6 +96,113 @@
   font-size: 0.9375rem;
 }
 
+/* The previews are the operator's own files: Domi's pointer is not fetchable by the browser. */
+.chat-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.chat-attachment-image {
+  display: block;
+  max-width: min(220px, 100%);
+  max-height: 220px;
+  border-radius: 0.375rem;
+  object-fit: cover;
+}
+
+.chat-attachment-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.8125rem;
+}
+
+/*
+ * A media-only turn replayed from the transcript. Domi persists a turn's TEXT and nothing else,
+ * so a photo sent on its own comes back as a `User` row with an empty string: without this the
+ * bubble would render blank, which reads as a bug rather than as a file that went out.
+ */
+.chat-attachment-lost {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-style: italic;
+  opacity: 0.8;
+}
+
+.chat-attachment-lost tabler-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.chat-pending {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.8125rem;
+}
+
+.chat-pending-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  max-width: 14rem;
+  padding: 0.125rem 0.375rem 0.125rem 0.125rem;
+  border: 1px solid var(--tblr-border-color, #e6e7e9);
+  border-radius: 0.375rem;
+}
+
+.chat-pending-thumb {
+  flex: none;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.25rem;
+  object-fit: cover;
+}
+
+.chat-pending-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--tblr-bg-surface-secondary, #f1f5f9);
+  color: var(--tblr-secondary, #667382);
+}
+
+.chat-pending-icon tabler-icon {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.chat-pending-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-pending-remove {
+  display: inline-flex;
+  flex: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--tblr-secondary, #667382);
+  cursor: pointer;
+}
+
+.chat-pending-remove tabler-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.chat-pending-count {
+  color: var(--tblr-secondary, #667382);
+  font-size: 0.75rem;
+}
+
 .chat-meta {
   display: flex;
   align-items: center;

@@ -163,7 +163,40 @@
                       @if (item.message.role === 'System') {
                         <div class="chat-system-badge">Sistema</div>
                       }
-                      <div class="chat-text">{{ item.message.text }}</div>
+                      @if (item.message.attachments; as files) {
+                        <div class="chat-attachments">
+                          @for (file of files; track $index) {
+                            @if (file.objectUrl) {
+                              <img
+                                [src]="file.objectUrl"
+                                [alt]="file.name"
+                                class="chat-attachment-image"
+                              />
+                            } @else {
+                              <span class="chat-attachment-file">
+                                <tabler-icon name="file" />
+                                {{ file.name }}
+                              </span>
+                            }
+                          }
+                        </div>
+                      }
+                      @if (item.message.text) {
+                        <div class="chat-text">{{ item.message.text }}</div>
+                      }
+                      @if (
+                        item.message.role === 'User' &&
+                        !item.message.text &&
+                        !item.message.attachments
+                      ) {
+                        <div
+                          class="chat-text chat-attachment-lost"
+                          title="El archivo se envió, pero no queda una copia que el panel pueda mostrar."
+                        >
+                          <tabler-icon name="paperclip" />
+                          Archivo adjunto
+                        </div>
+                      }
                       <button
                         type="button"
                         class="chat-copy"
@@ -213,7 +246,62 @@
         }
 
         <div class="card-footer">
+          @if (attachments().length) {
+            <div class="chat-pending" role="status">
+              @for (pending of attachments(); track pending.id) {
+                <span class="chat-pending-item">
+                  @if (pending.preview.objectUrl) {
+                    <img
+                      [src]="pending.preview.objectUrl"
+                      [alt]="pending.preview.name"
+                      class="chat-pending-thumb"
+                    />
+                  } @else {
+                    <span class="chat-pending-thumb chat-pending-icon">
+                      <tabler-icon name="file" />
+                    </span>
+                  }
+                  <span class="chat-pending-name">{{ pending.preview.name }}</span>
+                  <button
+                    type="button"
+                    class="chat-pending-remove"
+                    [title]="'Quitar ' + pending.preview.name"
+                    [attr.aria-label]="'Quitar ' + pending.preview.name"
+                    [disabled]="sending()"
+                    (click)="removeAttachment(pending.id)"
+                  >
+                    <tabler-icon name="x" />
+                  </button>
+                </span>
+              }
+              <span class="chat-pending-count">
+                {{ attachments().length }} / {{ maxAttachments }}
+              </span>
+            </div>
+          }
           <form class="d-flex gap-2" [formGroup]="messageForm" (ngSubmit)="sendMessage()">
+            <input
+              #fileInput
+              type="file"
+              class="d-none"
+              multiple
+              accept="image/jpeg,image/png,image/gif,image/webp,application/pdf"
+              (change)="onFilesSelected($event)"
+            />
+            <button
+              type="button"
+              class="btn btn-outline-secondary"
+              [title]="
+                attachmentSlots() > 0
+                  ? 'Adjuntar imágenes o PDF (hasta ' + maxAttachments + ' por mensaje)'
+                  : 'Un mensaje admite ' + maxAttachments + ' archivos'
+              "
+              aria-label="Adjuntar imágenes o PDF"
+              [disabled]="sending() || attachmentSlots() === 0"
+              (click)="fileInput.click()"
+            >
+              <tabler-icon name="paperclip" />
+            </button>
             <input
               type="text"
               class="form-control"
@@ -224,7 +312,7 @@
             <button
               type="submit"
               class="btn btn-primary"
-              [disabled]="sending() || !messageControl.value.trim()"
+              [disabled]="sending() || (!messageControl.value.trim() && !attachments().length)"
             >
               <tabler-icon name="send" />
             </button>

@@ -63,8 +63,8 @@ modules follow the same conventions described here.
 > Two contract rules worth knowing up front: a role's `scope` is set on create and **immutable** on edit,
 > and **system roles** (`isSystem`) are treated as read-only in the panel.
 
-- **Chat simulation:** `POST /chat-simulation` (`{phone,text}` → `{reply}`) forwards a simulated message
-  to Domi. `GET /chat-simulation/{phone}/messages?afterTurn=N&includeBeforeReset=false` returns
+- **Chat simulation:** `POST /chat-simulation` (`{phone,text,media?}` → `{reply}`) forwards a simulated
+  message to Domi. `GET /chat-simulation/{phone}/messages?afterTurn=N&includeBeforeReset=false` returns
   `{ conversationId, cursor, resetAfterTurn, messages[] }` — cursor pattern (Domi ADR-0027): `afterTurn=0`
   rehydrates the thread, subsequent calls pass the returned `cursor` for deltas. The panel polls this
   endpoint every 4 s and merges new turns by the `turnNumber:role` pair; the `POST` reply is no longer
@@ -72,6 +72,19 @@ modules follow the same conventions described here.
   transcript. The panel sends **phone only** — Domi resolves the tenant from the number, and any spelling
   of a number canonicalizes to the same bare E.164 conversation (Domi ADR-0012), so the panel canonicalizes
   before it calls.
+
+  A turn may carry attachments, and they go up **first**: `POST /chat-simulation/media` (multipart,
+  field name exactly `file`, one file per call) mints a short-lived pointer — `{ url, contentType,
+  expiresAtUtc }`, where `url` is Domi's own `domi-testchat:…` scheme — and the turn then lists those
+  pointers in `media[]`. Up to **5** per turn, each ≤ 5 MB, `image/jpeg|png|gif|webp` or
+  `application/pdf`; any other URL (`https://…`, `data:…`) is refused with 400. `text` may be null or
+  empty **only** when `media` travels; neither one → 400 `Validation.Failed`. A refused file is 400
+  `Chat.MediaRejected` with the reason in `detail`; the API's own ceiling is a **413 with no body**, so
+  that copy is the panel's. The pointer is never reused: one is minted per file, immediately before the
+  turn that spends it. The browser cannot fetch a `domi-testchat:` pointer, so the thumbnails in the
+  thread are object URLs over the operator's own `File` — the panel revokes them when the thread is
+  dropped. A turn carrying only files answers with an **empty** `reply`; the acknowledgement arrives
+  later through the transcript poll, like every other turn.
 
   `DELETE /chat-simulation/{phone}` **resets** the conversation — it does not delete it
   (Domi ADR-0004 §13–§14). Domi's transcript is append-only: the reset clears the agent's conversational
@@ -167,7 +180,7 @@ src/app/
     ├── request-categories/     # cross-tenant catalog: list, create, edit of PQRS categories
     ├── announcements/          # cross-tenant list (status/category/tenant filters) + create/edit form
     ├── knowledge-resources/    # cross-tenant list (status/category/tenant filters) + create/edit form
-    ├── chat-simulation/        # Domi chat tester (phone gate → bubble chat); polls GET …/messages?afterTurn= for async turns, renders the reset cut
+    ├── chat-simulation/        # Domi chat tester (phone gate → bubble chat); polls GET …/messages?afterTurn= for async turns, renders the reset cut, attaches up to 5 images/PDF per turn
     └── conversations/          # Domi's persisted conversations: cross-tenant list (phone/tenant/date filters) + detail with transcript & decision tabs
 ```
 

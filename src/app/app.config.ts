@@ -22,6 +22,7 @@ import {
   IconEdit,
   IconExternalLink,
   IconEye,
+  IconFile,
   IconFilterOff,
   IconHistory,
   IconInfoCircle,
@@ -34,6 +35,7 @@ import {
   IconMessageChatbot,
   IconMessagePlus,
   IconMessages,
+  IconPaperclip,
   IconPlayerPause,
   IconPlayerPlay,
   IconPlus,
@@ -123,6 +125,8 @@ export const appConfig: ApplicationConfig = {
       IconHistory,
       IconPlayerPause,
       IconPlayerPlay,
+      IconPaperclip,
+      IconFile,
     }),
     // WYSIWYG editor (notification-templates email body). Toolbar kept intentionally small.
     provideQuillConfig({
