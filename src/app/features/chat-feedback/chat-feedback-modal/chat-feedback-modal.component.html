@@ -1,0 +1,86 @@
+<div class="modal-header">
+  <h5 class="modal-title">Detalle del feedback</h5>
+  <button
+    type="button"
+    class="btn-close"
+    aria-label="Cerrar"
+    (click)="activeModal.dismiss()"
+  ></button>
+</div>
+
+<div class="modal-body">
+  @if (feedback(); as f) {
+    <div class="datagrid mb-3">
+      <div class="datagrid-item">
+        <div class="datagrid-title">Fecha</div>
+        <div class="datagrid-content">{{ formatDate(f.createdAtUtc) }}</div>
+      </div>
+      <div class="datagrid-item">
+        <div class="datagrid-title">Conjunto</div>
+        <div class="datagrid-content">{{ tenantName() || f.tenantSlug }}</div>
+      </div>
+      <div class="datagrid-item">
+        <div class="datagrid-title">Teléfono</div>
+        <div class="datagrid-content">{{ f.senderId }}</div>
+      </div>
+      <div class="datagrid-item">
+        <div class="datagrid-title">Episodio</div>
+        <div class="datagrid-content">{{ f.episode }}</div>
+      </div>
+      <div class="datagrid-item">
+        <div class="datagrid-title">Encuesta</div>
+        <div class="datagrid-content">
+          <span [class]="f.asked ? 'badge bg-blue-lt' : 'badge bg-secondary-lt'">
+            {{ f.asked ? 'Enviada' : 'No enviada' }}
+          </span>
+        </div>
+      </div>
+      <div class="datagrid-item">
+        <div class="datagrid-title">Valoración</div>
+        <div class="datagrid-content">
+          @if (f.wasHelpful === null) {
+            <span class="badge bg-secondary-lt">Sin respuesta</span>
+          } @else if (f.wasHelpful) {
+            <span class="badge bg-green-lt">Útil</span>
+          } @else {
+            <span class="badge bg-red-lt">No útil</span>
+          }
+        </div>
+      </div>
+      <div class="datagrid-item">
+        <div class="datagrid-title">Actualizado</div>
+        <div class="datagrid-content">{{ formatDate(f.updatedAtUtc) }}</div>
+      </div>
+      @if (f.correlationId) {
+        <div class="datagrid-item">
+          <div class="datagrid-title">Correlation ID</div>
+          <div class="datagrid-content font-monospace text-break">
+            {{ f.correlationId }}
+          </div>
+        </div>
+      }
+    </div>
+
+    <h4 class="mb-2">Pregunta</h4>
+    <p class="mb-3" style="white-space: pre-wrap">{{ f.question }}</p>
+
+    <h4 class="mb-2">Comentario</h4>
+    @if (f.comment) {
+      <p class="mb-0" style="white-space: pre-wrap">{{ f.comment }}</p>
+    } @else {
+      <p class="text-secondary mb-0">El residente no dejó comentario.</p>
+    }
+  } @else {
+    <p class="text-secondary mb-0">No se recibió el feedback a mostrar.</p>
+  }
+</div>
+
+<div class="modal-footer">
+  <button type="button" class="btn btn-link" (click)="activeModal.dismiss()">Cerrar</button>
+  @if (feedback(); as f) {
+    <button type="button" class="btn btn-primary" (click)="openConversation(f.conversationId)">
+      <tabler-icon name="messages" class="me-2" />
+      Ver conversación
+    </button>
+  }
+</div>

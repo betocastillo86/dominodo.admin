@@ -55,6 +55,7 @@ export class SidebarComponent {
       children: [
         { label: 'Simulador de chat', path: '/chat-simulation' },
         { label: 'Conversaciones', path: '/conversations' },
+        { label: 'Feedback', path: '/chat-feedback' },
       ],
     },
     { label: 'Configuración', path: '/system-settings', icon: 'settings' },

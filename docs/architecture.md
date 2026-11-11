@@ -148,6 +148,15 @@ modules follow the same conventions described here.
   `404 Chat.ConversationNotFound` for an unknown id, `502 Chat.UpstreamUnavailable` when Domi is down.
   These routes do **not** opt out of the global error toast — they are not polled.
 
+- **Chat feedback (Domi):** `GET /chat-feedback` lists the questions Domi deflected with the
+  resident's verdict (`wasHelpful` is null until answered), filterable by `tenant` (slug), a
+  `createdAtUtc` range (`from`/`to`), `wasHelpful`, `answered` and a `direction` on the date.
+  `GET /chat-feedback/summary` returns the totals for the same tenant/date scope; its rates are
+  fractions and `null` — never 0 — when their denominator is zero. The panel calls both without
+  `X-Tenant` (platform scope). `400 Validation.Failed` when `from > to`, `502` when Domi is down.
+  The table leaves the question and the comment out: each row opens them in a modal
+  (`chat-feedback-modal`), which also links to the conversation detail.
+
 ---
 
 ## 4. Project structure
@@ -181,7 +190,8 @@ src/app/
     ├── announcements/          # cross-tenant list (status/category/tenant filters) + create/edit form
     ├── knowledge-resources/    # cross-tenant list (status/category/tenant filters) + create/edit form
     ├── chat-simulation/        # Domi chat tester (phone gate → bubble chat); polls GET …/messages?afterTurn= for async turns, renders the reset cut, attaches up to 5 images/PDF per turn
-    └── conversations/          # Domi's persisted conversations: cross-tenant list (phone/tenant/date filters) + detail with transcript & decision tabs
+    ├── conversations/          # Domi's persisted conversations: cross-tenant list (phone/tenant/date filters) + detail with transcript & decision tabs
+    └── chat-feedback/          # residents' verdicts on the questions Domi deflected: read-only list (tenant/date/answered/helpful filters, date sort) + summary cards
 ```
 
 - **`core/`**: single instances and cross-cutting concerns; no business UI.

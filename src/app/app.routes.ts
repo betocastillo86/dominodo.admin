@@ -100,6 +100,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'chat-feedback',
+        loadChildren: () =>
+          import('./features/chat-feedback/chat-feedback.routes').then(
+            (m) => m.chatFeedbackRoutes,
+          ),
+      },
+      {
         path: 'chat-simulation',
         loadChildren: () =>
           import('./features/chat-simulation/chat-simulation.routes').then(
